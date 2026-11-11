@@ -26,6 +26,9 @@ final class DensityStage implements DaySummaryStageInterface
 {
     private const float MIN_STD_EPSILON = 1.0e-6;
 
+    /**
+     * @param mixed[][] $days
+     */
     public function process(array $days, array $home): array
     {
         if ($days === []) {
@@ -36,6 +39,7 @@ final class DensityStage implements DaySummaryStageInterface
         $photoCounts = array_values(array_map(static fn (array $summary): int => $summary['photoCount'], $days));
 
         $stats = $this->computeMeanStd($photoCounts);
+
         foreach ($days as &$summary) {
             if ($stats['std'] > self::MIN_STD_EPSILON) {
                 $summary['densityZ'] = ($summary['photoCount'] - $stats['mean']) / $stats['std'];
@@ -57,6 +61,7 @@ final class DensityStage implements DaySummaryStageInterface
     private function computeMeanStd(array $values): array
     {
         $count = count($values);
+
         if ($count === 0) {
             return ['mean' => 0.0, 'std' => 0.0];
         }
@@ -65,6 +70,7 @@ final class DensityStage implements DaySummaryStageInterface
         $mean = $sum / $count;
 
         $variance = 0.0;
+
         foreach ($values as $value) {
             $variance += ($value - $mean) ** 2;
         }

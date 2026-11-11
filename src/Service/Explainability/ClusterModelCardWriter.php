@@ -69,6 +69,7 @@ final readonly class ClusterModelCardWriter
         }
 
         $directory = rtrim($this->outputDirectory, DIRECTORY_SEPARATOR);
+
         if ($directory === '') {
             return [];
         }
@@ -78,6 +79,7 @@ final readonly class ClusterModelCardWriter
         }
 
         $paths = [];
+
         foreach ($drafts as $draft) {
             $fingerprint = $this->fingerprint($draft);
             $filePath    = $directory . DIRECTORY_SEPARATOR . sprintf('cluster-%s.html', $fingerprint);
@@ -189,6 +191,7 @@ HTML;
         }
 
         $normalised = [];
+
         foreach ($value as $key => $inner) {
             if (is_string($key)) {
                 $normalised[$key] = $inner;
@@ -213,6 +216,7 @@ HTML;
         }
 
         $rows = [];
+
         foreach ($data as $label => $value) {
             if (is_array($value)) {
                 $value = json_encode($value, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT);
@@ -239,6 +243,7 @@ HTML;
         if ($policyDetails !== []) {
             $rows = [];
             ksort($policyDetails);
+
             foreach ($policyDetails as $key => $value) {
                 if ($value === null) {
                     continue;
@@ -261,8 +266,10 @@ HTML;
         }
 
         $strategies = $params['meta']['strategies'] ?? null;
+
         if (is_array($strategies) && $strategies !== []) {
             $rows = [];
+
             foreach ($strategies as $strategy) {
                 if (!is_string($strategy)) {
                     continue;
@@ -297,6 +304,7 @@ HTML;
         }
 
         $rows = [];
+
         foreach ($merges as $entry) {
             if (!is_array($entry)) {
                 continue;
@@ -340,6 +348,7 @@ HTML;
         $scores['Cluster-Score'] = $this->formatScore($params['score'] ?? null);
 
         $selectionCounts = $this->normaliseArray($selectionSummary['selection_counts'] ?? []);
+
         if ($selectionCounts !== []) {
             $scores['Auswahl (roh/kuratiert)'] = sprintf(
                 '%d / %d',
@@ -349,16 +358,19 @@ HTML;
         }
 
         $hashDistance = $selectionSummary['selection_spacing']['average_seconds'] ?? ($selectionSummary['avg_phash_distance'] ?? null);
+
         if (is_numeric($hashDistance)) {
             $scores['Durchschnittlicher pHash-Abstand'] = number_format((float) $hashDistance, 4);
         }
 
         $spacing = $selectionSummary['selection_spacing'] ?? null;
+
         if (is_array($spacing) && isset($spacing['average_seconds'])) {
             $scores['Durchschnittlicher Zeitabstand (s)'] = number_format((float) $spacing['average_seconds'], 2);
         }
 
         $memberQuality = $this->normaliseArray($params['member_quality']['summary'] ?? null);
+
         if ($memberQuality !== []) {
             $scores['Mitgliedsqualität'] = [
                 'ordered'          => $memberQuality['ordered'] ?? [],
@@ -380,6 +392,7 @@ HTML;
         }
 
         $rows = [];
+
         foreach ($rejectionCounts as $reason => $value) {
             if (!is_numeric($value)) {
                 continue;
@@ -419,6 +432,7 @@ HTML;
     private function buildKeyPhotoNarrative(ClusterDraft $draft, array $selectionSummary, array $policyDetails): string
     {
         $cover = $draft->getCoverMediaId();
+
         if ($cover === null) {
             return 'Kein Schlüsselbild ausgewählt.';
         }
@@ -459,11 +473,13 @@ HTML;
         ]);
 
         $iterations = $mmr['iterations'] ?? [];
+
         if (!is_array($iterations) || $iterations === []) {
             return $summaryTable;
         }
 
         $iterationRows = [];
+
         foreach ($iterations as $iteration) {
             if (!is_array($iteration)) {
                 continue;
@@ -472,6 +488,7 @@ HTML;
             $step        = $iteration['step'] ?? 'n/a';
             $selected    = $iteration['selected'] ?? 'n/a';
             $evaluations = $iteration['evaluations'] ?? [];
+
             if (is_array($evaluations)) {
                 $evaluations = json_encode($evaluations, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
             }
@@ -505,6 +522,7 @@ HTML;
         }
 
         $json = json_encode($selectionTelemetry, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
+
         if ($json === false) {
             return '<p class="muted">decision_features konnten nicht serialisiert werden.</p>';
         }
@@ -543,6 +561,7 @@ HTML;
         }
 
         $items = [];
+
         foreach ($value as $id) {
             if (!is_int($id)) {
                 continue;

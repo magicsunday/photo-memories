@@ -151,6 +151,7 @@ final class DeterministicImageQualityEstimatorTest extends TestCase
     private function createTemporaryFile(string $prefix, string $suffix): string
     {
         $temp = tempnam(sys_get_temp_dir(), $prefix);
+
         if ($temp === false) {
             self::fail('Unable to allocate temporary file.');
         }
@@ -164,6 +165,7 @@ final class DeterministicImageQualityEstimatorTest extends TestCase
     private function createSampleFrameBytes(): string
     {
         $image = imagecreatetruecolor(8, 8);
+
         if ($image === false) {
             self::fail('Unable to allocate test image.');
         }
@@ -195,6 +197,7 @@ final class DeterministicImageQualityEstimatorTest extends TestCase
     {
         foreach ($commands as $command) {
             $binary = $command[0] ?? '';
+
             if (str_contains($binary, $needle)) {
                 return true;
             }

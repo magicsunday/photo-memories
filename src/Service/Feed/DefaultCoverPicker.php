@@ -62,6 +62,7 @@ final class DefaultCoverPicker implements CoverPickerInterface
 
         foreach ($members as $m) {
             $score = $this->score($m, $context);
+
             if ($score > $bestScore) {
                 $best      = $m;
                 $bestScore = $score;
@@ -257,6 +258,7 @@ final class DefaultCoverPicker implements CoverPickerInterface
         $weightsRaw = is_array($memberQuality['weights'] ?? null) ? $memberQuality['weights'] : [];
 
         $members = [];
+
         if (is_array($memberQuality['members'] ?? null)) {
             foreach ($memberQuality['members'] as $id => $data) {
                 if (!is_array($data)) {
@@ -264,6 +266,7 @@ final class DefaultCoverPicker implements CoverPickerInterface
                 }
 
                 $intId = is_numeric($id) ? (int) $id : null;
+
                 if ($intId === null) {
                     continue;
                 }
@@ -312,12 +315,14 @@ final class DefaultCoverPicker implements CoverPickerInterface
         $ratio        = $this->floatOrNull($clusterParams['people_ratio'] ?? null);
 
         $people = $clusterParams['people'] ?? null;
+
         if (is_array($people)) {
-            $coverage ??= $this->floatOrNull($people['people_coverage'] ?? $people['coverage'] ?? null);
+            $coverage     ??= $this->floatOrNull($people['people_coverage'] ?? $people['coverage'] ?? null);
             $faceCoverage ??= $this->floatOrNull($people['people_face_coverage'] ?? $people['faceCoverage'] ?? null);
         }
 
         $primary = null;
+
         if (is_string($clusterParams['people_primary_subject'] ?? null)) {
             $primary = $clusterParams['people_primary_subject'];
         }
@@ -350,8 +355,10 @@ final class DefaultCoverPicker implements CoverPickerInterface
     private function normaliseTravelParams(array $clusterParams): array
     {
         $distance = $this->floatOrNull($clusterParams['total_travel_km'] ?? null);
+
         if ($distance === null) {
             $summary = $clusterParams['travel_summary'] ?? null;
+
             if (is_array($summary)) {
                 $distance = $this->floatOrNull($summary['total_travel_km'] ?? $summary['travel_km'] ?? null);
             }
@@ -366,6 +373,7 @@ final class DefaultCoverPicker implements CoverPickerInterface
         $segmentCount  = is_array($segments) ? count($segments) : 0;
 
         $weightBase = 0.0;
+
         if ($distance !== null) {
             $weightBase = min(1.0, max(0.0, $distance / 150.0));
         }
@@ -398,11 +406,13 @@ final class DefaultCoverPicker implements CoverPickerInterface
 
         foreach ($members as $media) {
             $phash = $this->fingerprintOrNull($media->getPhash64()) ?? $this->fingerprintOrNull($media->getPhash());
+
             if ($phash !== null) {
                 $phashCounts[$phash] = ($phashCounts[$phash] ?? 0) + 1;
             }
 
             $dhash = $this->fingerprintOrNull($media->getDhash());
+
             if ($dhash !== null) {
                 $dhashCounts[$dhash] = ($dhashCounts[$dhash] ?? 0) + 1;
             }
@@ -445,6 +455,7 @@ final class DefaultCoverPicker implements CoverPickerInterface
     private function timeScore(Media $media, ?int $medianTs): float
     {
         $timestamp = $media->getTakenAt()?->getTimestamp();
+
         if ($medianTs === null || $timestamp === null) {
             return 0.5;
         }
@@ -467,6 +478,7 @@ final class DefaultCoverPicker implements CoverPickerInterface
         $detail = $meta['members'][$media->getId()] ?? null;
 
         $score = $media->getQualityScore();
+
         if ($detail !== null && isset($detail['quality'])) {
             $score = max($score ?? 0.0, $detail['quality']);
         } elseif ($detail !== null && isset($detail['score'])) {
@@ -480,6 +492,7 @@ final class DefaultCoverPicker implements CoverPickerInterface
         }
 
         $qualityAvg = $meta['summary']['quality_avg'];
+
         if ($qualityAvg !== null && $qualityAvg > 0.0) {
             $relative = $score / max(0.0001, $qualityAvg);
             $score    = ($score * 0.7) + ($this->clamp01($relative) * 0.3);
@@ -508,26 +521,31 @@ final class DefaultCoverPicker implements CoverPickerInterface
         if ($score === null) {
             $components = [];
             $exposure   = $media->getQualityExposure();
+
             if ($exposure !== null) {
                 $components[] = $this->clamp01($exposure);
             } else {
                 $brightness = $media->getBrightness();
+
                 if ($brightness !== null) {
                     $components[] = $this->balancedScore($this->clamp01($brightness), 0.55, 0.35);
                 }
 
                 $contrast = $media->getContrast();
+
                 if ($contrast !== null) {
                     $components[] = $this->clamp01($contrast);
                 }
             }
 
             $entropy = $media->getEntropy();
+
             if ($entropy !== null) {
                 $components[] = $this->clamp01($entropy);
             }
 
             $color = $media->getColorfulness();
+
             if ($color !== null) {
                 $components[] = $this->clamp01($color);
             }
@@ -536,6 +554,7 @@ final class DefaultCoverPicker implements CoverPickerInterface
         }
 
         $aestheticAvg = $meta['summary']['aesthetics_avg'];
+
         if ($aestheticAvg !== null && $aestheticAvg > 0.0) {
             $relative = $score / max(0.0001, $aestheticAvg);
             $score    = ($score * 0.65) + ($this->clamp01($relative) * 0.35);
@@ -575,6 +594,7 @@ final class DefaultCoverPicker implements CoverPickerInterface
         $faceScore = $this->clamp01($faceScore);
 
         $emphasis = $people['emphasis'];
+
         if ($emphasis > 0.5) {
             $faceScore = $this->clamp01($faceScore * (1.0 + 0.3 * $emphasis));
         } else {
@@ -582,6 +602,7 @@ final class DefaultCoverPicker implements CoverPickerInterface
         }
 
         $primary = $people['primary'] ?? null;
+
         if (is_string($primary)) {
             $primary = strtolower(trim($primary));
 
@@ -591,12 +612,14 @@ final class DefaultCoverPicker implements CoverPickerInterface
                 if (is_array($persons)) {
                     foreach ($persons as $person) {
                         $personId = strtolower(trim($person));
+
                         if ($personId === '') {
                             continue;
                         }
 
                         if ($personId === $primary) {
                             $faceScore = $this->clamp01($faceScore + 0.15);
+
                             break;
                         }
                     }
@@ -615,6 +638,7 @@ final class DefaultCoverPicker implements CoverPickerInterface
         $confidence = $this->floatOrNull($saliency['confidence'] ?? null);
 
         $center = null;
+
         if (array_key_exists('center', $saliency)) {
             $center = $this->pointFromValue($saliency['center']);
         } elseif (array_key_exists('center_of_mass', $saliency)) {
@@ -624,6 +648,7 @@ final class DefaultCoverPicker implements CoverPickerInterface
         }
 
         $alignment = 0.5;
+
         if ($center !== null) {
             $alignment = $this->ruleOfThirdsAlignment($center[0], $center[1]);
         }
@@ -674,6 +699,7 @@ final class DefaultCoverPicker implements CoverPickerInterface
         $base = $this->clamp01($base);
 
         $weight = $travel['weight'];
+
         if ($weight <= 0.0) {
             return $this->clamp01(($base * 0.5) + 0.25);
         }
@@ -701,6 +727,7 @@ final class DefaultCoverPicker implements CoverPickerInterface
         $confidence = $this->floatOrNull($vision['primary_pose_confidence'] ?? $peopleNs['pose_confidence'] ?? null);
 
         $score = 0.5;
+
         if ($pose !== null) {
             $score = match (true) {
                 str_contains($pose, 'smil')    => 0.95,
@@ -717,6 +744,7 @@ final class DefaultCoverPicker implements CoverPickerInterface
         }
 
         $emphasis = $people['emphasis'];
+
         if ($emphasis > 0.5) {
             $score = $this->clamp01($score * (0.8 + 0.4 * $emphasis));
         }
@@ -744,11 +772,13 @@ final class DefaultCoverPicker implements CoverPickerInterface
         $penalty = 0.0;
 
         $detail = $meta['members'][$media->getId()] ?? null;
+
         if ($detail !== null && isset($detail['penalty'])) {
             $penalty = max($penalty, $detail['penalty']);
         }
 
         $phash = $this->fingerprintOrNull($media->getPhash64()) ?? $this->fingerprintOrNull($media->getPhash());
+
         if ($phash !== null) {
             $phashPenalty = $this->duplicateDistanceScore(
                 $phash,
@@ -761,6 +791,7 @@ final class DefaultCoverPicker implements CoverPickerInterface
         }
 
         $dhash = $this->fingerprintOrNull($media->getDhash());
+
         if ($dhash !== null) {
             $dhashPenalty = $this->duplicateDistanceScore(
                 $dhash,
@@ -785,17 +816,20 @@ final class DefaultCoverPicker implements CoverPickerInterface
         $count = $counts[$value] ?? 0;
 
         $penalty = 0.0;
+
         if ($count > 1) {
             $penalty = min(1.0, 0.65 + 0.1 * ($count - 2));
         }
 
         $minDistance = null;
+
         foreach ($distinct as $other) {
             if ($other === $value) {
                 continue;
             }
 
             $distance = Phash::hammingFromHex($value, $other);
+
             if ($minDistance === null || $distance < $minDistance) {
                 $minDistance = $distance;
             }

@@ -97,6 +97,7 @@ final readonly class Context
 
         foreach ($this->people as $key => $value) {
             $contextKey = 'context_' . $key;
+
             if (!array_key_exists($contextKey, $params)) {
                 $params[$contextKey] = $value;
             }
@@ -130,6 +131,7 @@ final readonly class Context
 
         foreach ($scope as $media) {
             $takenAt = $media->getTakenAt();
+
             if (!$takenAt instanceof DateTimeImmutable) {
                 continue;
             }
@@ -155,9 +157,11 @@ final readonly class Context
 
         foreach ($scope as $media) {
             $cell = $media->getS2CellId();
+
             if ($cell === null) {
                 $lat = $media->getGpsLat();
                 $lon = $media->getGpsLon();
+
                 if ($lat === null) {
                     continue;
                 }

@@ -191,9 +191,11 @@ trait MediaFilterTrait
         }
 
         $coordinates = [];
+
         foreach ($items as $media) {
             $lat = $media->getGpsLat();
             $lon = $media->getGpsLon();
+
             if ($lat === null || $lon === null) {
                 return $items;
             }
@@ -212,6 +214,7 @@ trait MediaFilterTrait
 
             foreach ($points as $idx => [$latB, $lonB]) {
                 $distance = MediaMath::haversineDistanceInMeters($latA, $lonA, $latB, $lonB);
+
                 if ($distance <= $radius) {
                     $neighbors[] = $idx;
                 }
@@ -226,14 +229,17 @@ trait MediaFilterTrait
             }
 
             $neighbors = $regionQuery($coordinates, $i, $radiusMeters);
+
             if (count($neighbors) < $minSamples) {
                 $labels[$i] = -1;
+
                 continue;
             }
 
             $labels[$i] = $clusterId;
             $queue      = $neighbors;
             $counter    = count($queue);
+
             for ($queueIndex = 0; $queueIndex < $counter; ++$queueIndex) {
                 $neighborIndex = $queue[$queueIndex];
 
@@ -259,6 +265,7 @@ trait MediaFilterTrait
         }
 
         $result = [];
+
         foreach ($items as $index => $media) {
             if ($labels[$index] !== null && $labels[$index] >= 0) {
                 $result[] = $media;

@@ -191,11 +191,13 @@ final class VacationMemberSelector implements MemberSelectorInterface
                 }
 
                 $result = $stage($attemptOptions);
+
                 if ($result === null) {
                     continue;
                 }
 
                 $attemptOptions = $result['options'];
+
                 foreach ($result['changes'] as $change) {
                     $relaxations[] = $change;
 
@@ -219,6 +221,7 @@ final class VacationMemberSelector implements MemberSelectorInterface
         $finalTelemetry['minimum_total_met'] = count($finalMembers) >= $minimumTotal;
 
         $thresholds = $finalTelemetry['thresholds'] ?? null;
+
         if (is_array($thresholds)) {
             $thresholds['spacing_relaxed_to_zero'] = (bool) ($thresholds['spacing_relaxed_to_zero'] ?? false) || $spacingRelaxedToZero;
             $thresholds['phash_relaxed_to_zero']   = (bool) ($thresholds['phash_relaxed_to_zero'] ?? false) || $phashRelaxedToZero;
@@ -243,6 +246,7 @@ final class VacationMemberSelector implements MemberSelectorInterface
     private function maybeLogRelaxedThresholds(array $telemetry): void
     {
         $thresholds = $telemetry['thresholds'] ?? null;
+
         if (!is_array($thresholds)) {
             return;
         }
@@ -268,6 +272,7 @@ final class VacationMemberSelector implements MemberSelectorInterface
         ];
 
         $relaxations = $telemetry['relaxations'] ?? null;
+
         if (is_array($relaxations)) {
             $context['relaxations'] = $relaxations;
         }
@@ -287,29 +292,35 @@ final class VacationMemberSelector implements MemberSelectorInterface
         $tag    = null;
 
         $run = $telemetry['run'] ?? null;
+
         if (is_array($run)) {
             $candidateId = $run['id'] ?? null;
+
             if (is_string($candidateId) || is_int($candidateId)) {
                 $runId = $candidateId;
             }
 
             $candidateTag = $run['tag'] ?? null;
+
             if (is_string($candidateTag)) {
                 $runTag = $candidateTag;
             }
         }
 
         $directId = $telemetry['run_id'] ?? null;
+
         if ($runId === null && (is_string($directId) || is_int($directId))) {
             $runId = $directId;
         }
 
         $directTag = $telemetry['run_tag'] ?? null;
+
         if ($runTag === null && is_string($directTag)) {
             $runTag = $directTag;
         }
 
         $tagCandidate = $telemetry['tag'] ?? null;
+
         if (is_string($tagCandidate)) {
             $tag = $tagCandidate;
         }
@@ -384,6 +395,7 @@ final class VacationMemberSelector implements MemberSelectorInterface
         }
 
         $filtered = $this->prefilter($daySummaries, $options);
+
         if ($filtered['unique'] === [] && $filtered['fallback'] === []) {
             return [[], $this->telemetry];
         }
@@ -396,11 +408,13 @@ final class VacationMemberSelector implements MemberSelectorInterface
 
         $runDays      = count($dayOrder);
         $rawPerDayCap = $runDays > 0 ? (int) ceil($options->targetTotal / $runDays) : 1;
+
         if ($rawPerDayCap < 1) {
             $rawPerDayCap = 1;
         }
 
         $basePerDayCap = min($options->maxPerDay, $rawPerDayCap);
+
         if ($basePerDayCap < 1) {
             $basePerDayCap = 1;
         }
@@ -412,6 +426,7 @@ final class VacationMemberSelector implements MemberSelectorInterface
         $samples             = $this->samplePhashDistances($primaryByDay, $fallbackByDay, $options);
         $samplesForTelemetry = $samples;
         sort($samplesForTelemetry);
+
         if (count($samplesForTelemetry) > 50) {
             $samplesForTelemetry = array_slice($samplesForTelemetry, 0, 50);
         }
@@ -478,6 +493,7 @@ final class VacationMemberSelector implements MemberSelectorInterface
         usort($selected, $this->compareCandidates(...));
 
         $members = [];
+
         foreach ($selected as $item) {
             $members[] = $item['media'];
         }
@@ -578,6 +594,7 @@ final class VacationMemberSelector implements MemberSelectorInterface
                 }
 
                 $qualityScore = $media->getQualityScore();
+
                 if ($qualityScore !== null && $qualityScore < $options->qualityFloor) {
                     ++$this->telemetry['prefilter_quality_floor'];
 
@@ -640,6 +657,7 @@ final class VacationMemberSelector implements MemberSelectorInterface
 
             foreach ($accepted as $entry) {
                 $burstId = $entry['burstId'];
+
                 if ($burstId !== null) {
                     $finalizeSynthetic();
 
@@ -654,6 +672,7 @@ final class VacationMemberSelector implements MemberSelectorInterface
                     }
 
                     $burstGroups[$burstId]['members'][] = $entry['media'];
+
                     if ($entry['timestamp'] < $burstGroups[$burstId]['timestamp']) {
                         $burstGroups[$burstId]['timestamp'] = $entry['timestamp'];
                     }
@@ -672,6 +691,7 @@ final class VacationMemberSelector implements MemberSelectorInterface
                 }
 
                 $delta = $entry['timestamp'] - $currentSynthetic['lastTimestamp'];
+
                 if ($delta <= 30) {
                     $currentSynthetic['members'][]     = $entry['media'];
                     $currentSynthetic['lastTimestamp'] = $entry['timestamp'];
@@ -731,6 +751,7 @@ final class VacationMemberSelector implements MemberSelectorInterface
 
             foreach ($groups as $group) {
                 $members = $group['members'];
+
                 if ($members === []) {
                     continue;
                 }
@@ -756,6 +777,7 @@ final class VacationMemberSelector implements MemberSelectorInterface
             }
 
             [$unique[$date], $extraFallback] = $this->consolidateSlots($unique[$date]);
+
             if ($extraFallback !== []) {
                 $fallback[$date] = array_merge($fallback[$date], $extraFallback);
             }
@@ -776,6 +798,7 @@ final class VacationMemberSelector implements MemberSelectorInterface
 
         foreach ($candidates as $candidate) {
             $slot = $candidate['slot'];
+
             if (!array_key_exists($slot, $slots)) {
                 $slots[$slot] = $candidate;
 
@@ -783,6 +806,7 @@ final class VacationMemberSelector implements MemberSelectorInterface
             }
 
             $existing = $slots[$slot];
+
             if ($candidate['score'] > $existing['score']) {
                 $slotFallback[] = $existing;
                 $slots[$slot]   = $candidate;
@@ -852,8 +876,10 @@ final class VacationMemberSelector implements MemberSelectorInterface
     {
         $ordered = [];
         $index   = 0;
+
         while (true) {
             $progress = false;
+
             foreach ($dayOrder as $day) {
                 if (!isset($candidatesByDay[$day][$index])) {
                     continue;
@@ -921,6 +947,7 @@ final class VacationMemberSelector implements MemberSelectorInterface
 
         if (is_array($context)) {
             $candidate = $context['duration'] ?? null;
+
             if (is_int($candidate)) {
                 $duration = $candidate;
             } elseif (is_string($candidate) && is_numeric($candidate)) {
@@ -951,6 +978,7 @@ final class VacationMemberSelector implements MemberSelectorInterface
     private function collectDayCategories(array $daySummaries, array $dayOrder): array
     {
         $categories = [];
+
         foreach ($dayOrder as $day) {
             $categories[$day] = $this->resolveDayCategory($daySummaries[$day] ?? null);
         }
@@ -968,8 +996,10 @@ final class VacationMemberSelector implements MemberSelectorInterface
         }
 
         $context = $summary['selectionContext'] ?? null;
+
         if (is_array($context)) {
             $candidate = $context['category'] ?? null;
+
             if (is_string($candidate) && $candidate !== '') {
                 return $candidate;
             }
@@ -981,11 +1011,13 @@ final class VacationMemberSelector implements MemberSelectorInterface
     private function resolveStaypointCap(VacationSelectionOptions $options, int $basePerDayCap): int
     {
         $half = (int) floor($basePerDayCap / 2);
+
         if ($half < 1) {
             $half = 1;
         }
 
         $cap = min($options->maxPerStaypoint, $half);
+
         if ($cap < 1) {
             return 1;
         }
@@ -1016,6 +1048,7 @@ final class VacationMemberSelector implements MemberSelectorInterface
         }
 
         $total = count($pool);
+
         if ($total < 2) {
             return [];
         }
@@ -1026,16 +1059,20 @@ final class VacationMemberSelector implements MemberSelectorInterface
         );
 
         $samples = [];
+
         for ($i = 0; $i < $total - 1; ++$i) {
             $limit = min($total - 1, $i + 5);
+
             for ($j = $i + 1; $j <= $limit; ++$j) {
                 $seconds = $this->metrics->secondsBetween($pool[$i]['media'], $pool[$j]['media']);
                 $window  = max(600, $options->minSpacingSeconds);
+
                 if ($seconds > $window) {
                     continue;
                 }
 
                 $distance = $this->metrics->phashDistance($pool[$i]['media'], $pool[$j]['media']);
+
                 if ($distance !== null) {
                     $samples[] = $distance;
                 }
@@ -1083,6 +1120,7 @@ final class VacationMemberSelector implements MemberSelectorInterface
         $day      = $candidate['day'];
         $dayCount = $dayCounts[$day] ?? 0;
         $dayCap   = $this->dayCaps[$day] ?? $this->basePerDayCap;
+
         if ($dayCount >= $dayCap) {
             ++$this->telemetry['day_limit_rejections'];
 
@@ -1090,11 +1128,14 @@ final class VacationMemberSelector implements MemberSelectorInterface
         }
 
         $duplicateIndex = $this->findDuplicate($candidate, $selected, $options);
+
         if ($duplicateIndex !== null) {
             $existing = $selected[$duplicateIndex];
+
             if ($candidate['quality'] > $existing['quality']) {
                 $this->replaceSelection($duplicateIndex, $candidate, $selected, $dayCounts, $staypointCounts, $personCounts);
                 ++$this->telemetry['near_duplicate_replacements'];
+
                 if ($fromFallback) {
                     ++$this->telemetry['fallback_used'];
                 }
@@ -1108,8 +1149,10 @@ final class VacationMemberSelector implements MemberSelectorInterface
         }
 
         $staypointKey = $candidate['staypointKey'];
+
         if ($staypointKey !== null) {
             $currentStaypointCount = $staypointCounts[$staypointKey] ?? 0;
+
             if ($currentStaypointCount >= $this->effectiveMaxPerStaypoint) {
                 ++$this->telemetry['staypoint_rejections'];
 
@@ -1132,6 +1175,7 @@ final class VacationMemberSelector implements MemberSelectorInterface
         }
 
         $balanced = $this->applyPeopleBalancing($candidate, $selected, $personCounts, $options);
+
         if ($balanced === null) {
             return false;
         }
@@ -1140,6 +1184,7 @@ final class VacationMemberSelector implements MemberSelectorInterface
 
         $selected[]      = $candidate;
         $dayCounts[$day] = $dayCount + 1;
+
         if ($staypointKey !== null) {
             $staypointCounts[$staypointKey] = ($staypointCounts[$staypointKey] ?? 0) + 1;
         }
@@ -1171,6 +1216,7 @@ final class VacationMemberSelector implements MemberSelectorInterface
         $removed                = $selected[$index];
         $removedDay             = $removed['day'];
         $dayCounts[$removedDay] = max(0, ($dayCounts[$removedDay] ?? 1) - 1);
+
         if ($removed['staypointKey'] !== null) {
             $key                   = $removed['staypointKey'];
             $staypointCounts[$key] = max(0, ($staypointCounts[$key] ?? 1) - 1);
@@ -1180,6 +1226,7 @@ final class VacationMemberSelector implements MemberSelectorInterface
 
         $selected[$index]             = $candidate;
         $dayCounts[$candidate['day']] = ($dayCounts[$candidate['day']] ?? 0) + 1;
+
         if ($candidate['staypointKey'] !== null) {
             $key                   = $candidate['staypointKey'];
             $staypointCounts[$key] = ($staypointCounts[$key] ?? 0) + 1;
@@ -1207,6 +1254,7 @@ final class VacationMemberSelector implements MemberSelectorInterface
 
         /** @var list<string> $persons */
         $persons = $candidate['persons'] ?? [];
+
         if ($persons === []) {
             return $candidate;
         }
@@ -1214,6 +1262,7 @@ final class VacationMemberSelector implements MemberSelectorInterface
         ++$this->telemetry['people_balance_considered'];
 
         $weight = $options->peopleBalanceWeight;
+
         if ($weight < 0.0) {
             $weight = 0.0;
         } elseif ($weight > 1.0) {
@@ -1222,19 +1271,23 @@ final class VacationMemberSelector implements MemberSelectorInterface
 
         $nextIndex = count($selected) + 1;
         $limit     = $weight <= 0.0 ? 1 : (int) ceil($nextIndex * $weight);
+
         if ($limit < 1) {
             $limit = 1;
         }
 
         $dominantCount = 0;
+
         foreach ($persons as $person) {
             $current = $personCounts[$person] ?? 0;
+
             if ($current > $dominantCount) {
                 $dominantCount = $current;
             }
         }
 
         $projectedCount = $dominantCount + 1;
+
         if ($projectedCount > $limit) {
             ++$this->telemetry['people_balance_rejected'];
 
@@ -1242,14 +1295,17 @@ final class VacationMemberSelector implements MemberSelectorInterface
         }
 
         $maxOverlap = 0.0;
+
         foreach ($selected as $existing) {
             $overlap = $this->metrics->personOverlap($candidate['media'], $existing['media']);
+
             if ($overlap > $maxOverlap) {
                 $maxOverlap = $overlap;
             }
         }
 
         $shareRatio = $dominantCount / (float) $limit;
+
         if ($shareRatio > 1.0) {
             $shareRatio = 1.0;
         }
@@ -1258,6 +1314,7 @@ final class VacationMemberSelector implements MemberSelectorInterface
 
         if ($options->repeatPenalty !== 0.0 && $overlapFactor > 0.0) {
             $adjustment = -$options->repeatPenalty * $overlapFactor;
+
             if ($adjustment < 0.0) {
                 ++$this->telemetry['people_balance_penalized'];
             } elseif ($adjustment > 0.0) {
@@ -1291,6 +1348,7 @@ final class VacationMemberSelector implements MemberSelectorInterface
     {
         /** @var list<string> $persons */
         $persons = $candidate['persons'] ?? [];
+
         if ($persons === []) {
             return;
         }
@@ -1308,12 +1366,14 @@ final class VacationMemberSelector implements MemberSelectorInterface
     {
         /** @var list<string> $persons */
         $persons = $candidate['persons'] ?? [];
+
         if ($persons === []) {
             return;
         }
 
         foreach ($persons as $person) {
             $current = $personCounts[$person] ?? 0;
+
             if ($current <= 1) {
                 unset($personCounts[$person]);
 
@@ -1340,11 +1400,13 @@ final class VacationMemberSelector implements MemberSelectorInterface
             }
 
             $distance = $this->metrics->phashDistance($candidate['media'], $existing['media']);
+
             if ($distance !== null && $distance <= $this->effectivePhashMin) {
                 return $index;
             }
 
             $seconds = $this->metrics->secondsBetween($candidate['media'], $existing['media']);
+
             if ($seconds <= max(300, $options->minSpacingSeconds)) {
                 return $index;
             }
@@ -1376,6 +1438,7 @@ final class VacationMemberSelector implements MemberSelectorInterface
     private function selectBurstRepresentative(array $members): Media
     {
         $best = $members[0];
+
         foreach ($members as $member) {
             if ($member->isBurstRepresentative() === true) {
                 $best = $member;
@@ -1422,6 +1485,7 @@ final class VacationMemberSelector implements MemberSelectorInterface
         $score     = $this->scoreMedia($media, $options, $quality);
         $staypoint = null;
         $index     = $summary['staypointIndex'] ?? null;
+
         if ($index instanceof StaypointIndex) {
             $staypoint = $index->get($media);
         } else {
@@ -1452,6 +1516,7 @@ final class VacationMemberSelector implements MemberSelectorInterface
     private function computeSlot(Media $media, array $summary, VacationSelectionOptions $options, int $timestamp): int
     {
         $timezoneIdentifier = $summary['localTimezoneIdentifier'] ?? 'UTC';
+
         try {
             $timezone = new DateTimeZone($timezoneIdentifier);
         } catch (Throwable) {
@@ -1514,6 +1579,7 @@ final class VacationMemberSelector implements MemberSelectorInterface
     private function resolveTimestamp(Media $media): int
     {
         $takenAt = $media->getTakenAt();
+
         if ($takenAt instanceof DateTimeImmutable) {
             return $takenAt->getTimestamp();
         }

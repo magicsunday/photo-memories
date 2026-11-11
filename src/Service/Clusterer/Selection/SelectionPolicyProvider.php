@@ -93,6 +93,7 @@ final class SelectionPolicyProvider
         $config = $this->profiles[$profileKey];
 
         $constraintResolution = $this->resolveConstraintOverrides($profileKey, $runLengthDays);
+
         if ($constraintResolution['values'] !== []) {
             $config = array_merge($config, $constraintResolution['values']);
         }
@@ -159,6 +160,7 @@ final class SelectionPolicyProvider
     private function finalizeConfig(array $config): array
     {
         $targetTotal = $config['target_total'] ?? null;
+
         if (is_int($targetTotal)) {
             $targetTotal            = $this->clampTargetTotal($targetTotal);
             $config['target_total'] = $targetTotal;
@@ -167,6 +169,7 @@ final class SelectionPolicyProvider
         }
 
         $minimumTotal = $config['minimum_total'] ?? null;
+
         if (is_int($minimumTotal)) {
             $minimumTotal = $this->clampTargetTotal($minimumTotal);
 
@@ -190,6 +193,7 @@ final class SelectionPolicyProvider
     {
         if (array_key_exists('target_total', $overrides)) {
             $target = $config['target_total'] ?? null;
+
             if (is_int($target)) {
                 $overrides['target_total'] = $target;
             } else {
@@ -199,6 +203,7 @@ final class SelectionPolicyProvider
 
         if (array_key_exists('minimum_total', $overrides)) {
             $minimum = $config['minimum_total'] ?? null;
+
             if (is_int($minimum)) {
                 $overrides['minimum_total'] = $minimum;
             } else {
@@ -246,6 +251,7 @@ final class SelectionPolicyProvider
         }
 
         $metadata = [];
+
         if ($runLengthDays !== null) {
             $metadata['run_length_days'] = $runLengthDays;
         }
@@ -308,6 +314,7 @@ final class SelectionPolicyProvider
             }
 
             $sanitised = [];
+
             foreach ($mapping as $storyline => $profileKey) {
                 if ($storyline === '') {
                     continue;
@@ -322,6 +329,7 @@ final class SelectionPolicyProvider
 
             if (isset($mapping[self::DEFAULT_STORYLINE])) {
                 $defaultProfile = $mapping[self::DEFAULT_STORYLINE];
+
                 if ($defaultProfile !== '') {
                     $sanitised[self::DEFAULT_STORYLINE] = $defaultProfile;
                 }
@@ -361,6 +369,7 @@ final class SelectionPolicyProvider
         }
 
         $fallback = reset($mapping);
+
         if (is_string($fallback) && $fallback !== '') {
             $this->guardProfileExists($fallback, $algorithm);
 
@@ -389,14 +398,17 @@ final class SelectionPolicyProvider
         }
 
         $trimmed = trim($storyline);
+
         if ($trimmed === '') {
             return [];
         }
 
         $candidates = [$trimmed];
+
         if (str_contains($trimmed, '.')) {
             $parts  = explode('.', $trimmed);
             $suffix = end($parts);
+
             if ($suffix !== '' && $suffix !== $trimmed) {
                 $candidates[] = $suffix;
             }
@@ -504,6 +516,7 @@ final class SelectionPolicyProvider
             }
 
             $value = $config[$key];
+
             if (is_int($value)) {
                 $sanitised[$key] = $value;
 
@@ -533,6 +546,7 @@ final class SelectionPolicyProvider
             }
 
             $value = $definition[$boolKey];
+
             if (is_bool($value)) {
                 $overrides[$boolKey] = $value;
 
@@ -541,6 +555,7 @@ final class SelectionPolicyProvider
 
             if (is_string($value)) {
                 $normalised = strtolower(trim($value));
+
                 if ($normalised === 'true' || $normalised === '1') {
                     $overrides[$boolKey] = true;
 
@@ -559,6 +574,7 @@ final class SelectionPolicyProvider
             }
 
             $value = $definition[$floatKey];
+
             if (is_float($value) || is_int($value)) {
                 $overrides[$floatKey] = (float) $value;
 
@@ -576,6 +592,7 @@ final class SelectionPolicyProvider
             }
 
             $value = $definition[$intKey];
+
             if (is_int($value)) {
                 $overrides[$intKey] = $value;
 
@@ -602,6 +619,7 @@ final class SelectionPolicyProvider
         }
 
         $value = $config[$key];
+
         if ($value === null) {
             return null;
         }
@@ -611,6 +629,7 @@ final class SelectionPolicyProvider
         }
 
         $weights = [];
+
         foreach ($value as $bucket => $weight) {
             if ($bucket === '') {
                 continue;
@@ -635,6 +654,7 @@ final class SelectionPolicyProvider
         }
 
         $value = $source[$key];
+
         if ($value === null) {
             return;
         }
@@ -661,6 +681,7 @@ final class SelectionPolicyProvider
         }
 
         $value = $source[$key];
+
         if ($value === null) {
             $target[$key] = null;
 
@@ -689,6 +710,7 @@ final class SelectionPolicyProvider
         }
 
         $value = $source[$key];
+
         if ($value === null) {
             return;
         }
@@ -715,6 +737,7 @@ final class SelectionPolicyProvider
         }
 
         $value = $source[$key];
+
         if ($value === null) {
             $target[$key] = null;
 
@@ -742,6 +765,7 @@ final class SelectionPolicyProvider
         }
 
         $value = $config[$key];
+
         if (is_int($value)) {
             return $value;
         }
@@ -763,6 +787,7 @@ final class SelectionPolicyProvider
         }
 
         $value = $config[$key];
+
         if (is_float($value) || is_int($value)) {
             return (float) $value;
         }
@@ -780,6 +805,7 @@ final class SelectionPolicyProvider
     private function intValue(array $config, string $key): int
     {
         $value = $config[$key] ?? null;
+
         if (!is_int($value)) {
             throw new InvalidArgumentException('Configuration value ' . $key . ' must be int.');
         }
@@ -793,6 +819,7 @@ final class SelectionPolicyProvider
     private function intOrNull(array $config, string $key): ?int
     {
         $value = $config[$key] ?? null;
+
         if ($value === null) {
             return null;
         }
@@ -810,6 +837,7 @@ final class SelectionPolicyProvider
     private function floatValue(array $config, string $key): float
     {
         $value = $config[$key] ?? null;
+
         if (!is_float($value) && !is_int($value)) {
             throw new InvalidArgumentException('Configuration value ' . $key . ' must be numeric.');
         }
@@ -823,6 +851,7 @@ final class SelectionPolicyProvider
     private function floatOrNull(array $config, string $key): ?float
     {
         $value = $config[$key] ?? null;
+
         if ($value === null) {
             return null;
         }

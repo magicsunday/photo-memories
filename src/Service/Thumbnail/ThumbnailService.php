@@ -190,6 +190,7 @@ class ThumbnailService implements ThumbnailServiceInterface
 
             $results       = [];
             $generatedKeys = [];
+
             foreach ($sizes as $size) {
                 $targetDimension = min($size, $maxSourceDimension);
 
@@ -332,9 +333,11 @@ class ThumbnailService implements ThumbnailServiceInterface
 
         if (!$src instanceof GdImage) {
             $data = @file_get_contents($filepath);
+
             if ($data === false) {
                 throw new RuntimeException(
-                    sprintf('Unable to read image data from "%s" for thumbnail generation.', $filepath));
+                    sprintf('Unable to read image data from "%s" for thumbnail generation.', $filepath)
+                );
             }
 
             // Fall back to the generic loader which can infer the format from the binary data.
@@ -343,7 +346,8 @@ class ThumbnailService implements ThumbnailServiceInterface
 
         if (!$src instanceof GdImage) {
             throw new RuntimeException(
-                sprintf('Unable to create GD image from "%s".', $filepath));
+                sprintf('Unable to create GD image from "%s".', $filepath)
+            );
         }
 
         if ($this->applyOrientation) {
@@ -358,6 +362,7 @@ class ThumbnailService implements ThumbnailServiceInterface
         try {
             $results       = [];
             $generatedKeys = [];
+
             foreach ($sizes as $size) {
                 $targetDimension = min($size, $maxSourceDimension);
 
@@ -405,6 +410,7 @@ class ThumbnailService implements ThumbnailServiceInterface
                     }
 
                     $resampleResult = imagecopyresampled($dst, $src, 0, 0, 0, 0, $newWidth, $newHeight, $width, $height);
+
                     if ($resampleResult === false) {
                         throw new RuntimeException('Unable to resample image for thumbnail.');
                     }
@@ -417,7 +423,8 @@ class ThumbnailService implements ThumbnailServiceInterface
 
                 if ($writeResult === false) {
                     throw new RuntimeException(
-                        sprintf('Unable to create thumbnail at path "%s".', $out));
+                        sprintf('Unable to create thumbnail at path "%s".', $out)
+                    );
                 }
 
                 $results[$targetDimension] = $out;
@@ -580,6 +587,7 @@ class ThumbnailService implements ThumbnailServiceInterface
     private function rotateImage(GdImage $image, float $degrees): GdImage
     {
         $rotated = imagerotate($image, $degrees, 0);
+
         if ($rotated === false) {
             return $image;
         }

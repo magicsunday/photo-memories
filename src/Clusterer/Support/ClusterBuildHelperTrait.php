@@ -62,6 +62,7 @@ trait ClusterBuildHelperTrait
 
         foreach ($members as $m) {
             $ts = $m->getTakenAt()?->getTimestamp();
+
             if ($ts !== null) {
                 if ($ts < $from) {
                     $from = $ts;
@@ -102,6 +103,7 @@ trait ClusterBuildHelperTrait
 
         foreach ($members as $media) {
             $tags = $media->getSceneTags();
+
             if ($tags === null) {
                 continue;
             }
@@ -117,6 +119,7 @@ trait ClusterBuildHelperTrait
                 }
 
                 $entry = $sceneScores[$label] ?? ['score' => 0.0, 'count' => 0];
+
                 if ($value > $entry['score']) {
                     $entry['score'] = $value;
                 }
@@ -128,11 +131,13 @@ trait ClusterBuildHelperTrait
 
         /** @var list<array{label: string, score: float}> $sceneTags */
         $sceneTags = [];
+
         if ($sceneScores !== []) {
             uasort(
                 $sceneScores,
                 static function (array $a, array $b): int {
                     $scoreCmp = $b['score'] <=> $a['score'];
+
                     if ($scoreCmp !== 0) {
                         return $scoreCmp;
                     }
@@ -153,8 +158,10 @@ trait ClusterBuildHelperTrait
 
         /** @var array<string, array{label: string, count: int}> $keywordStats */
         $keywordStats = [];
+
         foreach ($members as $media) {
             $keywords = $media->getKeywords();
+
             if ($keywords === null) {
                 continue;
             }
@@ -165,12 +172,14 @@ trait ClusterBuildHelperTrait
                 }
 
                 $trimmed = trim($keyword);
+
                 if ($trimmed === '') {
                     continue;
                 }
 
                 $normalized = mb_strtolower($trimmed);
                 $entry      = $keywordStats[$normalized] ?? ['label' => $trimmed, 'count' => 0];
+
                 if ($entry['label'] === '') {
                     $entry['label'] = $trimmed;
                 }
@@ -182,11 +191,13 @@ trait ClusterBuildHelperTrait
 
         /** @var list<string> $keywords */
         $keywords = [];
+
         if ($keywordStats !== []) {
             uasort(
                 $keywordStats,
                 static function (array $a, array $b): int {
                     $countCmp = $b['count'] <=> $a['count'];
+
                     if ($countCmp !== 0) {
                         return $countCmp;
                     }
@@ -203,6 +214,7 @@ trait ClusterBuildHelperTrait
         }
 
         $result = [];
+
         if ($sceneTags !== []) {
             $result['scene_tags'] = $sceneTags;
         }

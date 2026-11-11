@@ -99,6 +99,7 @@ final readonly class FeedPersonalizationProfile
         }
 
         $adjusted = $score;
+
         if ($ageInDays <= $this->recentDays) {
             $adjusted += $this->recentScoreBonus;
         }

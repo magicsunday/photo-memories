@@ -94,33 +94,40 @@ trait SelectionOverrideInputTrait
         $overrides = [];
 
         $targetTotal = $this->parseIntOption($input->getOption('sel-target-total'), 1, 'sel-target-total');
+
         if ($targetTotal !== null) {
             $overrides['target_total'] = $targetTotal;
         }
 
         $maxPerDay = $this->parseIntOption($input->getOption('sel-max-per-day'), 1, 'sel-max-per-day');
+
         if ($maxPerDay !== null) {
             $overrides['max_per_day'] = $maxPerDay;
         }
 
         $timeSlot = $this->parseFloatOption($input->getOption('sel-time-slot'), 0.1, 'sel-time-slot');
+
         if ($timeSlot !== null) {
             $overrides['time_slot_hours'] = $timeSlot;
         }
 
         $minSpacing = $this->parseIntOption($input->getOption('sel-min-spacing'), 0, 'sel-min-spacing');
+
         if ($minSpacing !== null) {
             $overrides['min_spacing_seconds'] = $minSpacing;
         }
 
         $phash = $this->parseIntOption($input->getOption('sel-phash-hamming'), 0, 'sel-phash-hamming');
+
         if ($phash !== null) {
             $overrides['phash_min_hamming'] = $phash;
         }
 
         $maxStaypointRaw = $input->getOption('sel-max-staypoint');
+
         if ($maxStaypointRaw !== null && $maxStaypointRaw !== '') {
             $maxStaypoint = $this->parseIntOption($maxStaypointRaw, 0, 'sel-max-staypoint');
+
             if ($maxStaypoint === 0) {
                 $overrides['max_per_staypoint']         = null;
                 $overrides['max_per_staypoint_relaxed'] = null;
@@ -131,16 +138,19 @@ trait SelectionOverrideInputTrait
         }
 
         $videoBonus = $this->parseFloatOption($input->getOption('sel-video-bonus'), 0.0, 'sel-video-bonus');
+
         if ($videoBonus !== null) {
             $overrides['video_bonus'] = $videoBonus;
         }
 
         $faceBonus = $this->parseFloatOption($input->getOption('sel-face-bonus'), 0.0, 'sel-face-bonus');
+
         if ($faceBonus !== null) {
             $overrides['face_bonus'] = $faceBonus;
         }
 
         $selfiePenalty = $this->parseFloatOption($input->getOption('sel-selfie-penalty'), 0.0, 'sel-selfie-penalty');
+
         if ($selfiePenalty !== null) {
             $overrides['selfie_penalty'] = $selfiePenalty;
         }

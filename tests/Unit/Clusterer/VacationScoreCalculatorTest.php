@@ -82,6 +82,7 @@ final class VacationScoreCalculatorTest extends TestCase
         $start    = new DateTimeImmutable('2024-04-01 09:00:00');
         $days     = [];
         $poiTypes = ['museum', 'park', 'aquarium'];
+
         for ($i = 0; $i < 3; ++$i) {
             $dayDate     = $start->add(new DateInterval('P' . $i . 'D'));
             $dayLocation = clone $lisbonLocation;
@@ -99,6 +100,7 @@ final class VacationScoreCalculatorTest extends TestCase
             $firstMember  = $members[0];
             $startTime    = $firstMember->getTakenAt();
             $dwellSeconds = 14400 + ($i * 1800);
+
             if ($startTime instanceof DateTimeImmutable) {
                 $lat          = $firstMember->getGpsLat() ?? 38.7223;
                 $lon          = $firstMember->getGpsLon() ?? -9.1393;
@@ -212,6 +214,7 @@ final class VacationScoreCalculatorTest extends TestCase
         self::assertIsArray($quality['ordered']);
         $qualitySummary = $quality['summary'] ?? [];
         self::assertIsArray($qualitySummary);
+
         foreach ($dayKeys as $dayKey) {
             self::assertArrayHasKey($dayKey, $qualitySummary['selection_per_day_distribution']);
             self::assertLessThanOrEqual(
@@ -287,6 +290,7 @@ final class VacationScoreCalculatorTest extends TestCase
         $start    = new DateTimeImmutable('2024-04-01 09:00:00');
         $days     = [];
         $poiTypes = ['museum', 'park', 'aquarium'];
+
         for ($i = 0; $i < 3; ++$i) {
             $dayDate     = $start->add(new DateInterval('P' . $i . 'D'));
             $dayLocation = clone $lisbonLocation;
@@ -322,6 +326,7 @@ final class VacationScoreCalculatorTest extends TestCase
         self::assertSame('vacation.extended', $baselineParams['storyline']);
 
         $transitDays = $days;
+
         foreach ($transitDays as $index => &$summary) {
             if ($index === $dayKeys[1]) {
                 $summary['hasHighSpeedTransit'] = true;
@@ -1314,6 +1319,7 @@ final class VacationScoreCalculatorTest extends TestCase
         $start   = new DateTimeImmutable('2024-05-10 09:00:00');
         $days    = [];
         $dayKeys = [];
+
         for ($i = 0; $i < 2; ++$i) {
             $dayDate   = $start->add(new DateInterval('P' . $i . 'D'));
             $members   = $this->makeMembersForDay(10 + $i, $dayDate, 3);
@@ -1324,6 +1330,7 @@ final class VacationScoreCalculatorTest extends TestCase
             $firstMember  = $members[0];
             $startTime    = $firstMember->getTakenAt();
             $dwellSeconds = 10800 + ($i * 900);
+
             if ($startTime instanceof DateTimeImmutable) {
                 $lat          = $firstMember->getGpsLat() ?? 41.3874;
                 $lon          = $firstMember->getGpsLon() ?? 2.1686;
@@ -1541,10 +1548,12 @@ final class VacationScoreCalculatorTest extends TestCase
         $start   = new DateTimeImmutable('2024-07-12 08:30:00');
         $days    = [];
         $dayKeys = [];
+
         for ($i = 0; $i < 2; ++$i) {
             $dayDate    = $start->add(new DateInterval('P' . $i . 'D'));
             $members    = $this->makeMembersForDay(30 + $i, $dayDate, 3);
             $gpsMembers = [];
+
             foreach ($members as $index => $member) {
                 $takenAt      = $member->getTakenAt();
                 $gpsMembers[] = $this->makeMediaFixture(
@@ -1562,6 +1571,7 @@ final class VacationScoreCalculatorTest extends TestCase
             $firstMember  = $members[0];
             $startTime    = $firstMember->getTakenAt();
             $dwellSeconds = 12600 + ($i * 600);
+
             if ($startTime instanceof DateTimeImmutable) {
                 $lat          = $firstMember->getGpsLat() ?? 48.2082;
                 $lon          = $firstMember->getGpsLon() ?? 16.3738;
@@ -1654,6 +1664,7 @@ final class VacationScoreCalculatorTest extends TestCase
         $start   = new DateTimeImmutable('2024-06-05 09:00:00');
         $days    = [];
         $dayKeys = [];
+
         for ($i = 0; $i < 3; ++$i) {
             $dayDate   = $start->add(new DateInterval('P' . $i . 'D'));
             $members   = $this->makeMembersForDay(20 + $i, $dayDate, 3, $lisbonLocation);
@@ -1664,6 +1675,7 @@ final class VacationScoreCalculatorTest extends TestCase
             $firstMember  = $members[0];
             $startTime    = $firstMember->getTakenAt();
             $dwellSeconds = 13200 + ($i * 900);
+
             if ($startTime instanceof DateTimeImmutable) {
                 $lat          = $firstMember->getGpsLat() ?? 38.7223;
                 $lon          = $firstMember->getGpsLon() ?? -9.1393;
@@ -2050,11 +2062,13 @@ final class VacationScoreCalculatorTest extends TestCase
         /** @var array<int, Media> $mediaIndex */
         $mediaIndex = [];
         $dayCount   = 4;
+
         for ($i = 0; $i < $dayCount; ++$i) {
             $dayDate   = $start->add(new DateInterval('P' . $i . 'D'));
             $members   = $this->makeMembersForDay($i, $dayDate, 7);
             $dayKey    = $dayDate->format('Y-m-d');
             $dayKeys[] = $dayKey;
+
             foreach ($members as $member) {
                 $mediaIndex[$member->getId()] = $member;
             }
@@ -2089,14 +2103,17 @@ final class VacationScoreCalculatorTest extends TestCase
 
         $expectedOrder = [];
         $perDayCounts  = [];
+
         foreach ($dayKeys as $dayKey) {
             foreach ($days[$dayKey]['members'] as $media) {
                 $perDayCounts[$dayKey] = ($perDayCounts[$dayKey] ?? 0) + 1;
+
                 if ($perDayCounts[$dayKey] > $selectionOptions->maxPerDay) {
                     continue;
                 }
 
                 $expectedOrder[] = $media->getId();
+
                 if (count($expectedOrder) >= $selectionOptions->targetTotal) {
                     break 2;
                 }
@@ -2122,8 +2139,10 @@ final class VacationScoreCalculatorTest extends TestCase
 
         $expectedDistribution = [];
         $remaining            = $selectionOptions->targetTotal;
+
         foreach ($dayKeys as $dayKey) {
             $limit = min($selectionOptions->maxPerDay, count($days[$dayKey]['members']));
+
             if ($limit > $remaining) {
                 $limit = $remaining;
             }
@@ -2271,6 +2290,7 @@ final class VacationScoreCalculatorTest extends TestCase
     {
         $items  = [];
         $baseId = 100 + ($index * 100);
+
         for ($j = 0; $j < $count; ++$j) {
             $items[] = $this->makeMediaFixture(
                 id: $baseId + $j,
@@ -2280,11 +2300,13 @@ final class VacationScoreCalculatorTest extends TestCase
                 lon: -9.1393 + ($index * 0.01) + ($j * 0.002),
                 configure: function (Media $media) use ($location): void {
                     $media->setTimezoneOffsetMin(0);
+
                     if ($location instanceof Location) {
                         $media->setLocation($location);
                     }
 
                     $media->setHasFaces(true);
+
                     if ($media->getId() % 3 === 0) {
                         $media->setPersons(['Alex']);
                     } else {

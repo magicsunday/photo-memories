@@ -101,6 +101,7 @@ final readonly class SignificantPlaceClusterStrategy implements ClusterStrategyI
             function (array $list, string $cell) use (&$visitCounts): bool {
                 /** @var array<string,bool> $days */
                 $days = [];
+
                 foreach ($list as $m) {
                     $takenAt = $m->getTakenAt();
                     assert($takenAt instanceof DateTimeImmutable);
@@ -108,6 +109,7 @@ final readonly class SignificantPlaceClusterStrategy implements ClusterStrategyI
                 }
 
                 $count = count($days);
+
                 if ($count < $this->minVisitDays) {
                     return false;
                 }
@@ -135,13 +137,16 @@ final readonly class SignificantPlaceClusterStrategy implements ClusterStrategyI
                 'time_range' => $time,
             ];
             $label = $this->locHelper->majorityLabel($list);
+
             if ($label !== null) {
                 $params['place'] = $label;
             }
 
             $poi = $this->locHelper->majorityPoiContext($list);
+
             if ($poi !== null) {
                 $params['poi_label'] = $poi['label'];
+
                 if ($poi['categoryKey'] !== null) {
                     $params['poi_category_key'] = $poi['categoryKey'];
                 }
@@ -157,11 +162,13 @@ final readonly class SignificantPlaceClusterStrategy implements ClusterStrategyI
 
             $tagMetadata = $this->collectDominantTags($list);
             $sceneTags   = $tagMetadata['scene_tags'] ?? null;
+
             if (is_array($sceneTags) && $sceneTags !== []) {
                 $params['scene_tags'] = $sceneTags;
             }
 
             $keywords = $tagMetadata['keywords'] ?? null;
+
             if (is_array($keywords) && $keywords !== []) {
                 $params['keywords'] = $keywords;
             }
@@ -170,6 +177,7 @@ final readonly class SignificantPlaceClusterStrategy implements ClusterStrategyI
             $params       = [...$params, ...$peopleParams];
 
             $qualityParams = $this->qualityAggregator->buildParams($list);
+
             foreach ($qualityParams as $qualityKey => $qualityValue) {
                 if ($qualityValue !== null) {
                     $params[$qualityKey] = $qualityValue;

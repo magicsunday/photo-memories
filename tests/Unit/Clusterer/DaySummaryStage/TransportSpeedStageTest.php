@@ -49,6 +49,7 @@ final class TransportSpeedStageTest extends TestCase
         ];
 
         $items = [];
+
         foreach ($points as $point) {
             $items[] = $this->makeMediaFixture(
                 $point['id'],
@@ -69,6 +70,7 @@ final class TransportSpeedStageTest extends TestCase
         $gps     = $summary['gpsMembers'];
 
         $gpsById = [];
+
         foreach ($gps as $media) {
             $gpsById[$media->getId()] = $media;
         }

@@ -136,12 +136,14 @@ final readonly class VacationClusterStrategy implements ClusterStrategyInterface
         $this->notifyProgress($update, $progress, $totalSteps, 'Chronologie herstellen');
 
         $configuredHome = $this->homeLocator->getConfiguredHome();
+
         if ($configuredHome !== null) {
             $this->emitConfiguredHomeWarnings($configuredHome);
         }
 
         // Determine the traveller's base location, which anchors day grouping and trip detection.
         $home = $this->homeLocator->determineHome($ordered);
+
         if ($home === null) {
             $this->emitMonitoring('skipped', [
                 'reason'            => 'no_home_location',
@@ -256,6 +258,7 @@ final readonly class VacationClusterStrategy implements ClusterStrategyInterface
                 }
 
                 $comparison = $leftTakenAt <=> $rightTakenAt;
+
                 if ($comparison !== 0) {
                     return $comparison;
                 }

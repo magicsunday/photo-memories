@@ -80,6 +80,7 @@ final readonly class MimeDetectionStage implements MediaIngestionStageInterface
 
         try {
             $value = @$this->finfo->file($path);
+
             if (is_string($value) && $value !== '') {
                 $mime = $value;
             }
@@ -89,6 +90,7 @@ final readonly class MimeDetectionStage implements MediaIngestionStageInterface
 
         if ($mime === '') {
             $value = @mime_content_type($path);
+
             if (is_string($value) && $value !== '') {
                 $mime = $value;
             }

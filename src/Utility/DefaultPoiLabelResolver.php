@@ -35,6 +35,7 @@ final readonly class DefaultPoiLabelResolver implements PoiLabelResolverInterfac
     public function __construct(?string $preferredLocale = null)
     {
         $preferredLocale = $preferredLocale !== null ? trim($preferredLocale) : null;
+
         if ($preferredLocale === '') {
             $preferredLocale = null;
         }
@@ -45,11 +46,13 @@ final readonly class DefaultPoiLabelResolver implements PoiLabelResolverInterfac
     public function preferredLabel(array $poi): ?string
     {
         $label = $this->labelFromNames($poi['names']);
+
         if ($label !== null) {
             return $label;
         }
 
         $name = $poi['name'];
+
         if ($name !== null && $name !== '') {
             return $name;
         }
@@ -63,6 +66,7 @@ final readonly class DefaultPoiLabelResolver implements PoiLabelResolverInterfac
     private function labelFromNames(array $names): ?string
     {
         $localized = $names['localized'];
+
         if ($localized !== []) {
             $preferredLocaleKey = array_find(
                 $this->preferredLocaleKeys,
@@ -77,6 +81,7 @@ final readonly class DefaultPoiLabelResolver implements PoiLabelResolverInterfac
         }
 
         $default = $names['default'];
+
         if ($default !== null && $default !== '') {
             return $default;
         }
@@ -106,6 +111,7 @@ final readonly class DefaultPoiLabelResolver implements PoiLabelResolverInterfac
         $normalized = str_replace('_', '-', $lower);
 
         $candidates = [];
+
         if ($normalized !== '') {
             $candidates[] = $normalized;
             $candidates[] = str_replace('-', '_', $normalized);
@@ -113,6 +119,7 @@ final readonly class DefaultPoiLabelResolver implements PoiLabelResolverInterfac
 
         if (str_contains($normalized, '-')) {
             $language = explode('-', $normalized)[0];
+
             if ($language !== '') {
                 $candidates[] = $language;
             }
@@ -121,8 +128,10 @@ final readonly class DefaultPoiLabelResolver implements PoiLabelResolverInterfac
         }
 
         $filtered = [];
+
         foreach ($candidates as $candidate) {
             $trimmed = trim($candidate);
+
             if ($trimmed === '') {
                 continue;
             }

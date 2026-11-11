@@ -47,6 +47,7 @@ final class SimilarityMetrics
     public function secondsBetween(Media $a, Media $b): int
     {
         $key = $this->pairKey($a, $b);
+
         if (isset($this->timeCache[$key])) {
             return $this->timeCache[$key];
         }
@@ -63,6 +64,7 @@ final class SimilarityMetrics
     public function phashDistance(Media $a, Media $b): ?int
     {
         $key = $this->pairKey($a, $b);
+
         if (array_key_exists($key, $this->phashCache)) {
             return $this->phashCache[$key];
         }
@@ -98,6 +100,7 @@ final class SimilarityMetrics
     public function geoDistanceMeters(Media $a, Media $b): ?float
     {
         $key = $this->pairKey($a, $b);
+
         if (array_key_exists($key, $this->distanceCache)) {
             return $this->distanceCache[$key];
         }
@@ -122,6 +125,7 @@ final class SimilarityMetrics
     public function personOverlap(Media $a, Media $b): float
     {
         $key = $this->pairKey($a, $b);
+
         if (isset($this->personCache[$key])) {
             return $this->personCache[$key];
         }
@@ -139,6 +143,7 @@ final class SimilarityMetrics
         $overlap = array_intersect($personsA, $personsB);
 
         $score = 0.0;
+
         if ($unique !== []) {
             $score = count($overlap) / count($unique);
         }
@@ -181,6 +186,7 @@ final class SimilarityMetrics
     private function resolveTimestamp(Media $media): int
     {
         $takenAt = $media->getTakenAt();
+
         if ($takenAt instanceof DateTimeImmutable) {
             return $takenAt->getTimestamp();
         }
@@ -192,6 +198,7 @@ final class SimilarityMetrics
     {
         $bits = 0;
         $v    = $value;
+
         while ($v > 0) {
             $bits += $v & 1;
             $v >>= 1;

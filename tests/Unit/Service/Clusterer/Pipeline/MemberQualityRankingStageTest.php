@@ -334,6 +334,7 @@ final class MemberQualityRankingStageTest extends TestCase
         $media->setColorfulness($colorfulness);
         $media->setPhash($phash);
         $media->setPhashPrefix($phash);
+
         if ($phash64 !== null) {
             $media->setPhash64($phash64);
         }
@@ -363,11 +364,16 @@ final readonly class InMemoryMediaLookup implements MemberMediaLookupInterface
     {
     }
 
+    /**
+     * @return Media[]
+     */
     public function findByIds(array $ids, bool $onlyVideos = false): array
     {
         $result = [];
+
         foreach ($ids as $id) {
             $media = $this->map[$id] ?? null;
+
             if ($media instanceof Media && $media->isNoShow() === false) {
                 $result[] = $media;
             }

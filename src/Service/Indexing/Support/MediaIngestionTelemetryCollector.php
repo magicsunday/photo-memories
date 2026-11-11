@@ -120,6 +120,7 @@ final class MediaIngestionTelemetryCollector implements MediaIngestionTelemetryI
         foreach ($this->mediaRecords as $path => $record) {
             if ($record['isVideo']) {
                 ++$videosTotal;
+
                 if (array_key_exists($path, $this->ffprobeAvailability) === false) {
                     $this->ffprobeAvailability[$path] = false;
                 }

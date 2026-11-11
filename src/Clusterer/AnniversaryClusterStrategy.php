@@ -137,6 +137,7 @@ final readonly class AnniversaryClusterStrategy implements ClusterStrategyInterf
 
         /** @var array<string, list<Media>> $byMonthDay */
         $byMonthDay = [];
+
         foreach ($timestamped as $media) {
             $takenAt = $media->getTakenAt();
             assert($takenAt instanceof DateTimeImmutable);
@@ -204,8 +205,10 @@ final readonly class AnniversaryClusterStrategy implements ClusterStrategyInterf
             ++$processed;
 
             $years = [];
+
             foreach ($group as $media) {
                 $takenAt = $media->getTakenAt();
+
                 if ($takenAt instanceof DateTimeImmutable) {
                     $year         = (int) $takenAt->format('Y');
                     $years[$year] = ($years[$year] ?? 0) + 1;
@@ -213,6 +216,7 @@ final readonly class AnniversaryClusterStrategy implements ClusterStrategyInterf
             }
 
             $distinctYears = count($years);
+
             if ($distinctYears < $this->minDistinctYears) {
                 if (($processed % $candidateNotifyThreshold) === 0 || $processed === $candidateTotal) {
                     $this->notifyProgress(
@@ -297,11 +301,13 @@ final readonly class AnniversaryClusterStrategy implements ClusterStrategyInterf
             $params = $this->appendLocationMetadata($group, $params);
 
             $tags = $this->collectDominantTags($group);
+
             if ($tags !== []) {
                 $params = [...$params, ...$tags];
             }
 
             $qualityParams = $this->qualityAggregator->buildParams($group);
+
             foreach ($qualityParams as $qualityKey => $qualityValue) {
                 if ($qualityValue !== null) {
                     $params[$qualityKey] = $qualityValue;
@@ -320,6 +326,7 @@ final readonly class AnniversaryClusterStrategy implements ClusterStrategyInterf
             );
 
             ++$enriched;
+
             if (($enriched % $metadataNotifyThreshold) === 0 || $enriched === $summaryTotal) {
                 $this->notifyProgress(
                     $update,

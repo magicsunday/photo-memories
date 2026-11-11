@@ -54,6 +54,7 @@ final class StaypointIndex
 
         foreach ($members as $media) {
             $timestamp = $media->getTakenAt()?->getTimestamp();
+
             if ($timestamp === null) {
                 continue;
             }
@@ -61,6 +62,7 @@ final class StaypointIndex
             foreach ($staypoints as $staypoint) {
                 $start = $staypoint['start'];
                 $end   = $staypoint['end'];
+
                 if ($timestamp < $start) {
                     continue;
                 }

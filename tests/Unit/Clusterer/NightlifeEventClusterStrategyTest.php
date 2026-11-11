@@ -38,6 +38,7 @@ final class NightlifeEventClusterStrategyTest extends TestCase
 
         $start = new DateTimeImmutable('2024-03-15 20:30:00', new DateTimeZone('UTC'));
         $media = [];
+
         for ($i = 0; $i < 5; ++$i) {
             $media[] = $this->createMedia(
                 610 + $i,
@@ -79,6 +80,7 @@ final class NightlifeEventClusterStrategyTest extends TestCase
 
         $start = new DateTimeImmutable('2024-03-16 23:30:00', new DateTimeZone('UTC'));
         $media = [];
+
         for ($i = 0; $i < 5; ++$i) {
             $media[] = $this->createMedia(
                 710 + $i,
@@ -143,6 +145,7 @@ final class NightlifeEventClusterStrategyTest extends TestCase
 
         $start = new DateTimeImmutable('2024-03-17 00:15:00', new DateTimeZone('UTC'));
         $media = [];
+
         for ($i = 0; $i < 5; ++$i) {
             $media[] = $this->createMedia(
                 810 + $i,
@@ -177,6 +180,7 @@ final class NightlifeEventClusterStrategyTest extends TestCase
 
         $start = new DateTimeImmutable('2024-03-18 21:00:00', new DateTimeZone('UTC'));
         $media = [];
+
         for ($i = 0; $i < 5; ++$i) {
             $media[] = $this->createMedia(
                 910 + $i,
@@ -202,6 +206,7 @@ final class NightlifeEventClusterStrategyTest extends TestCase
 
         $start = new DateTimeImmutable('2024-03-16 22:00:00', new DateTimeZone('UTC'));
         $media = [];
+
         for ($i = 0; $i < 5; ++$i) {
             $media[] = $this->createMedia(
                 1110 + $i,

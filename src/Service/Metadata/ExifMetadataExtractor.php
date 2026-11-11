@@ -66,6 +66,7 @@ final readonly class ExifMetadataExtractor implements SingleMetadataExtractorInt
     public function supports(string $filepath, Media $media): bool
     {
         $mime = $media->getMime();
+
         if ($mime === null) {
             return false;
         }

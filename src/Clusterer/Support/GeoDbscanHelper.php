@@ -40,9 +40,11 @@ final class GeoDbscanHelper
         }
 
         $points = [];
+
         foreach ($items as $media) {
             $lat = $media->getGpsLat();
             $lon = $media->getGpsLon();
+
             if ($lat === null) {
                 continue;
             }
@@ -59,6 +61,7 @@ final class GeoDbscanHelper
         }
 
         $count = count($points);
+
         if ($count === 0) {
             return ['clusters' => [], 'noise' => []];
         }
@@ -97,6 +100,7 @@ final class GeoDbscanHelper
         }
 
         $clusterList = [];
+
         foreach ($clusters as $memberList) {
             if ($memberList !== []) {
                 $clusterList[] = $memberList;
@@ -104,6 +108,7 @@ final class GeoDbscanHelper
         }
 
         $noise = [];
+
         foreach ($points as $index => $point) {
             if ($assignments[$index] === -1) {
                 $noise[] = $point['media'];

@@ -103,6 +103,7 @@ final readonly class FeedVisibilityFilter
 
         foreach ($persons as $person) {
             $normalized = $this->normaliseScalar($person);
+
             if ($normalized !== null && array_key_exists($normalized, $this->hiddenPersons)) {
                 return true;
             }
@@ -122,6 +123,7 @@ final readonly class FeedVisibilityFilter
 
         foreach ($pets as $pet) {
             $normalized = $this->normaliseScalar($pet);
+
             if ($normalized !== null && array_key_exists($normalized, $this->hiddenPets)) {
                 return true;
             }
@@ -137,6 +139,7 @@ final readonly class FeedVisibilityFilter
         }
 
         $normalized = $this->normaliseText($place);
+
         if ($normalized === null) {
             return false;
         }
@@ -155,6 +158,7 @@ final readonly class FeedVisibilityFilter
 
         foreach ($places as $place) {
             $normalized = $this->normaliseText($place);
+
             if ($normalized !== null && array_key_exists($normalized, $this->hiddenPlaces)) {
                 return true;
             }
@@ -174,6 +178,7 @@ final readonly class FeedVisibilityFilter
 
         foreach ($dates as $date) {
             $normalized = $this->normaliseDate($date);
+
             if ($normalized !== null && array_key_exists($normalized, $this->hiddenDates)) {
                 return true;
             }
@@ -193,6 +198,7 @@ final readonly class FeedVisibilityFilter
 
         foreach ($values as $value) {
             $normalized = $this->normaliseText($value);
+
             if ($normalized === null) {
                 continue;
             }
@@ -234,11 +240,13 @@ final readonly class FeedVisibilityFilter
         }
 
         $text = $this->normaliseScalar($value);
+
         if ($text === null) {
             return null;
         }
 
         $date = DateTimeImmutable::createFromFormat('Y-m-d', $text);
+
         if ($date === false) {
             return null;
         }

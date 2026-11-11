@@ -64,6 +64,7 @@ final class SeriesHighlightService
         }
 
         $years = [];
+
         foreach ($value as $candidate) {
             if (is_int($candidate)) {
                 $year = $candidate;
@@ -96,6 +97,7 @@ final class SeriesHighlightService
     private function isConsecutive(array $years): bool
     {
         $count = count($years);
+
         if ($count < 2) {
             return true;
         }
@@ -130,6 +132,7 @@ final class SeriesHighlightService
         }
 
         $count = count($years);
+
         if ($count === 1) {
             return (string) $years[0];
         }

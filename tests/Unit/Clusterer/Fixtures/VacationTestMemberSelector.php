@@ -56,13 +56,16 @@ final readonly class VacationTestMemberSelector implements MemberSelectorInterfa
 
         foreach ($dayOrder as $day) {
             $summary = $daySummaries[$day];
+
             foreach ($summary['members'] as $media) {
                 $dayCounts[$day] = ($dayCounts[$day] ?? 0) + 1;
+
                 if ($dayCounts[$day] > $perDayLimit) {
                     continue;
                 }
 
                 $members[] = $media;
+
                 if (count($members) >= $targetTotal) {
                     break 2;
                 }
@@ -81,8 +84,10 @@ final readonly class VacationTestMemberSelector implements MemberSelectorInterfa
 
         if ($this->curationFilter instanceof Closure) {
             $result = ($this->curationFilter)($members, $daySummaries, $options);
+
             if (is_array($result)) {
                 $members = $result['members'] ?? $members;
+
                 if (isset($result['telemetry']) && is_array($result['telemetry'])) {
                     $telemetry = array_merge($telemetry, $result['telemetry']);
                 }

@@ -90,6 +90,7 @@ final class NestingResolverStageTest extends TestCase
     private function createDraft(string $algorithm, array $members, float $score, ?string $classification): ClusterDraft
     {
         $params = ['score' => $score];
+
         if ($classification !== null) {
             $params['classification'] = $classification;
         }

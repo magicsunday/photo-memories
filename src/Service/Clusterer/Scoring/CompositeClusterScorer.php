@@ -87,8 +87,11 @@ final class CompositeClusterScorer
         foreach ($this->algorithmBoosts as $algorithm => $boost) {
             if ($boost <= 0.0) {
                 throw new InvalidArgumentException(
-                    sprintf('Algorithm boost must be > 0.0, got %s => %f',
-                        $algorithm, $boost)
+                    sprintf(
+                        'Algorithm boost must be > 0.0, got %s => %f',
+                        $algorithm,
+                        $boost
+                    )
                 );
             }
         }
@@ -123,6 +126,7 @@ final class CompositeClusterScorer
         }
 
         $mediaMap = $this->loadMediaMap($clusters, $progressCallback);
+
         foreach ($this->heuristics as $heuristic) {
             if ($heuristic instanceof PreferenceAwareClusterScoreHeuristicInterface) {
                 $heuristic->setFeedUserPreferences($preferences);
@@ -132,13 +136,16 @@ final class CompositeClusterScorer
         }
 
         $clusterCount = count($clusters);
+
         if ($progressCallback instanceof ClusterBuildProgressCallbackInterface) {
             $progressCallback->onStageStart(ClusterBuildProgressCallbackInterface::STAGE_SCORING, $clusterCount);
         }
 
         $rawScores = [];
+
         foreach ($clusters as $index => $cluster) {
             $weightedValues = [];
+
             foreach ($this->heuristics as $heuristic) {
                 if (!$heuristic->supports($cluster)) {
                     continue;
@@ -188,6 +195,7 @@ final class CompositeClusterScorer
             $cluster->setParam('post_norm_score', $normalised);
 
             $boost = $this->algorithmBoosts[$algorithm] ?? 1.0;
+
             if ($boost !== 1.0) {
                 $cluster->setParam('score_algorithm_boost', $boost);
             }
@@ -218,6 +226,7 @@ final class CompositeClusterScorer
     private function loadMediaMap(array $clusters, ?ClusterBuildProgressCallbackInterface $progressCallback = null): array
     {
         $ids = [];
+
         foreach ($clusters as $c) {
             foreach ($c->getMembers() as $id) {
                 $ids[$id] = true;
@@ -225,6 +234,7 @@ final class CompositeClusterScorer
         }
 
         $allIds = array_map(static fn (int $k): int => $k, array_keys($ids));
+
         if ($allIds === []) {
             return [];
         }
@@ -246,6 +256,7 @@ final class CompositeClusterScorer
                 ->setParameter('ids', $slice);
             /** @var list<Media> $rows */
             $rows = $qb->getQuery()->getResult();
+
             foreach ($rows as $m) {
                 $map[(int) $m->getId()] = $m;
             }
@@ -306,14 +317,17 @@ final class CompositeClusterScorer
         $weights = $this->weights;
 
         $algorithm = $cluster->getAlgorithm();
+
         if (isset($this->algorithmWeightOverrides[$algorithm])) {
             $overrides = $this->resolveStorylineOverrides($cluster->getStoryline(), $this->algorithmWeightOverrides[$algorithm]);
+
             if ($overrides !== []) {
                 $weights = $this->mergeWeights($weights, $overrides);
             }
         }
 
         $clusterOverrides = $cluster->getParams()['score_weight_overrides'] ?? null;
+
         if ($clusterOverrides !== null) {
             return $this->mergeWeights($weights, $clusterOverrides);
         }
@@ -342,6 +356,7 @@ final class CompositeClusterScorer
             }
 
             $weight = (float) $value;
+
             if ($weight < 0.0) {
                 continue;
             }
@@ -362,6 +377,7 @@ final class CompositeClusterScorer
         }
 
         $result = [];
+
         foreach ($overrides as $key => $value) {
             if (!is_string($key)) {
                 continue;
@@ -372,6 +388,7 @@ final class CompositeClusterScorer
             }
 
             $weight = (float) $value;
+
             if ($weight < 0.0) {
                 continue;
             }
@@ -398,6 +415,7 @@ final class CompositeClusterScorer
 
             if ($this->isFlatWeightMap($mapping)) {
                 $sanitised = $this->sanitizeWeightOverrides($mapping);
+
                 if ($sanitised === []) {
                     continue;
                 }
@@ -408,12 +426,14 @@ final class CompositeClusterScorer
             }
 
             $storylines = [];
+
             foreach ($mapping as $storyline => $storylineOverrides) {
                 if ($storyline === '') {
                     continue;
                 }
 
                 $sanitised = $this->sanitizeWeightOverrides($storylineOverrides);
+
                 if ($sanitised === []) {
                     continue;
                 }
@@ -474,14 +494,17 @@ final class CompositeClusterScorer
     private function storylineCandidates(string $storyline): array
     {
         $trimmed = trim($storyline);
+
         if ($trimmed === '' || $trimmed === self::DEFAULT_STORYLINE) {
             return [];
         }
 
         $candidates = [$trimmed];
+
         if (str_contains($trimmed, '.')) {
             $parts  = explode('.', $trimmed);
             $suffix = end($parts);
+
             if ($suffix !== '' && $suffix !== $trimmed) {
                 $candidates[] = $suffix;
             }
@@ -513,11 +536,13 @@ final class CompositeClusterScorer
         }
 
         $grouped = [];
+
         foreach ($rawScores as $entry) {
             $grouped[$entry['algorithm']][] = $entry['score'];
         }
 
         $distributions = [];
+
         foreach ($grouped as $algorithm => $scores) {
             sort($scores);
 
@@ -539,6 +564,7 @@ final class CompositeClusterScorer
     private function quantile(array $sorted, float $q): float
     {
         $count = count($sorted);
+
         if ($count === 0) {
             return 0.0;
         }

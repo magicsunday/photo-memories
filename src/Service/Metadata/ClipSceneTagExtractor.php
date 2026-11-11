@@ -54,6 +54,7 @@ final readonly class ClipSceneTagExtractor implements SingleMetadataExtractorInt
         }
 
         $mime = $media->getMime();
+
         if ($mime === null) {
             return true;
         }
@@ -66,6 +67,7 @@ final readonly class ClipSceneTagExtractor implements SingleMetadataExtractorInt
         $predictions = $this->model->predict($filepath, $media);
 
         $tags = $this->selectTopTags($predictions);
+
         if ($tags === []) {
             $media->setSceneTags(null);
 
@@ -112,6 +114,7 @@ final readonly class ClipSceneTagExtractor implements SingleMetadataExtractorInt
             }
 
             $value = $score;
+
             if ($value < $this->minScore) {
                 continue;
             }

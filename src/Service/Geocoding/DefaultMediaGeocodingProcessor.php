@@ -71,6 +71,7 @@ final readonly class DefaultMediaGeocodingProcessor implements MediaGeocodingPro
             }
 
             $networkCallsForMedia = $this->linker->consumeLastNetworkCalls();
+
             if ($networkCallsForMedia > 0) {
                 $networkCalls += $networkCallsForMedia;
 

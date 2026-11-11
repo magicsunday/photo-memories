@@ -51,6 +51,7 @@ final readonly class LocalizedDateFormatter
     public function formatDate(mixed $timestamp, string $locale = 'de'): string
     {
         $ts = $this->scalarToInt($timestamp);
+
         if ($ts <= 0) {
             return '';
         }
@@ -72,6 +73,7 @@ final readonly class LocalizedDateFormatter
 
         $from = $this->scalarToInt($range['from']);
         $to   = $this->scalarToInt($range['to']);
+
         if ($from <= 0 || $to <= 0) {
             return '';
         }
@@ -210,8 +212,10 @@ final readonly class LocalizedDateFormatter
         $canonical ??= 'de_DE';
 
         $segments = explode('_', str_replace('-', '_', $canonical));
+
         if (count($segments) === 1) {
             $lang = $segments[0];
+
             if (in_array($lang, ['de', 'en', 'fr', 'it', 'es'], true)) {
                 return $lang . '_' . strtoupper($lang);
             }

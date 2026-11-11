@@ -53,6 +53,7 @@ final class GeoHash
         while (strlen($geohash) < $precision) {
             if ($isEven) {
                 $mid = ($lonInterval[0] + $lonInterval[1]) / 2.0;
+
                 if ($longitude >= $mid) {
                     $ch |= 1 << (4 - $bit);
                     $lonInterval[0] = $mid;
@@ -61,6 +62,7 @@ final class GeoHash
                 }
             } else {
                 $mid = ($latInterval[0] + $latInterval[1]) / 2.0;
+
                 if ($latitude >= $mid) {
                     $ch |= 1 << (4 - $bit);
                     $latInterval[0] = $mid;
@@ -73,6 +75,7 @@ final class GeoHash
 
             if ($bit < 4) {
                 ++$bit;
+
                 continue;
             }
 

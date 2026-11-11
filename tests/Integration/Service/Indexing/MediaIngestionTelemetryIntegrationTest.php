@@ -114,11 +114,13 @@ final class MediaIngestionTelemetryIntegrationTest extends TestCase
     private function createFixture(string $extension): string
     {
         $path = tempnam(sys_get_temp_dir(), 'ingest-');
+
         if ($path === false) {
             self::fail('Unable to create temporary fixture.');
         }
 
         $target = $path . '.' . $extension;
+
         if (@rename($path, $target) === false) {
             @unlink($path);
             self::fail('Unable to rename fixture.');

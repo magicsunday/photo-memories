@@ -167,11 +167,13 @@ namespace MagicSunday\Memories\Test\Unit\Service\Thumbnail {
             }
 
             $thumbnailDir = sys_get_temp_dir() . DIRECTORY_SEPARATOR . 'memories-thumb-' . uniqid('', true);
+
             if (!@mkdir($thumbnailDir) && !is_dir($thumbnailDir)) {
                 self::fail('Unable to create thumbnail directory.');
             }
 
             $sourceDir = sys_get_temp_dir() . DIRECTORY_SEPARATOR . 'memories-thumb-source-' . uniqid('', true);
+
             if (!@mkdir($sourceDir) && !is_dir($sourceDir)) {
                 self::fail('Unable to create thumbnail source directory.');
             }
@@ -278,11 +280,13 @@ namespace MagicSunday\Memories\Test\Unit\Service\Thumbnail {
             }
 
             $thumbnailDir = sys_get_temp_dir() . DIRECTORY_SEPARATOR . 'memories-thumb-' . uniqid('', true);
+
             if (!@mkdir($thumbnailDir) && !is_dir($thumbnailDir)) {
                 self::fail('Unable to create thumbnail directory.');
             }
 
             $sourceDir = sys_get_temp_dir() . DIRECTORY_SEPARATOR . 'memories-thumb-source-' . uniqid('', true);
+
             if (!@mkdir($sourceDir) && !is_dir($sourceDir)) {
                 self::fail('Unable to create thumbnail source directory.');
             }
@@ -359,11 +363,13 @@ namespace MagicSunday\Memories\Test\Unit\Service\Thumbnail {
             }
 
             $thumbnailDir = sys_get_temp_dir() . DIRECTORY_SEPARATOR . 'memories-thumb-' . uniqid('', true);
+
             if (!@mkdir($thumbnailDir) && !is_dir($thumbnailDir)) {
                 self::fail('Unable to create thumbnail directory.');
             }
 
             $sourceDir = sys_get_temp_dir() . DIRECTORY_SEPARATOR . 'memories-thumb-source-' . uniqid('', true);
+
             if (!@mkdir($sourceDir) && !is_dir($sourceDir)) {
                 self::fail('Unable to create thumbnail source directory.');
             }
@@ -450,11 +456,13 @@ namespace MagicSunday\Memories\Test\Unit\Service\Thumbnail {
             }
 
             $thumbnailDir = sys_get_temp_dir() . DIRECTORY_SEPARATOR . 'memories-thumb-' . uniqid('', true);
+
             if (!@mkdir($thumbnailDir) && !is_dir($thumbnailDir)) {
                 self::fail('Unable to create thumbnail directory.');
             }
 
             $sourceDir = sys_get_temp_dir() . DIRECTORY_SEPARATOR . 'memories-thumb-source-' . uniqid('', true);
+
             if (!@mkdir($sourceDir) && !is_dir($sourceDir)) {
                 self::fail('Unable to create thumbnail source directory.');
             }
@@ -515,11 +523,13 @@ namespace MagicSunday\Memories\Test\Unit\Service\Thumbnail {
             }
 
             $thumbnailDir = sys_get_temp_dir() . DIRECTORY_SEPARATOR . 'memories-thumb-' . uniqid('', true);
+
             if (!@mkdir($thumbnailDir) && !is_dir($thumbnailDir)) {
                 self::fail('Unable to create thumbnail directory.');
             }
 
             $sourceDir = sys_get_temp_dir() . DIRECTORY_SEPARATOR . 'memories-thumb-source-' . uniqid('', true);
+
             if (!@mkdir($sourceDir) && !is_dir($sourceDir)) {
                 self::fail('Unable to create thumbnail source directory.');
             }
@@ -573,11 +583,13 @@ namespace MagicSunday\Memories\Test\Unit\Service\Thumbnail {
             }
 
             $thumbnailDir = sys_get_temp_dir() . DIRECTORY_SEPARATOR . 'memories-thumb-' . uniqid('', true);
+
             if (!@mkdir($thumbnailDir) && !is_dir($thumbnailDir)) {
                 self::fail('Unable to create thumbnail directory.');
             }
 
             $sourceDir = sys_get_temp_dir() . DIRECTORY_SEPARATOR . 'memories-thumb-source-' . uniqid('', true);
+
             if (!@mkdir($sourceDir) && !is_dir($sourceDir)) {
                 self::fail('Unable to create thumbnail source directory.');
             }
@@ -639,11 +651,13 @@ namespace MagicSunday\Memories\Test\Unit\Service\Thumbnail {
             }
 
             $thumbnailDir = sys_get_temp_dir() . DIRECTORY_SEPARATOR . 'memories-thumb-' . uniqid('', true);
+
             if (!@mkdir($thumbnailDir) && !is_dir($thumbnailDir)) {
                 self::fail('Unable to create thumbnail directory.');
             }
 
             $sourceDir = sys_get_temp_dir() . DIRECTORY_SEPARATOR . 'memories-thumb-source-' . uniqid('', true);
+
             if (!@mkdir($sourceDir) && !is_dir($sourceDir)) {
                 self::fail('Unable to create thumbnail source directory.');
             }
@@ -705,11 +719,13 @@ namespace MagicSunday\Memories\Test\Unit\Service\Thumbnail {
             }
 
             $thumbnailDir = sys_get_temp_dir() . DIRECTORY_SEPARATOR . 'memories-thumb-' . uniqid('', true);
+
             if (!@mkdir($thumbnailDir) && !is_dir($thumbnailDir)) {
                 self::fail('Unable to create thumbnail directory.');
             }
 
             $sourceDir = sys_get_temp_dir() . DIRECTORY_SEPARATOR . 'memories-thumb-source-' . uniqid('', true);
+
             if (!@mkdir($sourceDir) && !is_dir($sourceDir)) {
                 self::fail('Unable to create thumbnail source directory.');
             }
@@ -737,10 +753,12 @@ namespace MagicSunday\Memories\Test\Unit\Service\Thumbnail {
             $service = new ThumbnailService($thumbnailDir, $sizes);
 
             $thumbnails = [];
+
             try {
                 $thumbnails = $service->generateAll($sourcePath, $media);
 
                 self::assertCount(2, $thumbnails);
+
                 foreach ($sizes as $size) {
                     self::assertArrayHasKey($size, $thumbnails);
 
@@ -779,11 +797,13 @@ namespace MagicSunday\Memories\Test\Unit\Service\Thumbnail {
             }
 
             $thumbnailDir = sys_get_temp_dir() . DIRECTORY_SEPARATOR . 'memories-thumb-' . uniqid('', true);
+
             if (!@mkdir($thumbnailDir) && !is_dir($thumbnailDir)) {
                 self::fail('Unable to create thumbnail directory.');
             }
 
             $sourceDir = sys_get_temp_dir() . DIRECTORY_SEPARATOR . 'memories-thumb-source-' . uniqid('', true);
+
             if (!@mkdir($sourceDir) && !is_dir($sourceDir)) {
                 self::fail('Unable to create thumbnail source directory.');
             }
@@ -860,11 +880,13 @@ namespace MagicSunday\Memories\Test\Unit\Service\Thumbnail {
             }
 
             $thumbnailDir = sys_get_temp_dir() . DIRECTORY_SEPARATOR . 'memories-thumb-' . uniqid('', true);
+
             if (!@mkdir($thumbnailDir) && !is_dir($thumbnailDir)) {
                 self::fail('Unable to create thumbnail directory.');
             }
 
             $sourceDir = sys_get_temp_dir() . DIRECTORY_SEPARATOR . 'memories-thumb-source-' . uniqid('', true);
+
             if (!@mkdir($sourceDir) && !is_dir($sourceDir)) {
                 self::fail('Unable to create thumbnail source directory.');
             }
@@ -952,6 +974,7 @@ namespace MagicSunday\Memories\Test\Unit\Service\Thumbnail {
             }
 
             $thumbnailDir = sys_get_temp_dir() . DIRECTORY_SEPARATOR . 'memories-thumb-' . uniqid('', true);
+
             if (!@mkdir($thumbnailDir) && !is_dir($thumbnailDir)) {
                 self::fail('Unable to create thumbnail directory.');
             }
@@ -981,11 +1004,13 @@ namespace MagicSunday\Memories\Test\Unit\Service\Thumbnail {
             }
 
             $thumbnailDir = sys_get_temp_dir() . DIRECTORY_SEPARATOR . 'memories-thumb-' . uniqid('', true);
+
             if (!@mkdir($thumbnailDir) && !is_dir($thumbnailDir)) {
                 self::fail('Unable to create thumbnail directory.');
             }
 
             $sourcePath = $thumbnailDir . DIRECTORY_SEPARATOR . 'invalid.jpg';
+
             if (file_put_contents($sourcePath, 'not-an-image') === false) {
                 self::fail('Unable to create invalid thumbnail source file.');
             }
@@ -1018,11 +1043,13 @@ namespace MagicSunday\Memories\Test\Unit\Service\Thumbnail {
             }
 
             $thumbnailDir = sys_get_temp_dir() . DIRECTORY_SEPARATOR . 'memories-thumb-' . uniqid('', true);
+
             if (!@mkdir($thumbnailDir) && !is_dir($thumbnailDir)) {
                 self::fail('Unable to create thumbnail directory.');
             }
 
             $sourceDir = sys_get_temp_dir() . DIRECTORY_SEPARATOR . 'memories-thumb-source-' . uniqid('', true);
+
             if (!@mkdir($sourceDir) && !is_dir($sourceDir)) {
                 self::fail('Unable to create thumbnail source directory.');
             }
@@ -1077,11 +1104,13 @@ namespace MagicSunday\Memories\Test\Unit\Service\Thumbnail {
             }
 
             $thumbnailDir = sys_get_temp_dir() . DIRECTORY_SEPARATOR . 'memories-thumb-' . uniqid('', true);
+
             if (!@mkdir($thumbnailDir) && !is_dir($thumbnailDir)) {
                 self::fail('Unable to create thumbnail directory.');
             }
 
             $sourceDir = sys_get_temp_dir() . DIRECTORY_SEPARATOR . 'memories-thumb-source-' . uniqid('', true);
+
             if (!@mkdir($sourceDir) && !is_dir($sourceDir)) {
                 self::fail('Unable to create thumbnail source directory.');
             }
@@ -1098,6 +1127,7 @@ namespace MagicSunday\Memories\Test\Unit\Service\Thumbnail {
             $service = new ThumbnailService($thumbnailDir, [200]);
 
             $relocatedDir = $thumbnailDir . '-moved';
+
             if (!@rename($thumbnailDir, $relocatedDir)) {
                 self::fail('Unable to relocate thumbnail directory.');
             }
@@ -1144,11 +1174,13 @@ namespace MagicSunday\Memories\Test\Unit\Service\Thumbnail {
             }
 
             $thumbnailDir = sys_get_temp_dir() . DIRECTORY_SEPARATOR . 'memories-thumb-' . uniqid('', true);
+
             if (!@mkdir($thumbnailDir) && !is_dir($thumbnailDir)) {
                 self::fail('Unable to create thumbnail directory.');
             }
 
             $sourceDir = sys_get_temp_dir() . DIRECTORY_SEPARATOR . 'memories-thumb-source-' . uniqid('', true);
+
             if (!@mkdir($sourceDir) && !is_dir($sourceDir)) {
                 self::fail('Unable to create thumbnail source directory.');
             }
@@ -1289,6 +1321,10 @@ namespace MagicSunday\Memories\Test\Unit\Service\Thumbnail {
             $this->assertOrientationWithImagick($service, Imagick::ORIENTATION_RIGHTTOP, $storedLayout, $baseLayout);
         }
 
+        /**
+         * @param array<int, list<string>> $storedLayout
+         * @param array<int, list<string>> $expectedLayout
+         */
         private function assertOrientationWithGd(OrientationThumbnailServiceStub $service, int $orientation, array $storedLayout, array $expectedLayout): void
         {
             $image    = $this->createGdImageFromLayout($storedLayout);
@@ -1304,6 +1340,10 @@ namespace MagicSunday\Memories\Test\Unit\Service\Thumbnail {
             }
         }
 
+        /**
+         * @param array<int, list<string>> $storedLayout
+         * @param array<int, list<string>> $expectedLayout
+         */
         private function assertOrientationWithImagick(OrientationThumbnailServiceStub $service, int $orientation, array $storedLayout, array $expectedLayout): void
         {
             $imagick = $this->createImagickFromLayout($storedLayout);
@@ -1590,6 +1630,10 @@ namespace MagicSunday\Memories\Test\Unit\Service\Thumbnail {
             return $layout;
         }
 
+        /**
+         * @param array<int, list<string>> $actual
+         * @param array<int, list<string>> $expected
+         */
         private function assertLayoutEquals(array $expected, array $actual, string $context): void
         {
             self::assertCount(count($expected), $actual, sprintf('%s oriented image height differs.', $context));

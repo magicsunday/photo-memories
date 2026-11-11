@@ -82,6 +82,7 @@ final class FacePresenceDetector implements SingleMetadataExtractorInterface
 
         if ($this->isVideoMedia($media)) {
             $posterPath = $this->createPosterFrame($filepath);
+
             if ($posterPath === null) {
                 return $media;
             }

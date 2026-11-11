@@ -105,6 +105,7 @@ final readonly class DeviceSimilarityStrategy implements ClusterStrategyInterfac
         $eligibleGroups = $this->filterGroupsByMinItems($groups, $this->minItemsPerGroup);
 
         $drafts = [];
+
         foreach ($eligibleGroups as $key => $group) {
             $summary = $this->deviceAggregator->summarize($group);
 
@@ -149,11 +150,13 @@ final readonly class DeviceSimilarityStrategy implements ClusterStrategyInterfac
             $params       = [...$params, ...$peopleParams];
 
             $tagMetadata = $this->collectDominantTags($group);
+
             if ($tagMetadata !== []) {
                 $params = [...$params, ...$tagMetadata];
             }
 
             $qualityParams = $this->qualityAggregator->buildParams($group);
+
             foreach ($qualityParams as $qualityKey => $qualityValue) {
                 if ($qualityValue !== null) {
                     $params[$qualityKey] = $qualityValue;

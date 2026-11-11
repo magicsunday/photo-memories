@@ -37,30 +37,35 @@ trait ClusterPriorityResolverTrait
     ): bool {
         $priorityLeft  = ($priorityMap[$left->getAlgorithm()] ?? 0);
         $priorityRight = ($priorityMap[$right->getAlgorithm()] ?? 0);
+
         if ($priorityLeft !== $priorityRight) {
             return $priorityLeft > $priorityRight;
         }
 
         $classificationLeft  = $this->resolveClassificationRank($left);
         $classificationRight = $this->resolveClassificationRank($right);
+
         if ($classificationLeft !== $classificationRight) {
             return $classificationLeft > $classificationRight;
         }
 
         $countLeft  = count($leftMembers);
         $countRight = count($rightMembers);
+
         if ($countLeft !== $countRight) {
             return $countLeft > $countRight;
         }
 
         $scoreLeft  = $this->computeScore($left, $leftMembers);
         $scoreRight = $this->computeScore($right, $rightMembers);
+
         if ($scoreLeft !== $scoreRight) {
             return $scoreLeft > $scoreRight;
         }
 
         $durationLeft  = $this->resolveDurationSeconds($left);
         $durationRight = $this->resolveDurationSeconds($right);
+
         if ($durationLeft !== $durationRight) {
             return $durationLeft > $durationRight;
         }
@@ -75,6 +80,7 @@ trait ClusterPriorityResolverTrait
         }
 
         $classification = $draft->getParams()['classification'] ?? null;
+
         if (!is_string($classification) || $classification === '') {
             return 0;
         }
@@ -90,18 +96,21 @@ trait ClusterPriorityResolverTrait
     private function resolveDurationSeconds(ClusterDraft $draft): int
     {
         $range = $draft->getParams()['time_range'] ?? null;
+
         if (!is_array($range) || !isset($range['from'], $range['to'])) {
             return 0;
         }
 
         $from = $range['from'];
         $to   = $range['to'];
+
         if (!is_numeric($from) || !is_numeric($to)) {
             return 0;
         }
 
         $fromTs = (int) $from;
         $toTs   = (int) $to;
+
         if ($toTs <= $fromTs) {
             return 0;
         }

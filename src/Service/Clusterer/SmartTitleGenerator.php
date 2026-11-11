@@ -67,15 +67,19 @@ final readonly class SmartTitleGenerator implements TitleGeneratorInterface
 
         return preg_replace_callback('/\{\{\s*([a-zA-Z0-9_\.\|]+)\s*\}\}/', static function (array $m) use ($params): string {
             $candidates = explode('|', $m[1]);
+
             foreach ($candidates as $candidate) {
                 $key = trim($candidate);
+
                 if ($key === '') {
                     continue;
                 }
 
                 $val = $params[$key] ?? null;
+
                 if (is_scalar($val)) {
                     $stringVal = (string) $val;
+
                     if ($stringVal !== '') {
                         return $stringVal;
                     }
@@ -109,6 +113,7 @@ final readonly class SmartTitleGenerator implements TitleGeneratorInterface
 
         foreach (['place', 'place_city', 'place_region', 'place_country'] as $key) {
             $value = $normalized[$key] ?? null;
+
             if (!is_scalar($value)) {
                 continue;
             }
@@ -117,6 +122,7 @@ final readonly class SmartTitleGenerator implements TitleGeneratorInterface
         }
 
         $location = $normalized['place_location'] ?? null;
+
         if (is_scalar($location)) {
             $normalized['place_location'] = $this->normalizeLocationList((string) $location);
         }
@@ -127,11 +133,13 @@ final readonly class SmartTitleGenerator implements TitleGeneratorInterface
     private function normalizeLocationComponent(string $value): string
     {
         $trimmed = trim($value);
+
         if ($trimmed === '') {
             return $trimmed;
         }
 
         $lower = mb_strtolower($trimmed, 'UTF-8');
+
         if ($trimmed === $lower) {
             return mb_convert_case($trimmed, MB_CASE_TITLE, 'UTF-8');
         }
@@ -168,9 +176,10 @@ final readonly class SmartTitleGenerator implements TitleGeneratorInterface
         $timeRange = $params['time_range'] ?? null;
         $params['date_range'] ??= $this->dateFormatter->formatRange($timeRange, $locale);
         $params['start_date'] ??= $this->dateFormatter->formatDate($timeRange['from'] ?? null, $locale);
-        $params['end_date'] ??= $this->dateFormatter->formatDate($timeRange['to'] ?? null, $locale);
+        $params['end_date']   ??= $this->dateFormatter->formatDate($timeRange['to'] ?? null, $locale);
 
         $locationLabel = $this->resolvePrimaryLocationLabel($params);
+
         if ($locationLabel !== '') {
             $params['primary_location_label'] = $locationLabel;
         }
@@ -226,6 +235,7 @@ final readonly class SmartTitleGenerator implements TitleGeneratorInterface
 
             if ($needsTitle || $needsSubtitle) {
                 $storyTitle = $this->storyTitleBuilder->build($cluster, $locale, $summary);
+
                 if ($needsTitle) {
                     $params['vacation_title'] = $storyTitle['title'];
                 }
@@ -282,6 +292,7 @@ final readonly class SmartTitleGenerator implements TitleGeneratorInterface
             }
 
             $trimmed = trim($candidate);
+
             if ($trimmed !== '') {
                 return $trimmed;
             }
@@ -299,6 +310,7 @@ final readonly class SmartTitleGenerator implements TitleGeneratorInterface
 
         foreach ($parts as $part) {
             $trimmed = trim($part);
+
             if ($trimmed !== '') {
                 $filtered[] = $trimmed;
             }

@@ -115,7 +115,7 @@ final readonly class FirstVisitPlaceClusterStrategy implements ClusterStrategyIn
             $local = $t->setTimezone($tz);
             $day   = $local->format('Y-m-d');
             $cell  = $this->cellKey($lat, $lon);
-            $cellDayMap[$cell] ??= [];
+            $cellDayMap[$cell]       ??= [];
             $cellDayMap[$cell][$day] ??= [];
             $cellDayMap[$cell][$day][] = $m;
         }
@@ -148,6 +148,7 @@ final readonly class FirstVisitPlaceClusterStrategy implements ClusterStrategyIn
 
                 /** @var list<Media> $members */
                 $members = [];
+
                 foreach ($runDays as $d) {
                     foreach ($eligibleDaysMap[$d] as $m) {
                         $members[] = $m;
@@ -155,6 +156,7 @@ final readonly class FirstVisitPlaceClusterStrategy implements ClusterStrategyIn
                 }
 
                 $memberCount = count($members);
+
                 if ($memberCount < $this->minItemsTotal) {
                     $runDays = [];
 
@@ -226,14 +228,17 @@ final readonly class FirstVisitPlaceClusterStrategy implements ClusterStrategyIn
 
             /** iterate and pick the first qualifying run */
             $haveFirst = false;
+
             foreach ($days as $d) {
                 // consecutive day logic
                 if ($prev !== null && !$this->isNextDay($prev, $d)) {
                     // check previous run
                     $nights = max(0, count($runDays) - 1);
+
                     if ($nights >= $this->minNights && $nights <= $this->maxNights) {
                         $flush();
                         $haveFirst = true;
+
                         break; // only earliest session per cell
                     }
 
@@ -246,6 +251,7 @@ final readonly class FirstVisitPlaceClusterStrategy implements ClusterStrategyIn
 
             if ($haveFirst === false) {
                 $nights = max(0, count($runDays) - 1);
+
                 if ($nights >= $this->minNights && $nights <= $this->maxNights) {
                     $flush();
                 }

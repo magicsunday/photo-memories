@@ -70,6 +70,7 @@ final class MetadataQaReportCollector
             $this->featureCounts[$feature] = ($this->featureCounts[$feature] ?? 0) + 1;
 
             $examples = $this->examples[$feature] ?? [];
+
             if (count($examples) < $this->maxExamplesPerFeature) {
                 $examples[] = $path;
             }
@@ -121,8 +122,10 @@ final class MetadataQaReportCollector
             $output->writeln(sprintf('- %s: %d Vorkommen', $feature, $count));
 
             $examples = $report->getExamples()[$feature] ?? [];
+
             if ($examples !== []) {
                 $formatted = array_slice($examples, 0, $this->maxExamplesPerFeature);
+
                 foreach ($formatted as $example) {
                     $output->writeln(sprintf('  • %s', $example));
                 }
@@ -131,6 +134,7 @@ final class MetadataQaReportCollector
 
         if ($report->getSuggestionCounts() !== []) {
             $output->writeln('<comment>Empfohlene Maßnahmen:</comment>');
+
             foreach ($report->getSuggestionCounts() as $suggestion => $count) {
                 $output->writeln(sprintf('- (%d×) %s', $count, $suggestion));
             }
@@ -138,6 +142,7 @@ final class MetadataQaReportCollector
 
         if ($report->getContradictionCounts() !== []) {
             $output->writeln('<comment>Widersprüchliche Datenpunkte:</comment>');
+
             foreach ($report->getContradictionCounts() as $issue => $count) {
                 $output->writeln(sprintf('- %s: %d', $issue, $count));
             }

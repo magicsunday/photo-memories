@@ -313,8 +313,10 @@ abstract class TestCase extends BaseTestCase
         }
 
         $entries = [];
+
         foreach (explode("\n", $log) as $line) {
             $line = trim($line);
+
             if ($line === '') {
                 continue;
             }

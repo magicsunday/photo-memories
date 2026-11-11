@@ -78,6 +78,7 @@ final readonly class HolidayEventClusterStrategy implements ClusterStrategyInter
 
         foreach ($timestamped as $m) {
             $holiday = $this->resolveHolidayInfo($m);
+
             if ($holiday === null) {
                 continue;
             }
@@ -106,11 +107,13 @@ final readonly class HolidayEventClusterStrategy implements ClusterStrategyInter
             ];
 
             $tags = $this->collectDominantTags($members);
+
             if ($tags !== []) {
                 $params = [...$params, ...$tags];
             }
 
             $qualityParams = $this->qualityAggregator->buildParams($members);
+
             foreach ($qualityParams as $qualityKey => $qualityValue) {
                 if ($qualityValue !== null) {
                     $params[$qualityKey] = $qualityValue;
@@ -142,8 +145,10 @@ final readonly class HolidayEventClusterStrategy implements ClusterStrategyInter
         assert($takenAt instanceof DateTimeImmutable);
 
         $calendarFeatures = CalendarFeatureHelper::extract($media);
+
         if ($calendarFeatures['isHoliday'] === true && $calendarFeatures['holidayId'] !== null) {
             $parsed = $this->parseHolidayId($calendarFeatures['holidayId']);
+
             if ($parsed !== null) {
                 $name = $this->holidayNameFromCode($parsed['code']);
                 $name ??= Calendar::germanFederalHolidayName($takenAt);
@@ -159,6 +164,7 @@ final readonly class HolidayEventClusterStrategy implements ClusterStrategyInter
         }
 
         $name = Calendar::germanFederalHolidayName($takenAt);
+
         if ($name === null) {
             return null;
         }
@@ -176,6 +182,7 @@ final readonly class HolidayEventClusterStrategy implements ClusterStrategyInter
     private function parseHolidayId(string $holidayId): ?array
     {
         $pos = strrpos($holidayId, '-');
+
         if ($pos === false) {
             return null;
         }
@@ -187,11 +194,13 @@ final readonly class HolidayEventClusterStrategy implements ClusterStrategyInter
         }
 
         $year = (int) $yearPart;
+
         if ($year <= 0) {
             return null;
         }
 
         $code = substr($holidayId, 0, $pos);
+
         if ($code === '') {
             return null;
         }

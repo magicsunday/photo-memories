@@ -35,6 +35,7 @@ final class FileJobMonitoringEmitterTest extends TestCase
     public function writesJsonLine(): void
     {
         $path = tempnam(sys_get_temp_dir(), 'monitoring-test-');
+
         if (!is_string($path)) {
             self::markTestSkipped('Temp file could not be created.');
         }
@@ -74,6 +75,7 @@ final class FileJobMonitoringEmitterTest extends TestCase
     public function mergesPhaseMetricsIntoPayload(): void
     {
         $path = tempnam(sys_get_temp_dir(), 'monitoring-test-');
+
         if (!is_string($path)) {
             self::markTestSkipped('Temp file could not be created.');
         }
@@ -118,6 +120,7 @@ final class FileJobMonitoringEmitterTest extends TestCase
     public function acceptsScalarIdentifiers(): void
     {
         $path = tempnam(sys_get_temp_dir(), 'monitoring-test-');
+
         if (!is_string($path)) {
             self::markTestSkipped('Temp file could not be created.');
         }

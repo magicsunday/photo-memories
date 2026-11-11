@@ -40,6 +40,7 @@ final class DensityStageTest extends TestCase
 
         $items = [];
         $start = new DateTimeImmutable('2024-05-01 08:00:00', new DateTimeZone('UTC'));
+
         for ($i = 0; $i < 5; ++$i) {
             $items[] = $this->makeMediaFixture(
                 200 + $i,

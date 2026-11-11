@@ -120,6 +120,7 @@ final class FeedStoryboardIntegrationTest extends TestCase
             ->willReturnCallback(
                 static function (array $ids) use ($fixtures): array {
                     $result = [];
+
                     foreach ($ids as $id) {
                         if (!is_int($id)) {
                             continue;
@@ -228,6 +229,7 @@ final class FeedStoryboardIntegrationTest extends TestCase
                 }
 
                 $filename = (string) ($item['filename'] ?? '');
+
                 if ($filename === '') {
                     continue;
                 }
@@ -242,6 +244,7 @@ final class FeedStoryboardIntegrationTest extends TestCase
                     );
 
                     $tags = $this->normaliseStringList($item['tags'] ?? []);
+
                     if ($tags !== []) {
                         $media->setKeywords($tags);
                         $media->setSceneTags(array_map(
@@ -251,6 +254,7 @@ final class FeedStoryboardIntegrationTest extends TestCase
                     }
 
                     $people = $this->normaliseStringList($item['people'] ?? []);
+
                     if ($people !== []) {
                         $media->setPersons($people);
                     }
@@ -269,11 +273,13 @@ final class FeedStoryboardIntegrationTest extends TestCase
                 $memberIds[] = $mediaId;
 
                 $tags = $this->normaliseStringList($item['tags'] ?? []);
+
                 if ($tags !== []) {
                     $clusterTags = array_merge($clusterTags, $tags);
                 }
 
                 $roles = is_array($item['roles'] ?? null) ? $item['roles'] : [];
+
                 if ($coverMediaId === null && in_array('key', $roles, true)) {
                     $coverMediaId = $mediaId;
                 }
@@ -286,6 +292,7 @@ final class FeedStoryboardIntegrationTest extends TestCase
                 if ($clusterPlace === null && is_array($item['location'] ?? null)) {
                     $city    = $item['location']['city'] ?? null;
                     $country = $item['location']['country'] ?? null;
+
                     if (is_string($city) && is_string($country)) {
                         $clusterPlace = sprintf('%s (%s)', $city, $country);
                     }
@@ -344,12 +351,14 @@ final class FeedStoryboardIntegrationTest extends TestCase
         }
 
         $result = [];
+
         foreach ($values as $value) {
             if (!is_string($value)) {
                 continue;
             }
 
             $trimmed = trim($value);
+
             if ($trimmed === '') {
                 continue;
             }

@@ -89,6 +89,7 @@ final readonly class LocationSimilarityStrategy implements ClusterStrategyInterf
 
         foreach ($withTimestamp as $m) {
             $key = $this->locationHelper->localityKeyForMedia($m);
+
             if ($key !== null) {
                 $byLocality[$key] ??= [];
                 $byLocality[$key][] = $m;
@@ -156,6 +157,7 @@ final readonly class LocationSimilarityStrategy implements ClusterStrategyInterf
         $params = $this->appendLocationMetadata($bucket, $params);
 
         $tagMetadata = $this->collectDominantTags($bucket);
+
         foreach ($tagMetadata as $paramKey => $value) {
             $params[$paramKey] = $value;
         }

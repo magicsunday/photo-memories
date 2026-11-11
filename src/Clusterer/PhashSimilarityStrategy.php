@@ -87,6 +87,7 @@ final readonly class PhashSimilarityStrategy implements ClusterStrategyInterface
         // 2) Buckets nach kurzer Präfix-Ähnlichkeit (4 Hex = 16 Bits); reduziert O(n^2)
         /** @var array<string, list<Media>> $buckets */
         $buckets = [];
+
         foreach ($with as $m) {
             $p         = (string) $m->getPhash();
             $bucketKey = substr($p, 0, 4);
@@ -99,6 +100,7 @@ final readonly class PhashSimilarityStrategy implements ClusterStrategyInterface
 
         // 3) Pro Bucket Komponenten nach Hamming-Distanz
         $drafts = [];
+
         foreach ($eligibleBuckets as $group) {
             foreach ($this->components($group) as $comp) {
                 if (count($comp) < $this->minItemsPerBucket) {
@@ -138,6 +140,7 @@ final readonly class PhashSimilarityStrategy implements ClusterStrategyInterface
     private function components(array $items): array
     {
         $n = count($items);
+
         if ($n <= 1) {
             return $n === 1 ? [[$items[0]]] : [];
         }
@@ -146,6 +149,7 @@ final readonly class PhashSimilarityStrategy implements ClusterStrategyInterface
         /** @var array<int,list<int>> $adj */
         $adj    = array_fill(0, $n, []);
         $hashes = [];
+
         foreach ($items as $index => $item) {
             $hashes[$index] = (string) $item->getPhash();
         }
@@ -161,6 +165,7 @@ final readonly class PhashSimilarityStrategy implements ClusterStrategyInterface
 
         $seen = array_fill(0, $n, false);
         $out  = [];
+
         for ($i = 0; $i < $n; ++$i) {
             if ($seen[$i]) {
                 continue;
@@ -170,10 +175,12 @@ final readonly class PhashSimilarityStrategy implements ClusterStrategyInterface
             $queue    = [$i];
             $seen[$i] = true;
             $comp     = [];
+
             while ($queue !== []) {
                 $v = array_shift($queue);
 
                 $comp[] = $items[$v];
+
                 foreach ($adj[$v] as $w) {
                     if (!$seen[$w]) {
                         $seen[$w] = true;
@@ -192,6 +199,7 @@ final readonly class PhashSimilarityStrategy implements ClusterStrategyInterface
     {
         $len  = min(strlen($a), strlen($b));
         $dist = 0;
+
         for ($i = 0; $i < $len; ++$i) {
             $x = hexdec($a[$i]) ^ hexdec($b[$i]);
             // count bits in nibble

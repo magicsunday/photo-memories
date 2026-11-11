@@ -80,12 +80,14 @@ final readonly class DependencyContainerFactory
         $containerBuilder->setParameter('kernel.project_dir', $this->resolveProjectDir());
 
         $environment = getenv('APP_ENV');
+
         if (!is_string($environment) || $environment === '') {
             $environment = 'prod';
         }
 
         $debugRaw = getenv('APP_DEBUG');
         $debug    = false;
+
         if (is_string($debugRaw) && $debugRaw !== '') {
             $normalized = strtolower($debugRaw);
             $debug      = $normalized !== '0' && $normalized !== 'false';

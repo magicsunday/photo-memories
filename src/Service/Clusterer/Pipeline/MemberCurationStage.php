@@ -67,6 +67,7 @@ final readonly class MemberCurationStage implements ClusterConsolidationStageInt
     public function process(array $drafts, ?callable $progress = null): array
     {
         $total = count($drafts);
+
         if ($total === 0) {
             if ($progress !== null) {
                 $progress(0, 0);
@@ -76,10 +77,13 @@ final readonly class MemberCurationStage implements ClusterConsolidationStageInt
         }
 
         $result = [];
+
         foreach ($drafts as $index => $draft) {
             $members = $draft->getMembers();
+
             if ($members === []) {
                 $result[] = $draft;
+
                 if ($progress !== null) {
                     $progress($index + 1, $total);
                 }
@@ -104,6 +108,7 @@ final readonly class MemberCurationStage implements ClusterConsolidationStageInt
             $media = $this->mediaLookup->findByIds($members);
 
             $mediaMap = [];
+
             foreach ($media as $entity) {
                 $mediaMap[(int) $entity->getId()] = $entity;
             }
@@ -133,6 +138,7 @@ final readonly class MemberCurationStage implements ClusterConsolidationStageInt
             $dropped = $preCount > $postCount ? $preCount - $postCount : 0;
 
             $policyDetails = $this->summarizePolicy($policy);
+
             if (isset($telemetry['policy']) && is_array($telemetry['policy'])) {
                 $policyDetails = array_merge($policyDetails, $telemetry['policy']);
             }
@@ -158,6 +164,7 @@ final readonly class MemberCurationStage implements ClusterConsolidationStageInt
             $params['member_selection'] = $presentation;
 
             $memberQuality = $params['member_quality'] ?? [];
+
             if (!is_array($memberQuality)) {
                 $memberQuality = [];
             }
@@ -165,6 +172,7 @@ final readonly class MemberCurationStage implements ClusterConsolidationStageInt
             $memberQuality['ordered'] = $curated;
 
             $summary = $memberQuality['summary'] ?? [];
+
             if (!is_array($summary)) {
                 $summary = [];
             }
@@ -198,6 +206,7 @@ final readonly class MemberCurationStage implements ClusterConsolidationStageInt
             $result[] = $draft->withParams($params);
 
             $rejections = [];
+
             if (isset($telemetry['rejection_counts']) && is_array($telemetry['rejection_counts'])) {
                 $rejections = $telemetry['rejection_counts'];
             }
@@ -235,11 +244,13 @@ final readonly class MemberCurationStage implements ClusterConsolidationStageInt
     {
         $params   = $draft->getParams();
         $segments = $params['day_segments'] ?? null;
+
         if (!is_array($segments)) {
             return [];
         }
 
         $result = [];
+
         foreach ($segments as $day => $info) {
             if (!is_string($day)) {
                 continue;
@@ -254,6 +265,7 @@ final readonly class MemberCurationStage implements ClusterConsolidationStageInt
             }
 
             $scoreRaw = $info['score'] ?? 0.0;
+
             if (is_float($scoreRaw) || is_int($scoreRaw)) {
                 $score = (float) $scoreRaw;
             } elseif (is_string($scoreRaw) && is_numeric($scoreRaw)) {
@@ -263,16 +275,19 @@ final readonly class MemberCurationStage implements ClusterConsolidationStageInt
             }
 
             $category = $info['category'] ?? 'peripheral';
+
             if (!is_string($category) || $category === '') {
                 $category = 'peripheral';
             }
 
             $durationRaw = $info['duration'] ?? null;
             $duration    = null;
+
             if (is_int($durationRaw) && $durationRaw >= 0) {
                 $duration = $durationRaw;
             } elseif (is_string($durationRaw) && is_numeric($durationRaw)) {
                 $candidate = (int) $durationRaw;
+
                 if ($candidate >= 0) {
                     $duration = $candidate;
                 }
@@ -280,6 +295,7 @@ final readonly class MemberCurationStage implements ClusterConsolidationStageInt
 
             $metricsRaw = $info['metrics'] ?? [];
             $metrics    = [];
+
             if (is_array($metricsRaw)) {
                 foreach ($metricsRaw as $key => $value) {
                     if (!is_string($key)) {
@@ -326,6 +342,7 @@ final readonly class MemberCurationStage implements ClusterConsolidationStageInt
         $targetTotal = $policy->getTargetTotal();
         $dynamicCap  = (int) ceil($targetTotal / max(1, $dayCount));
         $baseCap     = $policy->getMaxPerDay();
+
         if ($baseCap !== null) {
             $dynamicCap = min($baseCap, $dynamicCap);
         }
@@ -333,6 +350,7 @@ final readonly class MemberCurationStage implements ClusterConsolidationStageInt
         $baseCap = max(1, $dynamicCap);
 
         $peripheralCount = 0;
+
         foreach ($daySegments as $day => $info) {
             if ($info['category'] === 'peripheral') {
                 ++$peripheralCount;
@@ -341,9 +359,11 @@ final readonly class MemberCurationStage implements ClusterConsolidationStageInt
 
         $peripheralQuotaLimit = null;
         $peripheralHardCap    = null;
+
         if ($peripheralCount > 0) {
             $peripheralShare = $peripheralCount / $dayCount;
             $peripheralRatio = 0.35;
+
             if ($peripheralShare >= 0.6) {
                 $peripheralRatio = 0.4;
             } elseif ($peripheralShare <= 0.25) {
@@ -351,6 +371,7 @@ final readonly class MemberCurationStage implements ClusterConsolidationStageInt
             }
 
             $peripheralQuotaLimit = (int) floor($targetTotal * $peripheralRatio);
+
             if ($peripheralQuotaLimit < $peripheralCount) {
                 $peripheralQuotaLimit = $peripheralCount;
             }
@@ -365,6 +386,7 @@ final readonly class MemberCurationStage implements ClusterConsolidationStageInt
         $dayQuotas        = [];
         $peripheralQuotas = [];
         $minimumPerDay    = [];
+
         foreach ($daySegments as $day => $info) {
             $quota = $baseCap;
 
@@ -398,12 +420,14 @@ final readonly class MemberCurationStage implements ClusterConsolidationStageInt
 
         if ($peripheralQuotaLimit !== null && $peripheralQuotas !== []) {
             $peripheralTotal = array_sum($peripheralQuotas);
+
             if ($peripheralTotal > $peripheralQuotaLimit) {
                 $overflow = $peripheralTotal - $peripheralQuotaLimit;
                 arsort($peripheralQuotas);
 
                 while ($overflow > 0) {
                     $reduced = false;
+
                     foreach ($peripheralQuotas as $day => $quota) {
                         if ($overflow === 0) {
                             break;
@@ -414,6 +438,7 @@ final readonly class MemberCurationStage implements ClusterConsolidationStageInt
                         }
 
                         $newQuota = max(0, $quota - 1);
+
                         if ($newQuota === $quota) {
                             continue;
                         }
@@ -441,6 +466,7 @@ final readonly class MemberCurationStage implements ClusterConsolidationStageInt
 
         $currentTotal = array_sum($dayQuotas);
         $targetGoal   = min($targetTotal, $currentTotal);
+
         if ($targetGoal < $targetFloor) {
             $targetGoal = min($currentTotal, $targetFloor);
         }
@@ -452,12 +478,14 @@ final readonly class MemberCurationStage implements ClusterConsolidationStageInt
         $policyWithContext = $policy->withDayContext($dayQuotas, $daySegments, $peripheralQuotaLimit, $peripheralHardCap);
 
         $staypointCap = $policyWithContext->getMaxPerStaypoint();
+
         if ($staypointCap !== null) {
             $staypointBase = $dayQuotas !== [] ? max($dayQuotas) : $policy->getMaxPerDay();
 
             if ($staypointBase !== null && $staypointBase > 0) {
                 $dynamicCap = max(1, (int) floor($staypointBase / 2));
                 $targetCap  = $staypointCap <= $dynamicCap ? $staypointCap : $dynamicCap;
+
                 if ($targetCap !== $staypointCap) {
                     $policyWithContext = $policyWithContext->withMaxPerStaypoint($targetCap);
                 }
@@ -477,6 +505,7 @@ final readonly class MemberCurationStage implements ClusterConsolidationStageInt
     private function rebalanceDayQuotas(array $dayQuotas, array $daySegments, array $minimumPerDay, int $targetGoal): array
     {
         $excess = array_sum($dayQuotas) - $targetGoal;
+
         if ($excess <= 0) {
             return $dayQuotas;
         }
@@ -501,13 +530,14 @@ final readonly class MemberCurationStage implements ClusterConsolidationStageInt
             $current = $dayQuotas[$day] ?? 0;
             $minimum = $minimumPerDay[$day] ?? 0;
             $room    = $current - $minimum;
+
             if ($room <= 0) {
                 continue;
             }
 
             $reduction = min($room, $excess);
             $dayQuotas[$day] -= $reduction;
-            $excess -= $reduction;
+            $excess          -= $reduction;
         }
 
         if ($excess <= 0) {
@@ -534,13 +564,14 @@ final readonly class MemberCurationStage implements ClusterConsolidationStageInt
             $current = $dayQuotas[$day] ?? 0;
             $minimum = $minimumPerDay[$day] ?? 0;
             $room    = $current - $minimum;
+
             if ($room <= 0) {
                 continue;
             }
 
             $reduction = min($room, $excess);
             $dayQuotas[$day] -= $reduction;
-            $excess -= $reduction;
+            $excess          -= $reduction;
         }
 
         return $dayQuotas;
@@ -565,8 +596,10 @@ final readonly class MemberCurationStage implements ClusterConsolidationStageInt
             }
 
             $score = $info['score'] ?? null;
+
             if ($score === null) {
                 $scores[(int) $memberId] = null;
+
                 continue;
             }
 
@@ -594,6 +627,7 @@ final readonly class MemberCurationStage implements ClusterConsolidationStageInt
     ): array {
         $telemetry['pre_count']  = $preCount;
         $telemetry['post_count'] = $postCount;
+
         if (!isset($telemetry['policy']) || !is_array($telemetry['policy'])) {
             $telemetry['policy'] = [];
         }
@@ -604,11 +638,13 @@ final readonly class MemberCurationStage implements ClusterConsolidationStageInt
         $telemetry['policy']['minimum_total'] = $policy->getMinimumTotal();
 
         $maxPerDay = $policy->getMaxPerDay();
+
         if ($maxPerDay !== null) {
             $telemetry['policy']['max_per_day'] = $maxPerDay;
         }
 
         $metadata = $policy->getMetadata();
+
         if ($metadata !== []) {
             $telemetry['policy']['metadata'] = $metadata;
 
@@ -629,11 +665,13 @@ final readonly class MemberCurationStage implements ClusterConsolidationStageInt
 
         if (is_array($metrics)) {
             $timeSamplesRaw = $metrics['time_gaps'] ?? [];
+
             if (is_array($timeSamplesRaw)) {
                 $timeSamples = $timeSamplesRaw;
             }
 
             $hashSamplesRaw = $metrics['phash_distances'] ?? [];
+
             if (is_array($hashSamplesRaw)) {
                 $hashSamples = $hashSamplesRaw;
             }
@@ -722,6 +760,7 @@ final readonly class MemberCurationStage implements ClusterConsolidationStageInt
         ];
 
         $metadata = $policy->getMetadata();
+
         if ($metadata !== []) {
             $details['metadata'] = $metadata;
         }

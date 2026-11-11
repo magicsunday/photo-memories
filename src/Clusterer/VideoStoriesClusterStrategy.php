@@ -121,16 +121,19 @@ final readonly class VideoStoriesClusterStrategy implements ClusterStrategyInter
 
             foreach ($members as $member) {
                 $videoDuration = $member->getVideoDurationS();
+
                 if ($videoDuration !== null) {
                     $videoDurationTotal += $videoDuration;
                 }
 
                 $isSlowMo = $member->isSlowMo();
+
                 if ($isSlowMo === true) {
                     ++$videoSlowMoCount;
                 }
 
                 $hasStabilization = $member->getVideoHasStabilization();
+
                 if ($hasStabilization === true) {
                     ++$videoStabilizedCount;
                 }
@@ -157,11 +160,13 @@ final readonly class VideoStoriesClusterStrategy implements ClusterStrategyInter
             }
 
             $tags = $this->collectDominantTags($members);
+
             if ($tags !== []) {
                 $params = [...$params, ...$tags];
             }
 
             $qualityParams = $this->qualityAggregator->buildParams($members);
+
             foreach ($qualityParams as $qualityKey => $qualityValue) {
                 if ($qualityValue !== null) {
                     $params[$qualityKey] = $qualityValue;

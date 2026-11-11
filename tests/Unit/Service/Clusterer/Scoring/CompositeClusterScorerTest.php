@@ -130,6 +130,7 @@ final class CompositeClusterScorerTest extends TestCase
         $params        = $scoredCluster->getParams();
 
         $values = [];
+
         foreach ($heuristics as $heuristic) {
             $values[$heuristic->weightKey()] = $heuristic->score($scoredCluster);
         }

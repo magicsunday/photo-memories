@@ -42,6 +42,7 @@ final class DayQuotaSelectionStage implements SelectionStageInterface
         }
 
         $quotas = $policy->getDayQuotas();
+
         if ($quotas === []) {
             return $candidates;
         }
@@ -51,9 +52,11 @@ final class DayQuotaSelectionStage implements SelectionStageInterface
         $history  = [];
 
         $total = count($candidates);
+
         for ($index = 0; $index < $total; ++$index) {
             $candidate = $candidates[$index];
             $day       = $candidate['day'] ?? null;
+
             if (!is_string($day) || $day === '') {
                 $selected[] = $candidate;
 
@@ -61,6 +64,7 @@ final class DayQuotaSelectionStage implements SelectionStageInterface
             }
 
             $limit = $quotas[$day] ?? null;
+
             if (is_int($limit) && $limit >= 0 && ($counts[$day] ?? 0) >= $limit) {
                 $telemetry->increment(SelectionTelemetry::REASON_DAY_QUOTA);
 
@@ -104,11 +108,13 @@ final class DayQuotaSelectionStage implements SelectionStageInterface
     private function extractPersonIds(array $candidate): array
     {
         $persons = $candidate['person_ids'] ?? null;
+
         if (!is_array($persons)) {
             return [];
         }
 
         $ids = [];
+
         foreach ($persons as $person) {
             if (is_int($person)) {
                 $ids[] = $person;
@@ -189,6 +195,7 @@ final class DayQuotaSelectionStage implements SelectionStageInterface
 
         for ($index = $startIndex; $index < $total; ++$index) {
             $candidateDay = $candidates[$index]['day'] ?? null;
+
             if (!is_string($candidateDay)) {
                 continue;
             }

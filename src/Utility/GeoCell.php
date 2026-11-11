@@ -65,6 +65,7 @@ final class GeoCell
 
         $period     = 360.0;
         $normalized = $lon;
+
         while ($normalized > 180.0) {
             $normalized -= $period;
         }

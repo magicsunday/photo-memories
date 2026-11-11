@@ -48,6 +48,7 @@ final readonly class DefaultGeocodingWorkflow
         }
 
         $city = $options->getCity();
+
         if (is_string($city) && trim($city) !== '') {
             $this->reprocessLocationsByCity($city, $options, $io, $output);
 
@@ -110,8 +111,10 @@ final readonly class DefaultGeocodingWorkflow
         $summary->render($io);
 
         $locationsForPoi = $summary->getLocationsForPoiUpdate();
+
         if ($locationsForPoi !== []) {
             $io->section('📍 POI-Daten aktualisieren');
+
             if ($options->refreshPois()) {
                 $io->note('Bestehende POI-Daten werden neu abgerufen.');
             }
@@ -159,6 +162,7 @@ final readonly class DefaultGeocodingWorkflow
         }
 
         $qb = $this->entityManager->getRepository(Location::class)->createQueryBuilder('l');
+
         if (!$options->refreshPois()) {
             $qb->where('l.pois IS NULL');
         }

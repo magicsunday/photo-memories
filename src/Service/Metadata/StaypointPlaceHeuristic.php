@@ -95,6 +95,7 @@ final readonly class StaypointPlaceHeuristic implements SingleMetadataExtractorI
         }
 
         $identifier = $media->getS2CellId();
+
         if ($identifier === null) {
             $identifier = S2CellId::tokenFromDegrees((float) $media->getGpsLat(), (float) $media->getGpsLon(), $this->s2Level);
             $media->setS2CellId($identifier);
@@ -129,6 +130,7 @@ final readonly class StaypointPlaceHeuristic implements SingleMetadataExtractorI
         $timestamps = [];
 
         $seedTakenAt = $seed->getTakenAt();
+
         if ($seedTakenAt instanceof DateTimeImmutable) {
             $timestamps[]                                   = $seedTakenAt;
             $seen[$seed->getId() ?? spl_object_hash($seed)] = true;
@@ -136,11 +138,13 @@ final readonly class StaypointPlaceHeuristic implements SingleMetadataExtractorI
 
         foreach ($candidates as $candidate) {
             $takenAt = $candidate->getTakenAt();
+
             if (!$takenAt instanceof DateTimeImmutable) {
                 continue;
             }
 
             $key = $candidate->getId() ?? spl_object_hash($candidate);
+
             if (isset($seen[$key])) {
                 continue;
             }

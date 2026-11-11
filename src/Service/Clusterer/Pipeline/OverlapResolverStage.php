@@ -90,6 +90,7 @@ final class OverlapResolverStage implements ClusterConsolidationStageInterface
         }
 
         $base = count($keepOrder);
+
         foreach ($keepOrder as $index => $algorithm) {
             $this->priorityMap[$algorithm] = $base - $index;
         }
@@ -163,6 +164,7 @@ final class OverlapResolverStage implements ClusterConsolidationStageInterface
                 }
 
                 $overlap = $this->jaccard($normalized[$i], $normalized[$j]);
+
                 if ($overlap < $this->mergeThreshold) {
                     continue;
                 }
@@ -347,16 +349,19 @@ final class OverlapResolverStage implements ClusterConsolidationStageInterface
         }
 
         $spatial = $metrics['spatial_distance_m'];
+
         if ($spatial !== null && $spatial > self::MERGE_MAX_SPATIAL_DISTANCE_M) {
             return false;
         }
 
         $core = $metrics['core_similarity'];
+
         if ($core !== null && $core < self::MERGE_MIN_CORE_SIMILARITY) {
             return false;
         }
 
         $phash = $metrics['phash_delta'];
+
         if ($phash !== null && $phash > self::MERGE_MAX_PHASH_DELTA) {
             return false;
         }
@@ -484,6 +489,7 @@ final class OverlapResolverStage implements ClusterConsolidationStageInterface
 
         foreach ($candidateKeys as $key) {
             $value = $params[$key] ?? null;
+
             if (is_string($value) && $value !== '') {
                 $values[] = strtolower($value);
             }
@@ -504,10 +510,13 @@ final class OverlapResolverStage implements ClusterConsolidationStageInterface
         }
 
         $selection = $params['member_selection'] ?? null;
+
         if (is_array($selection)) {
             $summary = $selection['summary'] ?? null;
+
             if (is_array($summary)) {
                 $core = $summary['core_members'] ?? null;
+
                 if (is_array($core)) {
                     foreach ($core as $entry) {
                         if (is_string($entry) && $entry !== '') {
@@ -541,16 +550,19 @@ final class OverlapResolverStage implements ClusterConsolidationStageInterface
     {
         $params    = $draft->getParams();
         $selection = $params['member_selection'] ?? null;
+
         if (!is_array($selection)) {
             return null;
         }
 
         $hashSamples = $selection['hash_samples'] ?? null;
+
         if (!is_array($hashSamples) || $hashSamples === []) {
             return null;
         }
 
         $values = [];
+
         foreach ($hashSamples as $hash) {
             if (!is_string($hash)) {
                 continue;
@@ -597,6 +609,7 @@ final class OverlapResolverStage implements ClusterConsolidationStageInterface
 
         $loserTime  = $loserParams['time_range'] ?? null;
         $winnerTime = $winnerParams['time_range'] ?? null;
+
         if (
             is_array($loserTime)
             && is_array($winnerTime)
@@ -610,6 +623,7 @@ final class OverlapResolverStage implements ClusterConsolidationStageInterface
 
         if (!isset($merged['primaryStaypoint'])) {
             $stay = $loserParams['primaryStaypoint'] ?? null;
+
             if (is_array($stay)) {
                 $merged['primaryStaypoint'] = $stay;
             }
@@ -617,12 +631,14 @@ final class OverlapResolverStage implements ClusterConsolidationStageInterface
 
         if (!isset($merged['member_selection'])) {
             $selection = $loserParams['member_selection'] ?? null;
+
             if (is_array($selection)) {
                 $merged['member_selection'] = $selection;
             }
         } else {
             $existingSelection = $merged['member_selection'];
             $loserSelection    = $loserParams['member_selection'] ?? null;
+
             if (is_array($existingSelection) && is_array($loserSelection)) {
                 $merged['member_selection'] = $this->mergeMemberSelection($existingSelection, $loserSelection);
             }
@@ -688,6 +704,7 @@ final class OverlapResolverStage implements ClusterConsolidationStageInterface
         } else {
             $primaryHashes   = is_array($primary['hash_samples']) ? $primary['hash_samples'] : [];
             $secondaryHashes = is_array($secondary['hash_samples'] ?? null) ? $secondary['hash_samples'] : [];
+
             if ($secondaryHashes !== []) {
                 $primary['hash_samples'] = $this->mergeHashSamples($primaryHashes, $secondaryHashes);
             }
@@ -793,11 +810,13 @@ final class OverlapResolverStage implements ClusterConsolidationStageInterface
     {
         $params = $draft->getParams();
         $meta   = $params['meta'] ?? [];
+
         if (!is_array($meta)) {
             $meta = [];
         }
 
         $merges = $meta['merges'] ?? [];
+
         if (!is_array($merges)) {
             $merges = [];
         }

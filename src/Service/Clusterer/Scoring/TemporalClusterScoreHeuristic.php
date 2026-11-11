@@ -71,6 +71,7 @@ final class TemporalClusterScoreHeuristic extends AbstractTimeRangeClusterScoreH
     private function computeTemporalMetrics(array $mediaItems, int $members, ?array $timeRange, array $cached): array
     {
         $duration = $cached['duration_seconds'] ?? null;
+
         if ($duration === null && is_array($timeRange) && isset($timeRange['from'], $timeRange['to'])) {
             $duration = max(0, $timeRange['to'] - $timeRange['from']);
         }
@@ -78,8 +79,10 @@ final class TemporalClusterScoreHeuristic extends AbstractTimeRangeClusterScoreH
         $duration = $duration !== null ? max(0, $duration) : 0;
 
         $coverage = $cached['coverage'] ?? null;
+
         if ($coverage === null) {
             $timestamped = 0;
+
             if ($members > 0) {
                 foreach ($mediaItems as $media) {
                     if ($media->getTakenAt() instanceof DateTimeImmutable) {
@@ -94,6 +97,7 @@ final class TemporalClusterScoreHeuristic extends AbstractTimeRangeClusterScoreH
         }
 
         $score = $cached['score'] ?? null;
+
         if ($score === null) {
             $spanScore = $duration > 0 ? $this->spanScore((float) $duration) : 0.0;
             $score     = $this->combineScores([

@@ -89,6 +89,7 @@ abstract class AbstractAtHomeClusterStrategy implements ClusterStrategyInterface
         }
 
         $lookup = [];
+
         foreach ($allowedWeekdays as $dow) {
             if ($dow >= 1 && $dow <= 7) {
                 $lookup[$dow] = true;
@@ -130,6 +131,7 @@ abstract class AbstractAtHomeClusterStrategy implements ClusterStrategyInterface
             $local = $this->localTimeHelper->resolve($media);
             assert($local instanceof DateTimeImmutable);
             $dow = (int) $local->format('N');
+
             if (!isset($this->allowedWeekdayLookup[$dow])) {
                 continue;
             }
@@ -152,9 +154,11 @@ abstract class AbstractAtHomeClusterStrategy implements ClusterStrategyInterface
 
         foreach ($eligibleDays as $day => $list) {
             $within = [];
+
             foreach ($list as $media) {
                 $lat = $media->getGpsLat();
                 $lon = $media->getGpsLon();
+
                 if ($lat === null) {
                     continue;
                 }
@@ -175,6 +179,7 @@ abstract class AbstractAtHomeClusterStrategy implements ClusterStrategyInterface
             }
 
             $share = count($within) / (float) count($list);
+
             if ($share >= $this->minHomeShare) {
                 $homeOnly[$day] = $within;
                 $keepDays[]     = $day;
@@ -199,6 +204,7 @@ abstract class AbstractAtHomeClusterStrategy implements ClusterStrategyInterface
 
             /** @var list<Media> $members */
             $members = [];
+
             foreach ($run as $day) {
                 foreach ($homeOnly[$day] as $media) {
                     $members[] = $media;
@@ -217,6 +223,7 @@ abstract class AbstractAtHomeClusterStrategy implements ClusterStrategyInterface
             $params = ['time_range' => $timeRange];
 
             $calendar = CalendarFeatureHelper::summarize($members);
+
             if ($calendar['isWeekend'] !== null) {
                 $params['isWeekend'] = $calendar['isWeekend'];
             }
@@ -226,11 +233,13 @@ abstract class AbstractAtHomeClusterStrategy implements ClusterStrategyInterface
             }
 
             $tagMetadata = $this->collectDominantTags($members);
+
             foreach ($tagMetadata as $tagKey => $tagValue) {
                 $params[$tagKey] = $tagValue;
             }
 
             $qualityParams = $this->qualityAggregator->buildParams($members);
+
             foreach ($qualityParams as $qualityKey => $qualityValue) {
                 if ($qualityValue !== null) {
                     $params[$qualityKey] = $qualityValue;
@@ -238,6 +247,7 @@ abstract class AbstractAtHomeClusterStrategy implements ClusterStrategyInterface
             }
 
             $peopleParams = $this->buildPeopleParams($members);
+
             foreach ($peopleParams as $peopleKey => $peopleValue) {
                 $params[$peopleKey] = $peopleValue;
             }
@@ -255,6 +265,7 @@ abstract class AbstractAtHomeClusterStrategy implements ClusterStrategyInterface
         };
 
         $prev = null;
+
         foreach ($keepDays as $day) {
             if ($prev !== null && !$this->isNextDay($prev, $day)) {
                 $flush();
@@ -309,6 +320,7 @@ abstract class AbstractAtHomeClusterStrategy implements ClusterStrategyInterface
         }
 
         $cachedDistance = $media->getDistanceKmFromHome();
+
         if ($cachedDistance !== null && $this->isHomeConfigFresh($media)) {
             return $cachedDistance;
         }
@@ -326,11 +338,13 @@ abstract class AbstractAtHomeClusterStrategy implements ClusterStrategyInterface
     private function isHomeConfigFresh(Media $media): bool
     {
         $expectedHash = $this->computeHomeConfigHash();
+
         if ($expectedHash === null) {
             return false;
         }
 
         $currentHash = $media->getHomeConfigHash();
+
         if ($currentHash === null) {
             return false;
         }

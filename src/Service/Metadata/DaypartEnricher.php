@@ -33,6 +33,7 @@ final readonly class DaypartEnricher implements SingleMetadataExtractorInterface
     public function extract(string $filepath, Media $media): Media
     {
         $local = $this->captureTimeResolver->resolve($media);
+
         if (!$local instanceof DateTimeImmutable) {
             return $media;
         }

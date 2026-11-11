@@ -66,6 +66,7 @@ final class TitleTemplateProvider
         }
 
         $data = Yaml::parseFile($resolvedPath) ?? [];
+
         if (!is_array($data)) {
             $data = [];
         }
@@ -92,6 +93,7 @@ final class TitleTemplateProvider
     {
         $loc = $locale ?? $this->locale;
         $hit = $this->templates[$loc][$algorithm] ?? null;
+
         if ($hit !== null) {
             return ['title' => $hit['title'], 'subtitle' => $hit['subtitle'] ?? ''];
         }

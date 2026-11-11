@@ -43,6 +43,7 @@ final class TransitionSequenceGeneratorTest extends TestCase
         self::assertCount(24, $sequence);
 
         $sequenceCount = count($sequence);
+
         for ($index = 1; $index < $sequenceCount; ++$index) {
             self::assertNotSame($sequence[$index - 1], $sequence[$index]);
         }

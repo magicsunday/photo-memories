@@ -50,6 +50,7 @@ final class FaceMetricHelper
         }
 
         $excess = $faceCount - self::GROUP_FACE_COUNT_THRESHOLD;
+
         if ($excess <= 0) {
             return 0.25;
         }
@@ -62,6 +63,7 @@ final class FaceMetricHelper
     public static function closeUpPenaltyFactor(?float $largestCoverage): float
     {
         $coverage = self::normaliseCoverage($largestCoverage);
+
         if ($coverage === null) {
             return 0.0;
         }
@@ -73,6 +75,7 @@ final class FaceMetricHelper
         $range = 1.0 - self::CLOSE_UP_DOMINANCE_THRESHOLD;
 
         $excess = $coverage - self::CLOSE_UP_DOMINANCE_THRESHOLD;
+
         if ($excess <= 0.0) {
             return 0.0;
         }
@@ -89,6 +92,7 @@ final class FaceMetricHelper
         }
 
         $coverage = self::normaliseCoverage($largestCoverage);
+
         if ($coverage !== null && $coverage > self::GROUP_FACE_MAX_DOMINANCE) {
             return false;
         }

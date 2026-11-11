@@ -122,6 +122,7 @@ final class VacationScoreCalculator implements VacationScoreCalculatorInterface
             null,
             ['away_days' => 4],
         );
+
         if ($this->defaultSelectionProfileKey === 'vacation') {
             $this->defaultSelectionProfileKey = 'vacation_weekend_transit';
         }
@@ -177,6 +178,7 @@ final class VacationScoreCalculator implements VacationScoreCalculatorInterface
 
             if ($summary['gpsMembers'] !== []) {
                 $gpsCandidates = $this->filterMembersWithinStaypoint($summary['gpsMembers'], $staypoint['start'], $staypoint['end']);
+
                 if ($gpsCandidates !== []) {
                     $candidates = array_merge($candidates, $gpsCandidates);
                 }
@@ -184,6 +186,7 @@ final class VacationScoreCalculator implements VacationScoreCalculatorInterface
 
             foreach ($candidates as $media) {
                 $objectId = spl_object_id($media);
+
                 if (isset($seen[$objectId])) {
                     continue;
                 }
@@ -207,11 +210,13 @@ final class VacationScoreCalculator implements VacationScoreCalculatorInterface
 
         foreach ($members as $media) {
             $takenAt = $media->getTakenAt();
+
             if (!$takenAt instanceof DateTimeImmutable) {
                 continue;
             }
 
             $timestamp = $takenAt->getTimestamp();
+
             if ($timestamp >= $start && $timestamp <= $end) {
                 $filtered[] = $media;
             }
@@ -277,8 +282,10 @@ final class VacationScoreCalculator implements VacationScoreCalculatorInterface
                 $rawMembers[]                          = $media;
                 $memberDayIndex[spl_object_id($media)] = $key;
                 $location                              = $media->getLocation();
+
                 if ($location instanceof Location) {
                     $poiType = $this->resolvePoiType($location->getType(), $location->getCategory());
+
                     if ($poiType !== null) {
                         $poiTypeSamples[$poiType] = true;
                     }
@@ -308,11 +315,13 @@ final class VacationScoreCalculator implements VacationScoreCalculatorInterface
             }
 
             $avgDistanceSum += $summary['avgDistanceKm'];
+
             if ((bool) $summary['baseAway']) {
                 $cohortRatioSum += (float) ($summary['cohortPresenceRatio'] ?? 0.0);
                 ++$cohortRatioSamples;
 
                 $cohortMembers = $summary['cohortMembers'] ?? [];
+
                 foreach ($cohortMembers as $personId => $count) {
                     $cohortMemberAggregate[$personId] ??= 0;
 
@@ -320,7 +329,7 @@ final class VacationScoreCalculator implements VacationScoreCalculatorInterface
                 }
 
                 $tourismHits += $summary['tourismHits'];
-                $poiSamples += $summary['poiSamples'];
+                $poiSamples  += $summary['poiSamples'];
 
                 if ($summary['travelKm'] > $this->movementThresholdKm) {
                     ++$moveDays;
@@ -456,12 +465,14 @@ final class VacationScoreCalculator implements VacationScoreCalculatorInterface
         ) / 1000.0;
 
         $countries = [];
+
         if ($countryCodes !== []) {
             $countries = array_keys($countryCodes);
             sort($countries, SORT_STRING);
         }
 
         $timezones = [];
+
         if ($timezoneOffsets !== []) {
             $timezones = array_keys($timezoneOffsets);
             sort($timezones, SORT_NUMERIC);
@@ -492,8 +503,10 @@ final class VacationScoreCalculator implements VacationScoreCalculatorInterface
 
             if ($staypointComponents !== []) {
                 $staypointCity = $staypointComponents['city'] ?? null;
+
                 if ($staypointCity !== null) {
                     $cityLabel = $this->formatLocationComponent($staypointCity);
+
                     if ($cityLabel !== '') {
                         $primaryStaypointCity            = $cityLabel;
                         $primaryStaypointLocationParts[] = $cityLabel;
@@ -501,10 +514,13 @@ final class VacationScoreCalculator implements VacationScoreCalculatorInterface
                 }
 
                 $staypointRegion = $staypointComponents['region'] ?? null;
+
                 if ($staypointRegion !== null) {
                     $regionLabel = $this->formatLocationComponent($staypointRegion);
+
                     if ($regionLabel !== '') {
                         $primaryStaypointRegion = $regionLabel;
+
                         if (!in_array($regionLabel, $primaryStaypointLocationParts, true)) {
                             $primaryStaypointLocationParts[] = $regionLabel;
                         }
@@ -512,10 +528,13 @@ final class VacationScoreCalculator implements VacationScoreCalculatorInterface
                 }
 
                 $staypointCountry = $staypointComponents['country'] ?? null;
+
                 if ($staypointCountry !== null) {
                     $countryLabel = $this->formatLocationComponent($staypointCountry);
+
                     if ($countryLabel !== '') {
                         $primaryStaypointCountry = $countryLabel;
+
                         if (!in_array($countryLabel, $primaryStaypointLocationParts, true)) {
                             $primaryStaypointLocationParts[] = $countryLabel;
                         }
@@ -527,6 +546,7 @@ final class VacationScoreCalculator implements VacationScoreCalculatorInterface
                 $primaryStaypointLocation = implode(', ', $primaryStaypointLocationParts);
             } elseif ($staypointMembers !== []) {
                 $staypointLabel = $this->locationHelper->majorityLabel($staypointMembers);
+
                 if ($staypointLabel !== null && $staypointLabel !== '') {
                     $primaryStaypointLocation = $staypointLabel;
                 }
@@ -590,6 +610,7 @@ final class VacationScoreCalculator implements VacationScoreCalculatorInterface
 
         $transitRatio   = $transitDays / $dayCount;
         $transitPenalty = 0.0;
+
         if ($transitRatio > 0.3) {
             $transitPenalty = $this->clamp01(($transitRatio - 0.3) / 0.7);
         }
@@ -599,6 +620,7 @@ final class VacationScoreCalculator implements VacationScoreCalculatorInterface
         $score         = $weightedScore * 10.0;
 
         $classification = $this->classifyTrip($effectiveAwayDays, $awayDays, $nights, $maxDistanceValue, $isWeekendGetaway);
+
         if ($classification === 'none') {
             return null;
         }
@@ -613,6 +635,7 @@ final class VacationScoreCalculator implements VacationScoreCalculatorInterface
 
         $baseClassification = $classification;
         $classification     = $this->applyScoreThresholds($classification, $score);
+
         if ($classification === null) {
             return null;
         }
@@ -642,6 +665,7 @@ final class VacationScoreCalculator implements VacationScoreCalculatorInterface
         if ($dayContext !== []) {
             foreach ($acceptedSummaries as $dayKey => &$summary) {
                 $context = $dayContext[$dayKey] ?? null;
+
                 if (is_array($summary) && is_array($context)) {
                     $summary['selectionContext'] = $context;
                 }
@@ -666,6 +690,7 @@ final class VacationScoreCalculator implements VacationScoreCalculatorInterface
         ];
 
         $requestedProfile = null;
+
         if ($isWeekendGetaway && $this->weekendSelectionProfile !== null) {
             $requestedProfile = $this->weekendSelectionProfile;
         }
@@ -675,6 +700,7 @@ final class VacationScoreCalculator implements VacationScoreCalculatorInterface
             $requestedProfile,
             $selectionContext,
         );
+
         if ($selectionProfileKey === 'vacation') {
             $selectionProfileKey = $this->defaultSelectionProfileKey;
         }
@@ -750,13 +776,16 @@ final class VacationScoreCalculator implements VacationScoreCalculatorInterface
 
         $spacingSamples    = [];
         $previousTimestamp = null;
+
         foreach ($curatedMembers as $media) {
             $takenAt = $media->getTakenAt();
+
             if (!$takenAt instanceof DateTimeImmutable) {
                 continue;
             }
 
             $timestamp = $takenAt->getTimestamp();
+
             if ($previousTimestamp !== null) {
                 $spacingSamples[] = abs($timestamp - $previousTimestamp);
             }
@@ -873,6 +902,7 @@ final class VacationScoreCalculator implements VacationScoreCalculatorInterface
         }
 
         $perDayCounts = [];
+
         foreach ($curatedMembers as $media) {
             $objectId = spl_object_id($media);
             $dayKey   = $memberDayIndex[$objectId] ?? null;
@@ -887,6 +917,7 @@ final class VacationScoreCalculator implements VacationScoreCalculatorInterface
         }
 
         $orderedDistribution = [];
+
         foreach ($dayKeys as $dayKey) {
             if (isset($perDayCounts[$dayKey])) {
                 $orderedDistribution[$dayKey] = $perDayCounts[$dayKey];
@@ -1054,6 +1085,7 @@ final class VacationScoreCalculator implements VacationScoreCalculatorInterface
 
             if ($city !== null) {
                 $cityLabel = $this->formatLocationComponent($city);
+
                 if ($cityLabel !== '') {
                     $params['place_city'] = $cityLabel;
                     $locationParts[]      = $cityLabel;
@@ -1062,8 +1094,10 @@ final class VacationScoreCalculator implements VacationScoreCalculatorInterface
 
             if ($region !== null) {
                 $regionLabel = $this->formatLocationComponent($region);
+
                 if ($regionLabel !== '') {
                     $params['place_region'] = $regionLabel;
+
                     if (!in_array($regionLabel, $locationParts, true)) {
                         $locationParts[] = $regionLabel;
                     }
@@ -1072,8 +1106,10 @@ final class VacationScoreCalculator implements VacationScoreCalculatorInterface
 
             if ($country !== null) {
                 $countryLabel = $this->formatLocationComponent($country);
+
                 if ($countryLabel !== '') {
                     $params['place_country'] = $countryLabel;
+
                     if (!in_array($countryLabel, $locationParts, true)) {
                         $locationParts[] = $countryLabel;
                     }
@@ -1114,21 +1150,25 @@ final class VacationScoreCalculator implements VacationScoreCalculatorInterface
         }
 
         $staypointMetadata = $this->buildStaypointMetadata($dayKeys, $days, $curatedMembers);
+
         if ($staypointMetadata['keys'] !== [] || $staypointMetadata['counts'] !== []) {
             $params['staypoints'] = $staypointMetadata;
         }
 
         $placeCityMissing = !isset($params['place_city']) || $params['place_city'] === '';
+
         if ($placeCityMissing && $primaryStaypointCity !== null) {
             $params['place_city'] = $primaryStaypointCity;
         }
 
         $placeRegionMissing = !isset($params['place_region']) || $params['place_region'] === '';
+
         if ($placeRegionMissing && $primaryStaypointRegion !== null) {
             $params['place_region'] = $primaryStaypointRegion;
         }
 
         $placeCountryMissing = !isset($params['place_country']) || $params['place_country'] === '';
+
         if ($placeCountryMissing && $primaryStaypointCountry !== null) {
             $params['place_country'] = $primaryStaypointCountry;
         }
@@ -1137,16 +1177,19 @@ final class VacationScoreCalculator implements VacationScoreCalculatorInterface
 
         $resolvedLocationParts = [];
         $resolvedCity          = $params['place_city'] ?? null;
+
         if (is_string($resolvedCity) && $resolvedCity !== '') {
             $resolvedLocationParts[] = $resolvedCity;
         }
 
         $resolvedRegion = $params['place_region'] ?? null;
+
         if (is_string($resolvedRegion) && $resolvedRegion !== '' && !in_array($resolvedRegion, $resolvedLocationParts, true)) {
             $resolvedLocationParts[] = $resolvedRegion;
         }
 
         $resolvedCountry = $params['place_country'] ?? null;
+
         if (is_string($resolvedCountry) && $resolvedCountry !== '' && !in_array($resolvedCountry, $resolvedLocationParts, true)) {
             $resolvedLocationParts[] = $resolvedCountry;
         }
@@ -1154,6 +1197,7 @@ final class VacationScoreCalculator implements VacationScoreCalculatorInterface
         if ($resolvedLocationParts !== []) {
             $resolvedLocation = implode(', ', $resolvedLocationParts);
             $currentLocation  = $params['place_location'] ?? null;
+
             if (!is_string($currentLocation) || $currentLocation !== $resolvedLocation) {
                 $params['place_location'] = $resolvedLocation;
             }
@@ -1206,6 +1250,7 @@ final class VacationScoreCalculator implements VacationScoreCalculatorInterface
 
             if (is_array($context)) {
                 $candidate = $context['category'];
+
                 if ($candidate !== '') {
                     $category = $candidate;
                 }
@@ -1232,6 +1277,7 @@ final class VacationScoreCalculator implements VacationScoreCalculatorInterface
     private function summarisePhashDistribution(array $selectionTelemetry): array
     {
         $metrics = $selectionTelemetry['metrics'] ?? null;
+
         if (!is_array($metrics)) {
             return [
                 'count'   => 0,
@@ -1245,6 +1291,7 @@ final class VacationScoreCalculator implements VacationScoreCalculatorInterface
         }
 
         $distances = $metrics['phash_distances'] ?? null;
+
         if (!is_array($distances)) {
             return [
                 'count'   => 0,
@@ -1258,6 +1305,7 @@ final class VacationScoreCalculator implements VacationScoreCalculatorInterface
         }
 
         $samples = [];
+
         foreach ($distances as $value) {
             if (is_int($value) || is_float($value)) {
                 $samples[] = (float) $value;
@@ -1308,6 +1356,7 @@ final class VacationScoreCalculator implements VacationScoreCalculatorInterface
         }
 
         $maxIndex = count($sortedSamples) - 1;
+
         if ($ratio >= 1.0) {
             return $sortedSamples[$maxIndex];
         }
@@ -1361,6 +1410,7 @@ final class VacationScoreCalculator implements VacationScoreCalculatorInterface
 
         foreach ($counts as $value) {
             $total += $value;
+
             if ($value > $maxCount) {
                 $maxCount = $value;
             }
@@ -1378,6 +1428,7 @@ final class VacationScoreCalculator implements VacationScoreCalculatorInterface
 
         $targetCapRaw = $selectionTelemetry['people_balance_target_cap'] ?? null;
         $targetCap    = null;
+
         if (is_int($targetCapRaw)) {
             $targetCap = $targetCapRaw;
         } elseif (is_float($targetCapRaw)) {
@@ -1429,6 +1480,7 @@ final class VacationScoreCalculator implements VacationScoreCalculatorInterface
 
         foreach ($dayKeys as $key) {
             $isAway = $baseAwayMap[$key] ?? false;
+
             if ($isAway) {
                 ++$awayDayCount;
             } else {
@@ -1436,13 +1488,16 @@ final class VacationScoreCalculator implements VacationScoreCalculatorInterface
             }
 
             $hasPoi = $poiPresence[$key] ?? false;
+
             if ($hasPoi) {
                 ++$poiDayCount;
 
                 $category = 'peripheral';
                 $context  = $dayContext[$key] ?? null;
+
                 if (is_array($context)) {
                     $candidate = $context['category'];
+
                     if ($candidate !== '') {
                         $category = $candidate;
                     }
@@ -1602,24 +1657,29 @@ final class VacationScoreCalculator implements VacationScoreCalculatorInterface
 
         foreach ($dayKeys as $dayKey) {
             $summary = $days[$dayKey] ?? null;
+
             if (!is_array($summary)) {
                 continue;
             }
 
             $index = $summary['staypointIndex'] ?? null;
+
             if ($index instanceof StaypointIndex) {
                 $dayIndexCounts = $index->getCounts();
+
                 foreach ($dayIndexCounts as $key => $count) {
                     $counts[$key] = ($counts[$key] ?? 0) + $count;
                 }
 
                 foreach ($summary['members'] as $media) {
                     $id = $media->getId();
+
                     if ($id === null) {
                         continue;
                     }
 
                     $key = $index->get($media);
+
                     if ($key === null) {
                         continue;
                     }
@@ -1629,11 +1689,13 @@ final class VacationScoreCalculator implements VacationScoreCalculatorInterface
 
                 foreach ($summary['gpsMembers'] as $media) {
                     $id = $media->getId();
+
                     if ($id === null) {
                         continue;
                     }
 
                     $key = $index->get($media);
+
                     if ($key === null) {
                         continue;
                     }
@@ -1642,9 +1704,11 @@ final class VacationScoreCalculator implements VacationScoreCalculatorInterface
                 }
 
                 $staypointCounts = $summary['staypointCounts'] ?? [];
+
                 foreach ($staypointCounts as $key => $count) {
                     $normalizedCount = $count;
                     $baseCount       = ($dayIndexCounts[$key] ?? 0);
+
                     if ($normalizedCount <= $baseCount) {
                         continue;
                     }
@@ -1656,19 +1720,23 @@ final class VacationScoreCalculator implements VacationScoreCalculatorInterface
             }
 
             $staypointCounts = $summary['staypointCounts'] ?? [];
+
             foreach ($staypointCounts as $key => $count) {
                 $counts[$key] = ($counts[$key] ?? 0) + $count;
             }
         }
 
         $filtered = [];
+
         foreach ($members as $media) {
             $id = $media->getId();
+
             if ($id === null) {
                 continue;
             }
 
             $intId = $id;
+
             if (isset($indexMap[$intId])) {
                 $filtered[$intId] = $indexMap[$intId];
             }
@@ -1689,16 +1757,19 @@ final class VacationScoreCalculator implements VacationScoreCalculatorInterface
     {
         $enabled   = isset($config['enabled']) ? (bool) $config['enabled'] : true;
         $minNights = isset($config['min_nights']) ? (int) $config['min_nights'] : 1;
+
         if ($minNights < 1) {
             $minNights = 1;
         }
 
         $maxNights = isset($config['max_nights']) ? (int) $config['max_nights'] : 3;
+
         if ($maxNights < $minNights) {
             $maxNights = $minNights;
         }
 
         $minFlaggedDays = isset($config['min_flagged_days']) ? (int) $config['min_flagged_days'] : 2;
+
         if ($minFlaggedDays < 0) {
             $minFlaggedDays = 0;
         }
@@ -1708,6 +1779,7 @@ final class VacationScoreCalculator implements VacationScoreCalculatorInterface
         $requireWeekendFlag = isset($config['require_weekend_flag']) ? (bool) $config['require_weekend_flag'] : true;
 
         $maxGapDays = isset($config['max_gap_days']) ? (int) $config['max_gap_days'] : 1;
+
         if ($maxGapDays < 0) {
             $maxGapDays = 0;
         }
@@ -1761,16 +1833,19 @@ final class VacationScoreCalculator implements VacationScoreCalculatorInterface
 
         foreach ($dayKeys as $key) {
             $summary = $days[$key] ?? null;
+
             if ($summary === null) {
                 continue;
             }
 
             $isAway = $baseAwayMap[$key] ?? false;
+
             if ($isAway === false) {
                 continue;
             }
 
             $weekday = (int) ($summary['weekday'] ?? 0);
+
             if ($weekday === 6) {
                 $hasSaturday = true;
             } elseif ($weekday === 7) {
@@ -1835,6 +1910,7 @@ final class VacationScoreCalculator implements VacationScoreCalculatorInterface
             }
 
             $isWeekendOrHoliday = $weekendHolidayFlags[$neighborKey] ?? $this->isWeekendOrHoliday($days[$neighborKey], $home);
+
             if ($isWeekendOrHoliday) {
                 ++$extra;
             }
@@ -1854,6 +1930,7 @@ final class VacationScoreCalculator implements VacationScoreCalculatorInterface
 
         $timezone = new DateTimeZone('UTC');
         $date     = DateTimeImmutable::createFromFormat('!Y-m-d', $referenceKey, $timezone);
+
         if ($date === false) {
             return null;
         }
@@ -1888,8 +1965,10 @@ final class VacationScoreCalculator implements VacationScoreCalculatorInterface
         $value = preg_replace('/\s+/', ' ', $value) ?? $value;
 
         $parts = explode('-', $value);
+
         foreach ($parts as $index => $part) {
             $normalizedPart = trim($part);
+
             if ($normalizedPart === '') {
                 $parts[$index] = $normalizedPart;
 
@@ -1897,6 +1976,7 @@ final class VacationScoreCalculator implements VacationScoreCalculatorInterface
             }
 
             $words = explode(' ', $normalizedPart);
+
             foreach ($words as $wordIndex => $word) {
                 if ($word === '') {
                     continue;
@@ -1953,11 +2033,13 @@ final class VacationScoreCalculator implements VacationScoreCalculatorInterface
 
         foreach ($dayKeys as $dayKey) {
             $summary = $days[$dayKey] ?? null;
+
             if (!is_array($summary)) {
                 continue;
             }
 
             $range = $this->timeRangeFromSummary($summary);
+
             if ($range === null) {
                 continue;
             }
@@ -1988,6 +2070,7 @@ final class VacationScoreCalculator implements VacationScoreCalculatorInterface
         $timestamps = [];
 
         $members = $summary['members'] ?? [];
+
         if (is_array($members)) {
             foreach ($members as $media) {
                 if (!$media instanceof Media) {
@@ -1995,6 +2078,7 @@ final class VacationScoreCalculator implements VacationScoreCalculatorInterface
                 }
 
                 $takenAt = $media->getTakenAt();
+
                 if ($takenAt instanceof DateTimeImmutable) {
                     $timestamps[] = $takenAt->getTimestamp();
                 }
@@ -2002,6 +2086,7 @@ final class VacationScoreCalculator implements VacationScoreCalculatorInterface
         }
 
         $gpsMembers = $summary['gpsMembers'] ?? [];
+
         if (is_array($gpsMembers)) {
             foreach ($gpsMembers as $media) {
                 if (!$media instanceof Media) {
@@ -2009,6 +2094,7 @@ final class VacationScoreCalculator implements VacationScoreCalculatorInterface
                 }
 
                 $takenAt = $media->getTakenAt();
+
                 if ($takenAt instanceof DateTimeImmutable) {
                     $timestamps[] = $takenAt->getTimestamp();
                 }
@@ -2025,27 +2111,33 @@ final class VacationScoreCalculator implements VacationScoreCalculatorInterface
         }
 
         $staypoints = $summary['staypoints'] ?? null;
+
         if (is_array($staypoints)) {
             $range = $this->timeRangeFromStaypoints($staypoints);
+
             if ($range !== null) {
                 return $range;
             }
         }
 
         $dominant = $summary['dominantStaypoints'] ?? null;
+
         if (is_array($dominant)) {
             $range = $this->timeRangeFromStaypoints($dominant);
+
             if ($range !== null) {
                 return $range;
             }
         }
 
         $date = $summary['date'] ?? null;
+
         if (!is_string($date) || $date === '') {
             return null;
         }
 
         $timezoneId = $summary['localTimezoneIdentifier'] ?? null;
+
         try {
             $timezone = is_string($timezoneId) && $timezoneId !== ''
                 ? new DateTimeZone($timezoneId)
@@ -2083,8 +2175,10 @@ final class VacationScoreCalculator implements VacationScoreCalculatorInterface
 
             if ($startTs === null && $endTs === null) {
                 $dwell = $staypoint['dwell'] ?? ($staypoint['dwellSeconds'] ?? null);
+
                 if (is_numeric($dwell) && (int) $dwell > 0) {
                     $startTs = $this->normalizeTimestamp($staypoint['timestamp'] ?? null);
+
                     if ($startTs !== null) {
                         $endTs = $startTs + (int) $dwell;
                     }
@@ -2093,11 +2187,13 @@ final class VacationScoreCalculator implements VacationScoreCalculatorInterface
 
             if ($startTs === null && $endTs !== null) {
                 $dwell = $staypoint['dwell'] ?? ($staypoint['dwellSeconds'] ?? null);
+
                 if (is_numeric($dwell)) {
                     $startTs = max(0, $endTs - (int) $dwell);
                 }
             } elseif ($endTs === null && $startTs !== null) {
                 $dwell = $staypoint['dwell'] ?? ($staypoint['dwellSeconds'] ?? null);
+
                 if (is_numeric($dwell)) {
                     $endTs = $startTs + (int) $dwell;
                 }
@@ -2167,6 +2263,7 @@ final class VacationScoreCalculator implements VacationScoreCalculatorInterface
             $isAway      = $baseAwayMap[$key] ?? false;
             $photoCount  = $photoCountMap[$key] ?? 0;
             $isSynthetic = $syntheticMap[$key] ?? false;
+
             if ($isAway) {
                 continue;
             }
@@ -2180,12 +2277,14 @@ final class VacationScoreCalculator implements VacationScoreCalculatorInterface
             }
 
             $previousAway = false;
+
             if ($index > 0) {
                 $previousKey  = $dayKeys[$index - 1];
                 $previousAway = $baseAwayMap[$previousKey] ?? false;
             }
 
             $nextAway = false;
+
             if ($index + 1 < $total) {
                 $nextKey  = $dayKeys[$index + 1];
                 $nextAway = $baseAwayMap[$nextKey] ?? false;
@@ -2202,6 +2301,7 @@ final class VacationScoreCalculator implements VacationScoreCalculatorInterface
     private function resolvePoiType(?string $type, ?string $category): ?string
     {
         $candidate = $type;
+
         if ($candidate === null || trim($candidate) === '') {
             $candidate = $category;
         }
@@ -2211,6 +2311,7 @@ final class VacationScoreCalculator implements VacationScoreCalculatorInterface
         }
 
         $normalized = trim(mb_strtolower($candidate));
+
         if ($normalized === '') {
             return null;
         }
@@ -2248,6 +2349,7 @@ final class VacationScoreCalculator implements VacationScoreCalculatorInterface
     private function isLikelySelfie(Media $media): bool
     {
         $persons = $media->getPersons();
+
         if (!is_array($persons)) {
             return false;
         }
@@ -2268,11 +2370,13 @@ final class VacationScoreCalculator implements VacationScoreCalculatorInterface
 
         foreach ($members as $media) {
             $takenAt = $media->getTakenAt();
+
             if (!$takenAt instanceof DateTimeImmutable) {
                 continue;
             }
 
             $timestamp = $takenAt->getTimestamp();
+
             if ($latest === null || $timestamp > $latest) {
                 $latest = $timestamp;
             }
@@ -2283,11 +2387,13 @@ final class VacationScoreCalculator implements VacationScoreCalculatorInterface
         }
 
         $ageSeconds = $this->referenceNow->getTimestamp() - $latest;
+
         if ($ageSeconds <= 0) {
             return 1.0;
         }
 
         $ageDays = $ageSeconds / 86400.0;
+
         if ($ageDays >= 730.0) {
             return 0.0;
         }
@@ -2448,6 +2554,7 @@ final class VacationScoreCalculator implements VacationScoreCalculatorInterface
     {
         $normalizedAwayDays = max(1, $awayDays);
         $adaptiveFloor      = (int) ceil($this->minItemsPerDay * $normalizedAwayDays * 0.6);
+
         if ($this->enforceDynamicMinimum) {
             $adaptiveFloor = max(60, $adaptiveFloor);
         }
@@ -2473,6 +2580,7 @@ final class VacationScoreCalculator implements VacationScoreCalculatorInterface
 
         foreach ($dayKeys as $key) {
             $context = $dayContext[$key] ?? null;
+
             if (!is_array($context)) {
                 continue;
             }
@@ -2541,6 +2649,7 @@ final class VacationScoreCalculator implements VacationScoreCalculatorInterface
         }
 
         $result = [];
+
         foreach ($metrics as $key => $value) {
             if ($key === '') {
                 continue;

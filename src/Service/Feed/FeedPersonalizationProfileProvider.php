@@ -57,6 +57,7 @@ final class FeedPersonalizationProfileProvider
     public function getProfile(?string $profileKey = null): FeedPersonalizationProfile
     {
         $resolved = $profileKey;
+
         if ($resolved === null || !array_key_exists($resolved, $this->profiles)) {
             $resolved = $this->defaultProfile;
         }
@@ -115,6 +116,7 @@ final class FeedPersonalizationProfileProvider
         }
 
         $value = $config[$key];
+
         if (is_numeric($value)) {
             return (float) $value;
         }
@@ -132,6 +134,7 @@ final class FeedPersonalizationProfileProvider
         }
 
         $value = $config[$key];
+
         if (is_numeric($value)) {
             return (int) $value;
         }

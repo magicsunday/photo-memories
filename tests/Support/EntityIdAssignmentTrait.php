@@ -12,6 +12,7 @@ declare(strict_types=1);
 namespace MagicSunday\Memories\Test\Support;
 
 use ReflectionClass;
+use ReflectionProperty;
 use RuntimeException;
 
 /**
@@ -37,7 +38,7 @@ trait EntityIdAssignmentTrait
             $class = $class->getParentClass();
         }
 
-        if ($reflection === null) {
+        if (!$reflection instanceof ReflectionProperty) {
             throw new RuntimeException(sprintf('Property "%s" could not be located on %s or its parents.', $property, $entity::class));
         }
 

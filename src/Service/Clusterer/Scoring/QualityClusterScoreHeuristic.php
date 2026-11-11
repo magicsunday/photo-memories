@@ -72,22 +72,23 @@ final class QualityClusterScoreHeuristic extends AbstractClusterScoreHeuristic
                 unset($metrics['quality_members']);
             }
 
-            $quality ??= $metrics['quality_avg'];
-            $aesthetics ??= $this->floatOrNull($metrics['aesthetics_score']);
-            $resolution ??= $this->floatOrNull($metrics['quality_resolution']);
-            $sharpness ??= $this->floatOrNull($metrics['quality_sharpness']);
-            $exposure ??= $this->floatOrNull($metrics['quality_exposure']);
-            $contrast ??= $this->floatOrNull($metrics['quality_contrast']);
-            $noise ??= $this->floatOrNull($metrics['quality_noise']);
-            $blockiness ??= $this->floatOrNull($metrics['quality_blockiness']);
-            $keyframe ??= $this->floatOrNull($metrics['quality_video_keyframe']);
-            $videoBonus ??= $this->floatOrNull($metrics['quality_video_bonus']);
+            $quality      ??= $metrics['quality_avg'];
+            $aesthetics   ??= $this->floatOrNull($metrics['aesthetics_score']);
+            $resolution   ??= $this->floatOrNull($metrics['quality_resolution']);
+            $sharpness    ??= $this->floatOrNull($metrics['quality_sharpness']);
+            $exposure     ??= $this->floatOrNull($metrics['quality_exposure']);
+            $contrast     ??= $this->floatOrNull($metrics['quality_contrast']);
+            $noise        ??= $this->floatOrNull($metrics['quality_noise']);
+            $blockiness   ??= $this->floatOrNull($metrics['quality_blockiness']);
+            $keyframe     ??= $this->floatOrNull($metrics['quality_video_keyframe']);
+            $videoBonus   ??= $this->floatOrNull($metrics['quality_video_bonus']);
             $videoPenalty ??= $this->floatOrNull($metrics['quality_video_penalty']);
-            $clipping ??= $this->floatOrNull($metrics['quality_clipping']);
-            $iso ??= $this->floatOrNull($metrics['quality_iso']);
+            $clipping     ??= $this->floatOrNull($metrics['quality_clipping']);
+            $iso          ??= $this->floatOrNull($metrics['quality_iso']);
         }
 
         $cluster->setParam('quality_avg', $quality);
+
         if ($aesthetics !== null) {
             $cluster->setParam('aesthetics_score', $aesthetics);
         }

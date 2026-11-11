@@ -55,11 +55,13 @@ final readonly class LivePairLinker implements SingleMetadataExtractorInterface
     private function linkApplePair(Media $media): void
     {
         $checksum = $media->getLivePairChecksum();
+
         if ($checksum === null || trim($checksum) === '') {
             return;
         }
 
         $counterpart = $this->mediaRepository->findLivePairCandidate($checksum, $media->getPath());
+
         if (!$counterpart instanceof Media) {
             return;
         }
@@ -96,11 +98,13 @@ final readonly class LivePairLinker implements SingleMetadataExtractorInterface
             }
 
             $candidateTaken = $candidate->getTakenAt();
+
             if (!$candidateTaken instanceof DateTimeImmutable) {
                 continue;
             }
 
             $timeDiff = $this->secondsBetween($takenAt, $candidateTaken);
+
             if ($timeDiff > 3) {
                 continue;
             }
@@ -110,11 +114,13 @@ final readonly class LivePairLinker implements SingleMetadataExtractorInterface
             }
 
             $distance = $row['distance'];
+
             if ($distance > 8) {
                 continue;
             }
 
             $score = $timeDiff * 100 + $distance;
+
             if ($bestScore === null || $score < $bestScore) {
                 $best      = $candidate;
                 $bestScore = $score;
@@ -126,8 +132,10 @@ final readonly class LivePairLinker implements SingleMetadataExtractorInterface
         }
 
         $checksum = $media->getLivePairChecksum();
+
         if ($checksum === null || trim($checksum) === '') {
             $counterChecksum = $best->getLivePairChecksum();
+
             if ($counterChecksum === null || trim($counterChecksum) === '') {
                 $checksum = $this->buildHeuristicChecksum($media, $best);
             } else {
@@ -141,6 +149,7 @@ final readonly class LivePairLinker implements SingleMetadataExtractorInterface
     private function hasConflictingPair(Media $media, Media $candidate): bool
     {
         $existing = $candidate->getLivePairMedia();
+
         if ($existing instanceof Media && $existing !== $media) {
             return true;
         }
@@ -166,6 +175,7 @@ final readonly class LivePairLinker implements SingleMetadataExtractorInterface
         }
 
         $media->setLivePairMedia($counterpart);
+
         if ($counterpart->getLivePairMedia() !== $media) {
             $counterpart->setLivePairMedia($media);
         }

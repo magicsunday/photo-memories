@@ -52,8 +52,10 @@ final class TimeSlotDiversificationStage implements SelectionStageInterface
         $maxPerDay      = $policy->getMaxPerDay();
 
         $uniqueDays = [];
+
         foreach ($candidates as $candidate) {
             $day = $candidate['day'] ?? null;
+
             if (is_string($day) && $day !== '') {
                 $uniqueDays[$day] = true;
             }
@@ -76,15 +78,16 @@ final class TimeSlotDiversificationStage implements SelectionStageInterface
         }
 
         $runDays = count($uniqueDays);
+
         if ($runDays <= 0) {
             $runDays = 1;
         }
 
-        $defaultPerDayCap = null;
         if (is_int($maxPerDay) && $maxPerDay > 0) {
             $defaultPerDayCap = $maxPerDay;
         } else {
             $defaultPerDayCap = (int) ceil($targetTotal / $runDays);
+
             if ($defaultPerDayCap <= 0) {
                 $defaultPerDayCap = 1;
             }
@@ -93,6 +96,7 @@ final class TimeSlotDiversificationStage implements SelectionStageInterface
         foreach ($candidates as $candidate) {
             $day  = $candidate['day'] ?? null;
             $slot = $candidate['slot'] ?? null;
+
             if (!is_string($day) || $day === '') {
                 $selected[] = $candidate;
 
@@ -101,6 +105,7 @@ final class TimeSlotDiversificationStage implements SelectionStageInterface
 
             if ($slot !== null) {
                 $slotKey = $day . '#' . $slot;
+
                 if (($countBySlot[$slotKey] ?? 0) >= self::SLOT_CAP) {
                     $telemetry->increment(SelectionTelemetry::REASON_TIME_SLOT);
 
@@ -109,6 +114,7 @@ final class TimeSlotDiversificationStage implements SelectionStageInterface
             }
 
             $timestamp = $candidate['timestamp'] ?? null;
+
             if (!is_int($timestamp)) {
                 $selected[] = $candidate;
 
@@ -119,11 +125,13 @@ final class TimeSlotDiversificationStage implements SelectionStageInterface
             $requiredSpacing = $baseSpacing;
 
             $perDayCap = $dayQuotas[$day] ?? null;
+
             if (!is_int($perDayCap) || $perDayCap < 0) {
                 $perDayCap = $defaultPerDayCap;
             }
 
             $dayDuration = $candidate['day_duration'] ?? ($dayContext[$day]['duration'] ?? null);
+
             if (is_int($dayDuration) && $dayDuration > 0) {
                 $quotaSpacing    = (int) ceil($dayDuration / max(3, $perDayCap + 1));
                 $requiredSpacing = max($requiredSpacing, $quotaSpacing);

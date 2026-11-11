@@ -116,11 +116,13 @@ final readonly class TimeSimilarityStrategy implements ClusterStrategyInterface,
         $params = $this->appendLocationMetadata($bucket, $params);
 
         $tagMetadata = $this->collectDominantTags($bucket);
+
         foreach ($tagMetadata as $key => $value) {
             $params[$key] = $value;
         }
 
         $qualityParams = $this->qualityAggregator->buildParams($bucket);
+
         foreach ($qualityParams as $qualityKey => $qualityValue) {
             if ($qualityValue !== null) {
                 $params[$qualityKey] = $qualityValue;

@@ -55,6 +55,7 @@ final class SceneDiversityStage implements SelectionStageInterface
 
         foreach ($candidates as $candidate) {
             $bucket = $candidate['bucket'] ?? null;
+
             if (!is_string($bucket) || $bucket === '') {
                 $selected[] = $candidate;
 
@@ -88,6 +89,7 @@ final class SceneDiversityStage implements SelectionStageInterface
 
         foreach (self::DEFAULT_WEIGHTS as $bucket => $defaultWeight) {
             $weight = $weights[$bucket] ?? $defaultWeight;
+
             if ($weight <= 0.0) {
                 $weight = $defaultWeight;
             }
@@ -122,11 +124,13 @@ final class SceneDiversityStage implements SelectionStageInterface
         }
 
         $total = array_sum($weights);
+
         if ($total <= 0.0) {
             $count = count($weights);
 
             $ratio  = 1.0 / $count;
             $ratios = [];
+
             foreach (array_keys($weights) as $bucket) {
                 $ratios[$bucket] = $ratio;
             }
@@ -135,6 +139,7 @@ final class SceneDiversityStage implements SelectionStageInterface
         }
 
         $ratios = [];
+
         foreach ($weights as $bucket => $weight) {
             $ratios[$bucket] = $weight / $total;
         }

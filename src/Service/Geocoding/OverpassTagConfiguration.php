@@ -80,6 +80,7 @@ final class OverpassTagConfiguration
 
         foreach (self::DEFAULT_ALLOWED_COMBINATIONS as $combination) {
             $normalized = $this->normalizeCombination($combination);
+
             if ($normalized !== []) {
                 $combinations[] = $normalized;
             }
@@ -139,8 +140,10 @@ final class OverpassTagConfiguration
             }
 
             $valueList = [];
+
             foreach ($values as $value) {
                 $value = $this->stringOrNull($value);
+
                 if ($value === null) {
                     continue;
                 }

@@ -87,6 +87,7 @@ final class PolicyDrivenMemberSelectorTest extends TestCase
         self::assertArrayHasKey('faces', $telemetry['metrics']);
 
         $rejections = $telemetry['rejections'];
+
         foreach ([
             'time_gap',
             'day_quota',
@@ -192,6 +193,7 @@ final class PolicyDrivenMemberSelectorTest extends TestCase
         self::assertSame(3, $secondIteration['selected']);
 
         $duplicateEvaluation = null;
+
         foreach ($secondIteration['evaluations'] as $evaluation) {
             if (($evaluation['id'] ?? null) === 2) {
                 $duplicateEvaluation = $evaluation;
@@ -309,6 +311,7 @@ final class PolicyDrivenMemberSelectorTest extends TestCase
         self::assertSame(2, $secondIteration['step']);
 
         $evaluations = [];
+
         foreach ($secondIteration['evaluations'] as $evaluation) {
             $evaluations[$evaluation['id']] = $evaluation;
         }
@@ -435,6 +438,7 @@ final class PolicyDrivenMemberSelectorTest extends TestCase
         self::assertArrayHasKey(0, $summary['iterations']);
 
         $evaluations = [];
+
         foreach ($summary['iterations'][0]['evaluations'] as $evaluation) {
             $evaluations[$evaluation['id']] = $evaluation;
         }
@@ -528,6 +532,7 @@ final class PolicyDrivenMemberSelectorTest extends TestCase
         self::assertSame(7, $iteration['selected']);
 
         $evaluations = [];
+
         foreach ($iteration['evaluations'] as $evaluation) {
             $evaluations[$evaluation['id']] = $evaluation;
         }
@@ -681,6 +686,7 @@ final class PolicyDrivenMemberSelectorTest extends TestCase
         foreach ([1, 2, 3, 4, 5, 6] as $id) {
             $media = $this->createMedia($id, $timestamps[$id], $hashes[$id], [], $coordinates[$id], [4000, 3000]);
             $media->setQualityScore(0.55);
+
             switch ($id) {
                 case 1:
                     $media->setFacesCount(4);
@@ -688,24 +694,29 @@ final class PolicyDrivenMemberSelectorTest extends TestCase
                     $media->setFeatures([
                         'faces' => ['largest_coverage' => 0.32],
                     ]);
+
                     break;
                 case 2:
                     $media->setIsPanorama(true);
+
                     break;
                 case 3:
                     $media->setFeatures([
                         'calendar' => ['daypart' => 'night'],
                     ]);
+
                     break;
                 case 4:
                     $media->setSceneTags([
                         ['label' => 'Delicious food spread', 'score' => 0.9],
                     ]);
+
                     break;
                 case 5:
                     $media->setSceneTags([
                         ['label' => 'Historic museum interior', 'score' => 0.88],
                     ]);
+
                     break;
                 default:
                     break;
@@ -773,6 +784,7 @@ final class PolicyDrivenMemberSelectorTest extends TestCase
         self::assertArrayHasKey('faces', $telemetry['metrics']);
 
         $rejections = $telemetry['rejections'];
+
         foreach ([
             'time_gap',
             'staypoint_quota',
@@ -1108,6 +1120,9 @@ final class PolicyDrivenMemberSelectorTest extends TestCase
                         return 'score-ordered';
                     }
 
+                    /**
+                     * @param mixed[][] $candidates
+                     */
                     public function apply(array $candidates, SelectionPolicy $policy, SelectionTelemetry $telemetry): array
                     {
                         usort(
@@ -1395,6 +1410,7 @@ final class PolicyDrivenMemberSelectorTest extends TestCase
 
         for ($i = 0; $i < $length && $i < 16; ++$i) {
             $nibble = hexdec($normalised[$i]);
+
             for ($bit = 3; $bit >= 0; --$bit) {
                 $bits[] = ($nibble >> $bit) & 1;
             }
@@ -1403,6 +1419,11 @@ final class PolicyDrivenMemberSelectorTest extends TestCase
         return $bits;
     }
 
+    /**
+     * @param string[] $persons
+     * @param float[]  $coords
+     * @param int[]    $size
+     */
     private function createMedia(
         int $id,
         string $takenAt,

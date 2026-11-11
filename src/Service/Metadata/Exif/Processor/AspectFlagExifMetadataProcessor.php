@@ -25,11 +25,13 @@ final class AspectFlagExifMetadataProcessor implements ExifMetadataProcessorInte
     {
         $width  = $media->getWidth();
         $height = $media->getHeight();
+
         if ($width === null || $height === null || $width <= 0 || $height <= 0) {
             return;
         }
 
         $orientation = $media->getOrientation();
+
         if ($orientation !== null && $orientation >= 5 && $orientation <= 8) {
             [$width, $height] = [$height, $width];
         }

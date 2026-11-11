@@ -437,6 +437,7 @@ final class ClusterDraft
         $nextParams = $params ?? $this->params;
         $storyline  = $this->storyline;
         $candidate  = $nextParams['storyline'] ?? null;
+
         if (is_string($candidate) && $candidate !== '') {
             $storyline = $candidate;
         }

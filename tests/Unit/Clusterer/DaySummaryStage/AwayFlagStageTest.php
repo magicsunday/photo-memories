@@ -71,6 +71,7 @@ final class AwayFlagStageTest extends TestCase
 
         $items     = [];
         $homeStart = new DateTimeImmutable('2024-06-01 08:00:00', new DateTimeZone('Europe/Berlin'));
+
         for ($i = 0; $i < 3; ++$i) {
             $timestamp = $homeStart->add(new DateInterval('PT' . ($i * 2) . 'H'));
             $items[]   = $this->makeMediaFixture(
@@ -87,6 +88,7 @@ final class AwayFlagStageTest extends TestCase
         }
 
         $awayStart = new DateTimeImmutable('2024-06-02 12:00:00', new DateTimeZone('America/New_York'));
+
         for ($i = 0; $i < 3; ++$i) {
             $timestamp = $awayStart->add(new DateInterval('PT' . ($i * 3) . 'H'));
             $items[]   = $this->makeMediaFixture(
@@ -145,6 +147,7 @@ final class AwayFlagStageTest extends TestCase
 
         $items   = [];
         $dayBase = new DateTimeImmutable('2024-07-10 09:00:00', new DateTimeZone('Europe/Berlin'));
+
         for ($i = 0; $i < 4; ++$i) {
             $items[] = $this->makeMediaFixture(
                 200 + $i,

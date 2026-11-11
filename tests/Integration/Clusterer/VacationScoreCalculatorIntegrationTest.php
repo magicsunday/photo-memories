@@ -311,6 +311,7 @@ final class VacationScoreCalculatorIntegrationTest extends TestCase
     {
         $items  = [];
         $baseId = 100 + ($index * 100);
+
         for ($j = 0; $j < $count; ++$j) {
             $items[] = $this->makeMediaFixture(
                 id: $baseId + $j,

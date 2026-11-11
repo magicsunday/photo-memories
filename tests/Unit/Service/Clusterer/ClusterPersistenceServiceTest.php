@@ -46,9 +46,13 @@ final class ClusterPersistenceServiceTest extends TestCase
             {
             }
 
+            /**
+             * @return Media[]
+             */
             public function findByIds(array $ids, bool $onlyVideos = false): array
             {
                 $result = [];
+
                 foreach ($ids as $id) {
                     if (isset($this->media[$id])) {
                         $result[] = $this->media[$id];
@@ -97,6 +101,7 @@ final class ClusterPersistenceServiceTest extends TestCase
         $capturedFpsParameters = [];
 
         $qbMocks = [];
+
         foreach ($chunkedResults as $index => $rows) {
             $query = $this->getMockBuilder(Query::class)
                 ->disableOriginalConstructor()
@@ -181,9 +186,13 @@ final class ClusterPersistenceServiceTest extends TestCase
             {
             }
 
+            /**
+             * @return Media[]
+             */
             public function findByIds(array $ids, bool $onlyVideos = false): array
             {
                 $result = [];
+
                 foreach ($ids as $id) {
                     if (isset($this->media[$id])) {
                         $result[] = $this->media[$id];
@@ -366,9 +375,13 @@ final class ClusterPersistenceServiceTest extends TestCase
             {
             }
 
+            /**
+             * @return Media[]
+             */
             public function findByIds(array $ids, bool $onlyVideos = false): array
             {
                 $result = [];
+
                 foreach ($ids as $id) {
                     if (isset($this->media[$id])) {
                         $result[] = $this->media[$id];
@@ -470,9 +483,13 @@ final class ClusterPersistenceServiceTest extends TestCase
             {
             }
 
+            /**
+             * @return Media[]
+             */
             public function findByIds(array $ids, bool $onlyVideos = false): array
             {
                 $result = [];
+
                 foreach ($ids as $id) {
                     if (isset($this->media[$id])) {
                         $result[] = $this->media[$id];
@@ -583,9 +600,13 @@ final class ClusterPersistenceServiceTest extends TestCase
             {
             }
 
+            /**
+             * @return Media[]
+             */
             public function findByIds(array $ids, bool $onlyVideos = false): array
             {
                 $result = [];
+
                 foreach ($ids as $id) {
                     if (isset($this->media[$id])) {
                         $result[] = $this->media[$id];

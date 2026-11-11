@@ -75,6 +75,7 @@ final class DefaultPoiScorer implements PoiScoringStrategyInterface
         }
 
         $categoryKey = $poi['categoryKey'];
+
         if ($categoryKey !== null) {
             $score += self::POI_CATEGORY_KEY_BONUS[$categoryKey] ?? 0;
         }

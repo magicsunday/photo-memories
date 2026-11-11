@@ -41,6 +41,7 @@ class Response
         array $headers = [],
     ) {
         $normalized = [];
+
         foreach ($headers as $name => $value) {
             if (!is_string($name)) {
                 continue;
@@ -103,6 +104,7 @@ class Response
     protected function sendFile(string $path): void
     {
         $result = readfile($path);
+
         if ($result === false) {
             throw new RuntimeException('Unable to stream binary file.');
         }

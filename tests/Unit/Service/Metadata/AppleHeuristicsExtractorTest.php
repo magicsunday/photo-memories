@@ -124,6 +124,7 @@ final class AppleHeuristicsExtractorTest extends TestCase
     {
         foreach ($filenames as $name) {
             $path = $directory . '/' . $name;
+
             if (is_file($path)) {
                 unlink($path);
             }

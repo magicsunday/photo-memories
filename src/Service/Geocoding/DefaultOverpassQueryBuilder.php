@@ -37,6 +37,7 @@ final readonly class DefaultOverpassQueryBuilder implements OverpassQueryBuilder
         $radius = max(1, $radius);
 
         $query = sprintf('[out:json][timeout:%d];(', $this->queryTimeout);
+
         foreach ($this->configuration->getAllowedTagCombinations() as $combination) {
             if ($combination === []) {
                 continue;

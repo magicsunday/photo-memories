@@ -78,8 +78,10 @@ final readonly class NominatimReverseGeocoder implements ReverseGeocoderInterfac
         $addr = (array) ($data['address'] ?? []);
         /** @var list<float>|null $bbox */
         $bbox = null;
+
         if (is_array($data['boundingbox'] ?? null)) {
             $b = $data['boundingbox'];
+
             if (count($b) === 4) {
                 $bbox = [(float) $b[0], (float) $b[1], (float) $b[2], (float) $b[3]];
             }
@@ -175,6 +177,7 @@ final readonly class NominatimReverseGeocoder implements ReverseGeocoderInterfac
         }
 
         $map = [];
+
         foreach ($value as $k => $v) {
             if (is_string($k) && is_string($v) && $v !== '') {
                 $map[$k] = $v;

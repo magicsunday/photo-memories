@@ -49,18 +49,22 @@ final readonly class StoryboardTextGenerator
     public function __construct(string $defaultLocale = 'de', array $supportedLocales = ['de', 'en'])
     {
         $normalizedDefault = $this->normalizeLocaleCode($defaultLocale);
+
         if ($normalizedDefault === '') {
             $normalizedDefault = 'de';
         }
 
         $locales = [];
+
         foreach ($supportedLocales as $localeCandidate) {
             $localeString = $this->toLocaleString($localeCandidate);
+
             if ($localeString === null) {
                 continue;
             }
 
             $candidate = $this->normalizeLocaleCode($localeString);
+
             if ($candidate === '') {
                 continue;
             }
@@ -102,6 +106,7 @@ final readonly class StoryboardTextGenerator
         $keywords = $this->resolveTopTags($entries, 'schlagwoerter');
 
         $title = $phrases['title_generic'];
+
         if ($location !== null && $persons !== []) {
             $title = sprintf($phrases['title_location_persons'], $this->formatList($persons, $resolvedLocale), $location);
         } elseif ($location !== null) {
@@ -111,6 +116,7 @@ final readonly class StoryboardTextGenerator
         }
 
         $sentences = [];
+
         if ($location !== null && $persons !== []) {
             $sentences[] = sprintf($phrases['description_location_persons'], $this->formatList($persons, $resolvedLocale), $location);
         } elseif ($location !== null) {
@@ -152,6 +158,7 @@ final readonly class StoryboardTextGenerator
     private function resolveLocale(string $locale): string
     {
         $candidate = $this->normalizeLocaleCode($locale);
+
         if ($candidate === '') {
             return $this->defaultLocale;
         }
@@ -166,6 +173,7 @@ final readonly class StoryboardTextGenerator
     private function normalizeLocaleCode(string $locale): string
     {
         $trimmed = trim($locale);
+
         if ($trimmed === '') {
             return '';
         }
@@ -179,8 +187,10 @@ final readonly class StoryboardTextGenerator
     private function combineSentences(array $sentences): string
     {
         $normalised = [];
+
         foreach ($sentences as $sentence) {
             $trimmed = trim($sentence);
+
             if ($trimmed === '') {
                 continue;
             }
@@ -249,6 +259,7 @@ final readonly class StoryboardTextGenerator
         }
 
         $label = trim((string) $value);
+
         if ($label === '') {
             return;
         }
@@ -269,8 +280,10 @@ final readonly class StoryboardTextGenerator
     {
         /** @var array<string, int> $counts */
         $counts = [];
+
         foreach ($entries as $entry) {
             $persons = $entry['personen'] ?? null;
+
             if (!is_array($persons)) {
                 continue;
             }
@@ -281,6 +294,7 @@ final readonly class StoryboardTextGenerator
                 }
 
                 $label = trim($person);
+
                 if ($label === '') {
                     continue;
                 }
@@ -311,8 +325,10 @@ final readonly class StoryboardTextGenerator
     {
         /** @var array<string, int> $counts */
         $counts = [];
+
         foreach ($entries as $entry) {
             $tags = $entry[$key] ?? null;
+
             if (!is_array($tags)) {
                 continue;
             }
@@ -323,6 +339,7 @@ final readonly class StoryboardTextGenerator
                 }
 
                 $label = trim($tag);
+
                 if ($label === '') {
                     continue;
                 }
@@ -350,8 +367,10 @@ final readonly class StoryboardTextGenerator
     private function formatList(array $items, string $locale): string
     {
         $filtered = [];
+
         foreach ($items as $item) {
             $value = $this->normalizeScalarString($item);
+
             if ($value === null) {
                 continue;
             }
@@ -362,6 +381,7 @@ final readonly class StoryboardTextGenerator
         }
 
         $count = count($filtered);
+
         if ($count === 0) {
             return '';
         }
@@ -371,6 +391,7 @@ final readonly class StoryboardTextGenerator
         }
 
         $conjunction = $locale === 'en' ? 'and' : 'und';
+
         if ($count === 2) {
             return $filtered[0] . ' ' . $conjunction . ' ' . $filtered[1];
         }

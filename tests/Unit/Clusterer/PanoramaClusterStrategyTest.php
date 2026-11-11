@@ -33,6 +33,7 @@ final class PanoramaClusterStrategyTest extends TestCase
 
         $start = new DateTimeImmutable('2024-06-01 12:00:00', new DateTimeZone('UTC'));
         $items = [];
+
         for ($i = 0; $i < 3; ++$i) {
             $items[] = $this->createPanorama(3900 + $i, $start->add(new DateInterval('PT' . ($i * 600) . 'S')));
         }
@@ -51,6 +52,7 @@ final class PanoramaClusterStrategyTest extends TestCase
 
         $start = new DateTimeImmutable('2024-06-02 12:00:00', new DateTimeZone('UTC'));
         $items = [];
+
         for ($i = 0; $i < 3; ++$i) {
             $items[] = $this->createNarrowPhoto(4000 + $i, $start->add(new DateInterval('PT' . ($i * 600) . 'S')));
         }
@@ -69,6 +71,7 @@ final class PanoramaClusterStrategyTest extends TestCase
 
         $start = new DateTimeImmutable('2024-06-03 12:00:00', new DateTimeZone('UTC'));
         $items = [];
+
         for ($i = 0; $i < 3; ++$i) {
             $items[] = $this->createFlaggedPanorama(
                 4100 + $i,
@@ -92,6 +95,7 @@ final class PanoramaClusterStrategyTest extends TestCase
 
         $start = new DateTimeImmutable('2024-06-04 12:00:00', new DateTimeZone('UTC'));
         $items = [];
+
         for ($i = 0; $i < 3; ++$i) {
             $items[] = $this->createFlaggedPanorama(
                 4200 + $i,

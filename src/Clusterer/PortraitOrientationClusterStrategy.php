@@ -115,7 +115,9 @@ final readonly class PortraitOrientationClusterStrategy implements ClusterStrate
             return [];
         }
 
-        usort($cand, static fn (Media $a, Media $b): int => ($a->getTakenAt()?->getTimestamp() ?? 0) <=> ($b->getTakenAt()?->getTimestamp() ?? 0)
+        usort(
+            $cand,
+            static fn (Media $a, Media $b): int => ($a->getTakenAt()?->getTimestamp() ?? 0) <=> ($b->getTakenAt()?->getTimestamp() ?? 0)
         );
 
         /** @var list<list<Media>> $runs */
@@ -126,6 +128,7 @@ final readonly class PortraitOrientationClusterStrategy implements ClusterStrate
 
         foreach ($cand as $m) {
             $ts = $m->getTakenAt()?->getTimestamp();
+
             if ($ts === null) {
                 continue;
             }
@@ -156,6 +159,7 @@ final readonly class PortraitOrientationClusterStrategy implements ClusterStrate
             $params = ['time_range' => $timeRange, ...$peopleParams];
 
             $tags = $this->collectDominantTags($run);
+
             if ($tags !== []) {
                 $params = [...$params, ...$tags];
             }
@@ -163,6 +167,7 @@ final readonly class PortraitOrientationClusterStrategy implements ClusterStrate
             $params = $this->appendLocationMetadata($run, $params);
 
             $qualityParams = $this->qualityAggregator->buildParams($run);
+
             foreach ($qualityParams as $qualityKey => $qualityValue) {
                 if ($qualityValue !== null) {
                     $params[$qualityKey] = $qualityValue;

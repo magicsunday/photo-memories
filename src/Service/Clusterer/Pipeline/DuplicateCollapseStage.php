@@ -45,6 +45,7 @@ final class DuplicateCollapseStage implements ClusterConsolidationStageInterface
     public function __construct(array $keepOrder, private readonly ?JobMonitoringEmitterInterface $monitoringEmitter = null)
     {
         $base = count($keepOrder);
+
         foreach ($keepOrder as $index => $algorithm) {
             $this->priorityMap[$algorithm] = $base - $index;
         }
@@ -97,12 +98,14 @@ final class DuplicateCollapseStage implements ClusterConsolidationStageInterface
 
         /** @var list<string> $compositeFingerprints */
         $compositeFingerprints = [];
+
         foreach ($drafts as $index => $draft) {
             $compositeFingerprints[$index] = $this->buildCompositeFingerprint($draft, $normalized[$index]);
         }
 
         /** @var array<string,int> $winnerByFingerprint */
         $winnerByFingerprint = [];
+
         foreach ($drafts as $index => $draft) {
             if ($progress !== null && ($index % 400) === 0) {
                 $progress($index, $total);
@@ -110,8 +113,10 @@ final class DuplicateCollapseStage implements ClusterConsolidationStageInterface
 
             $fingerprint = $compositeFingerprints[$index];
             $current     = $winnerByFingerprint[$fingerprint] ?? null;
+
             if ($current === null) {
                 $winnerByFingerprint[$fingerprint] = $index;
+
                 continue;
             }
 
@@ -154,6 +159,7 @@ final class DuplicateCollapseStage implements ClusterConsolidationStageInterface
     {
         $qualityA = $this->resolveAverageQuality($a);
         $qualityB = $this->resolveAverageQuality($b);
+
         if ($qualityA !== null || $qualityB !== null) {
             if ($qualityA === null) {
                 return false;
@@ -170,6 +176,7 @@ final class DuplicateCollapseStage implements ClusterConsolidationStageInterface
 
         $facesA = $this->resolveFacesCount($a);
         $facesB = $this->resolveFacesCount($b);
+
         if ($facesA !== null || $facesB !== null) {
             if ($facesA === null) {
                 return false;
@@ -186,12 +193,14 @@ final class DuplicateCollapseStage implements ClusterConsolidationStageInterface
 
         $scoreA = $this->computeScore($a, $normA);
         $scoreB = $this->computeScore($b, $normB);
+
         if ($scoreA !== $scoreB) {
             return $scoreA > $scoreB;
         }
 
         $priorityA = ($this->priorityMap[$a->getAlgorithm()] ?? 0);
         $priorityB = ($this->priorityMap[$b->getAlgorithm()] ?? 0);
+
         if ($priorityA !== $priorityB) {
             return $priorityA > $priorityB;
         }
@@ -207,21 +216,25 @@ final class DuplicateCollapseStage implements ClusterConsolidationStageInterface
         $components = ['members' => $members];
 
         $dayTag = $this->resolveDayTagBucket($draft);
+
         if ($dayTag !== null) {
             $components['day_tag_bucket'] = $dayTag;
         }
 
         $staypoint = $this->resolveStaypointSignature($draft);
+
         if ($staypoint !== null) {
             $components['staypoint'] = $staypoint;
         }
 
         $phashBucket = $this->resolvePhashBucket($draft);
+
         if ($phashBucket !== null) {
             $components['phash_bucket'] = $phashBucket;
         }
 
         $device = $this->resolveDeviceSignature($draft);
+
         if ($device !== null) {
             $components['device'] = $device;
         }
@@ -259,13 +272,16 @@ final class DuplicateCollapseStage implements ClusterConsolidationStageInterface
     private function resolveDayBucket(array $params): ?string
     {
         $bucketKey = $params['bucket_key'] ?? null;
+
         if (is_string($bucketKey) && $bucketKey !== '') {
             return $bucketKey;
         }
 
         $timeRange = $params['time_range'] ?? null;
+
         if (is_array($timeRange) && isset($timeRange['from'])) {
             $from = (int) $timeRange['from'];
+
             if ($from > 0) {
                 return (new DateTimeImmutable('@' . $from))->format('Y-m-d');
             }
@@ -274,6 +290,7 @@ final class DuplicateCollapseStage implements ClusterConsolidationStageInterface
         $year  = $params['year'] ?? null;
         $month = $params['month'] ?? null;
         $day   = $params['day'] ?? null;
+
         if (is_numeric($year) && is_numeric($month) && is_numeric($day)) {
             return sprintf('%04d-%02d-%02d', (int) $year, (int) $month, (int) $day);
         }
@@ -291,6 +308,7 @@ final class DuplicateCollapseStage implements ClusterConsolidationStageInterface
         $labels = [];
 
         $sceneTags = $params['scene_tags'] ?? null;
+
         if (is_array($sceneTags)) {
             foreach ($sceneTags as $entry) {
                 if (!is_array($entry)) {
@@ -298,6 +316,7 @@ final class DuplicateCollapseStage implements ClusterConsolidationStageInterface
                 }
 
                 $label = $entry['label'] ?? null;
+
                 if (is_string($label) && $label !== '') {
                     $labels[] = strtolower($label);
                 }
@@ -305,6 +324,7 @@ final class DuplicateCollapseStage implements ClusterConsolidationStageInterface
         }
 
         $keywords = $params['keywords'] ?? null;
+
         if (is_array($keywords)) {
             foreach ($keywords as $keyword) {
                 if (is_string($keyword) && $keyword !== '') {
@@ -332,12 +352,14 @@ final class DuplicateCollapseStage implements ClusterConsolidationStageInterface
     {
         $params = $draft->getParams();
         $stay   = $params['primaryStaypoint'] ?? null;
+
         if (!is_array($stay)) {
             return null;
         }
 
         $start = isset($stay['start']) ? (int) $stay['start'] : null;
         $end   = isset($stay['end']) ? (int) $stay['end'] : null;
+
         if ($start === null || $end === null) {
             return null;
         }
@@ -367,16 +389,19 @@ final class DuplicateCollapseStage implements ClusterConsolidationStageInterface
     {
         $params    = $draft->getParams();
         $selection = $params['member_selection'] ?? null;
+
         if (!is_array($selection)) {
             return null;
         }
 
         $hashSamples = $selection['hash_samples'] ?? null;
+
         if (!is_array($hashSamples) || $hashSamples === []) {
             return null;
         }
 
         $values = [];
+
         foreach ($hashSamples as $hash) {
             if (!is_string($hash)) {
                 continue;
@@ -413,6 +438,7 @@ final class DuplicateCollapseStage implements ClusterConsolidationStageInterface
         $label = $params['device_primary_label'] ?? null;
 
         $parts = [];
+
         if (is_string($make) && $make !== '') {
             $parts['make'] = $make;
         }
@@ -436,13 +462,16 @@ final class DuplicateCollapseStage implements ClusterConsolidationStageInterface
     {
         $params  = $draft->getParams();
         $quality = $params['quality_avg'] ?? null;
+
         if (is_numeric($quality)) {
             return (float) $quality;
         }
 
         $summary = $params['member_quality']['summary'] ?? null;
+
         if (is_array($summary)) {
             $value = $summary['quality_avg'] ?? null;
+
             if (is_numeric($value)) {
                 return (float) $value;
             }
@@ -456,19 +485,23 @@ final class DuplicateCollapseStage implements ClusterConsolidationStageInterface
         $params = $draft->getParams();
 
         $faces = $params['faces_count'] ?? null;
+
         if (is_numeric($faces)) {
             return (float) $faces;
         }
 
         $summary = $params['member_quality']['summary'] ?? null;
+
         if (is_array($summary)) {
             $value = $summary['faces_count'] ?? null;
+
             if (is_numeric($value)) {
                 return (float) $value;
             }
         }
 
         $coverage = $params['people_face_coverage'] ?? null;
+
         if (!is_numeric($coverage) && is_array($summary)) {
             $coverage = $summary['people_face_coverage'] ?? null;
         }

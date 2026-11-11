@@ -92,6 +92,7 @@ final readonly class IndexLogEntry
         }
 
         $context = $this->normaliseContext($this->context);
+
         if ($context !== []) {
             $payload['context'] = $context;
         }
@@ -138,6 +139,7 @@ final readonly class IndexLogEntry
 
             if (is_array($value)) {
                 $list = [];
+
                 foreach ($value as $entry) {
                     if (is_bool($entry) || is_int($entry) || is_float($entry)) {
                         $list[] = $entry;

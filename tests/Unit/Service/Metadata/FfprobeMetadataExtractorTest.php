@@ -35,6 +35,7 @@ final class FfprobeMetadataExtractorTest extends TestCase
         $extractor = new FfprobeMetadataExtractor(processRunner: static fn (array $command, float $timeout): string => $fixture);
 
         $videoPath = tempnam(sys_get_temp_dir(), 'vid');
+
         if ($videoPath === false) {
             self::fail('Unable to create temporary video fixture.');
         }
@@ -94,6 +95,7 @@ final class FfprobeMetadataExtractorTest extends TestCase
         $extractor = new FfprobeMetadataExtractor(processRunner: static fn (array $command, float $timeout): string => $fixture);
 
         $videoPath = tempnam(sys_get_temp_dir(), 'vid');
+
         if ($videoPath === false) {
             self::fail('Unable to create temporary video fixture.');
         }
@@ -148,6 +150,7 @@ final class FfprobeMetadataExtractorTest extends TestCase
         $extractor = new FfprobeMetadataExtractor(processRunner: static fn (array $command, float $timeout): string => $fixture);
 
         $videoPath = tempnam(sys_get_temp_dir(), 'vid');
+
         if ($videoPath === false) {
             self::fail('Unable to create temporary video fixture.');
         }
@@ -172,6 +175,7 @@ final class FfprobeMetadataExtractorTest extends TestCase
         $extractor = new FfprobeMetadataExtractor(processRunner: static fn (array $command, float $timeout): string => $fixture);
 
         $videoPath = tempnam(sys_get_temp_dir(), 'vid');
+
         if ($videoPath === false) {
             self::fail('Unable to create temporary video fixture.');
         }
@@ -196,6 +200,7 @@ final class FfprobeMetadataExtractorTest extends TestCase
         $extractor = new FfprobeMetadataExtractor(processRunner: static fn (array $command, float $timeout): string => $fixture);
 
         $videoPath = tempnam(sys_get_temp_dir(), 'vid');
+
         if ($videoPath === false) {
             self::fail('Unable to create temporary video fixture.');
         }
@@ -230,6 +235,7 @@ final class FfprobeMetadataExtractorTest extends TestCase
         };
 
         $videoPath = tempnam(sys_get_temp_dir(), 'vid');
+
         if ($videoPath === false) {
             self::fail('Unable to create temporary video fixture.');
         }
@@ -262,6 +268,7 @@ final class FfprobeMetadataExtractorTest extends TestCase
         ]);
 
         $videoPath = tempnam(sys_get_temp_dir(), 'vid');
+
         if ($videoPath === false) {
             self::fail('Unable to create temporary video fixture.');
         }
@@ -288,6 +295,7 @@ final class FfprobeMetadataExtractorTest extends TestCase
     {
         $path     = __DIR__ . '/fixtures/ffprobe/' . $filename;
         $contents = file_get_contents($path);
+
         if ($contents === false) {
             self::fail('Unable to load ffprobe fixture: ' . $filename);
         }

@@ -270,6 +270,7 @@ final readonly class SeasonClusterStrategy implements ClusterStrategyInterface, 
             ];
 
             $qualityParams = $this->qualityAggregator->buildParams($members);
+
             foreach ($qualityParams as $qualityKey => $qualityValue) {
                 if ($qualityValue !== null) {
                     $params[$qualityKey] = $qualityValue;
@@ -277,6 +278,7 @@ final readonly class SeasonClusterStrategy implements ClusterStrategyInterface, 
             }
 
             $tags = $this->collectDominantTags($members);
+
             if ($tags !== []) {
                 $params = [...$params, ...$tags];
             }

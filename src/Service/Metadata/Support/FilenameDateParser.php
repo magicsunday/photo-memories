@@ -46,6 +46,7 @@ final class FilenameDateParser
             $patterns,
             function (string $pattern) use ($stem, $timezone, &$dateTime): bool {
                 $matches = [];
+
                 if (preg_match($pattern, $stem, $matches) !== 1) {
                     return false;
                 }

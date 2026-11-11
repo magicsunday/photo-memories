@@ -37,6 +37,7 @@ final class PersonCohortClusterStrategyTest extends TestCase
 
         $start = new DateTimeImmutable('2024-01-05 12:00:00', new DateTimeZone('UTC'));
         $items = [];
+
         for ($i = 0; $i < 5; ++$i) {
             $items[] = $this->createPersonMedia(
                 1700 + $i,
@@ -78,6 +79,7 @@ final class PersonCohortClusterStrategyTest extends TestCase
 
         $start = new DateTimeImmutable('2024-02-01 10:00:00', new DateTimeZone('UTC'));
         $items = [];
+
         for ($i = 0; $i < 5; ++$i) {
             $items[] = $this->createPersonMedia(
                 1900 + $i,
@@ -102,6 +104,7 @@ final class PersonCohortClusterStrategyTest extends TestCase
 
         $start = new DateTimeImmutable('2024-03-15 08:00:00', new DateTimeZone('UTC'));
         $items = [];
+
         for ($i = 0; $i < 4; ++$i) {
             $items[] = $this->makeMediaFixture(
                 id: 2000 + $i,

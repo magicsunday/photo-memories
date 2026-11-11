@@ -51,6 +51,7 @@ final readonly class TimezoneResolver implements TimezoneResolverInterface
         if ($offsetVotes !== []) {
             $bestOffset = null;
             $bestCount  = -1;
+
             foreach ($offsetVotes as $offset => $count) {
                 if ($count > $bestCount) {
                     $bestCount  = $count;
@@ -71,6 +72,7 @@ final readonly class TimezoneResolver implements TimezoneResolverInterface
         if ($identifierVotes !== []) {
             $bestIdentifier = null;
             $bestCount      = -1;
+
             foreach ($identifierVotes as $identifier => $count) {
                 if ($count > $bestCount && $identifier !== '') {
                     $bestCount      = $count;
@@ -88,6 +90,7 @@ final readonly class TimezoneResolver implements TimezoneResolverInterface
         }
 
         $homeOffset = $home['timezone_offset'] ?? null;
+
         if ($homeOffset !== null) {
             return $this->traitCreateTimezoneFromOffset($homeOffset)->getName();
         }

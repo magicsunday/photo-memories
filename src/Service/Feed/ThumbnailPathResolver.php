@@ -52,6 +52,7 @@ final class ThumbnailPathResolver
             }
 
             $keyString = $key;
+
             if (ctype_digit($keyString)) {
                 $bySize[(int) $keyString] = $path;
 
@@ -65,6 +66,7 @@ final class ThumbnailPathResolver
             ksort($bySize, SORT_NUMERIC);
 
             $best = null;
+
             foreach ($bySize as $width => $candidate) {
                 if ($width > $desiredWidth) {
                     break;
@@ -80,6 +82,7 @@ final class ThumbnailPathResolver
             }
 
             $first = reset($bySize);
+
             if (is_file($first)) {
                 return $first;
             }

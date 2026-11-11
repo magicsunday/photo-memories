@@ -191,6 +191,7 @@ final readonly class SlideshowJob
     public static function fromJsonFile(string $path): self
     {
         $contents = file_get_contents($path);
+
         if ($contents === false) {
             throw new RuntimeException(sprintf('Could not read job file "%s".', $path));
         }
@@ -201,6 +202,7 @@ final readonly class SlideshowJob
             512,
             JSON_THROW_ON_ERROR
         );
+
         if (!is_array($payload)) {
             throw new RuntimeException(sprintf('Invalid job description in "%s": %s', $path, json_last_error_msg()));
         }
@@ -211,11 +213,13 @@ final readonly class SlideshowJob
         $error  = self::requireString($payload['error'] ?? null, 'error');
 
         $imagesRaw = $payload['images'] ?? [];
+
         if (!is_array($imagesRaw)) {
             throw new RuntimeException('Job payload "images" must be an array.');
         }
 
         $images = [];
+
         foreach ($imagesRaw as $image) {
             if (!is_string($image)) {
                 continue;
@@ -233,6 +237,7 @@ final readonly class SlideshowJob
         }
 
         $storyboardRaw = $payload['storyboard'] ?? [];
+
         if (!is_array($storyboardRaw)) {
             $storyboardRaw = [];
         }
@@ -276,6 +281,7 @@ final readonly class SlideshowJob
                 }
 
                 $image = $slide['image'] ?? ($images[$index] ?? null);
+
                 if (!is_string($image)) {
                     continue;
                 }
@@ -286,12 +292,14 @@ final readonly class SlideshowJob
 
                 $durationRaw = $slide['duration'] ?? null;
                 $duration    = is_numeric($durationRaw) ? (float) $durationRaw : 0.0;
+
                 if ($duration <= 0.0) {
                     $duration = 0.0;
                 }
 
                 $mediaRaw = $slide['mediaId'] ?? null;
                 $mediaId  = null;
+
                 if (is_int($mediaRaw)) {
                     $mediaId = $mediaRaw;
                 } elseif (is_numeric($mediaRaw)) {
@@ -300,8 +308,10 @@ final readonly class SlideshowJob
 
                 $transitionRaw = $slide['transition'] ?? null;
                 $transition    = null;
+
                 if (is_string($transitionRaw)) {
                     $trimmed = trim($transitionRaw);
+
                     if ($trimmed !== '') {
                         $transition = $trimmed;
                     }
@@ -329,6 +339,7 @@ final readonly class SlideshowJob
 
         $transitionDurationsRaw = $storyboard['transitionDurations'] ?? [];
         $transitionDurations    = [];
+
         if (is_array($transitionDurationsRaw)) {
             foreach ($transitionDurationsRaw as $index => $durationRaw) {
                 if (!is_numeric($durationRaw)) {
@@ -336,6 +347,7 @@ final readonly class SlideshowJob
                 }
 
                 $duration = (float) $durationRaw;
+
                 if ($duration <= 0.0) {
                     continue;
                 }
@@ -349,21 +361,26 @@ final readonly class SlideshowJob
 
         $transitionRaw      = $storyboard['transitionDuration'] ?? null;
         $transitionDuration = null;
+
         if (is_numeric($transitionRaw)) {
             $transitionDuration = (float) $transitionRaw;
+
             if ($transitionDuration <= 0.0) {
                 $transitionDuration = null;
             }
         }
 
         $musicRaw = $storyboard['music'] ?? null;
+
         if (!is_string($musicRaw)) {
             $musicRaw = $storyboard['audio'] ?? null;
         }
 
         $music = null;
+
         if (is_string($musicRaw)) {
             $trimmed = trim($musicRaw);
+
             if ($trimmed !== '') {
                 $music = $trimmed;
             }
@@ -384,6 +401,7 @@ final readonly class SlideshowJob
         }
 
         $trimmed = trim($value);
+
         if ($trimmed === '') {
             return null;
         }

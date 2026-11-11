@@ -63,11 +63,13 @@ final class HeuristicClipSceneTagModel implements VisionSceneTagModelInterface
     private function scorePersons(array &$scores, Media $media): void
     {
         $persons = $media->getPersons();
+
         if (!is_array($persons)) {
             return;
         }
 
         $count = 0;
+
         foreach ($persons as $person) {
             if ($person !== '') {
                 ++$count;
@@ -88,6 +90,7 @@ final class HeuristicClipSceneTagModel implements VisionSceneTagModelInterface
     private function scoreContentKind(array &$scores, Media $media): void
     {
         $kind = $media->getContentKind();
+
         if (!$kind instanceof ContentKind) {
             return;
         }
@@ -137,6 +140,7 @@ final class HeuristicClipSceneTagModel implements VisionSceneTagModelInterface
         $bag = $media->getFeatureBag();
 
         $season = $bag->calendarSeason();
+
         if (is_string($season)) {
             $map = [
                 'winter' => ['Winter', 0.62],
@@ -146,6 +150,7 @@ final class HeuristicClipSceneTagModel implements VisionSceneTagModelInterface
             ];
 
             $seasonLower = strtolower($season);
+
             if (isset($map[$seasonLower])) {
                 [$label, $score] = $map[$seasonLower];
                 $this->bump($scores, $label, $score);
@@ -153,11 +158,13 @@ final class HeuristicClipSceneTagModel implements VisionSceneTagModelInterface
         }
 
         $isHoliday = $bag->calendarIsHoliday();
+
         if ($isHoliday === true) {
             $this->bump($scores, 'Feiertag', 0.55);
         }
 
         $isWeekend = $bag->calendarIsWeekend();
+
         if ($isWeekend === true) {
             $this->bump($scores, 'Wochenende', 0.52);
         }
@@ -169,6 +176,7 @@ final class HeuristicClipSceneTagModel implements VisionSceneTagModelInterface
     private function scoreBrightness(array &$scores, Media $media): void
     {
         $brightness = $media->getBrightness();
+
         if ($brightness === null) {
             return;
         }
@@ -194,6 +202,7 @@ final class HeuristicClipSceneTagModel implements VisionSceneTagModelInterface
     private function scoreVisualTexture(array &$scores, Media $media): void
     {
         $sharpness = $media->getSharpness();
+
         if ($sharpness !== null && $sharpness >= 0.5) {
             $detailScore = 0.60 + min(0.25, max(0.0, $sharpness - 0.5) * 0.6);
             $this->bump($scores, 'Detailreich', $detailScore);
@@ -201,8 +210,10 @@ final class HeuristicClipSceneTagModel implements VisionSceneTagModelInterface
 
         $width  = $media->getWidth();
         $height = $media->getHeight();
+
         if ($width !== null && $height !== null && $height > 0) {
             $ratio = (float) $width / (float) $height;
+
             if ($ratio >= 1.9) {
                 $this->bump($scores, 'Panorama', 0.64);
             }
@@ -215,6 +226,7 @@ final class HeuristicClipSceneTagModel implements VisionSceneTagModelInterface
     private function scoreKeywords(array &$scores, Media $media): void
     {
         $keywords = $media->getKeywords();
+
         if (!is_array($keywords)) {
             return;
         }
@@ -225,6 +237,7 @@ final class HeuristicClipSceneTagModel implements VisionSceneTagModelInterface
             }
 
             $k = strtolower($keyword);
+
             if (str_contains($k, 'beach') || str_contains($k, 'strand')) {
                 $this->bump($scores, 'Strand', 0.74);
             } elseif (str_contains($k, 'mountain') || str_contains($k, 'berg')) {

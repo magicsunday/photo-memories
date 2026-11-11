@@ -35,16 +35,19 @@ final readonly class LocalTimeHelper
     public function resolve(Media $media): ?DateTimeImmutable
     {
         $capturedLocal = $media->getCapturedLocal();
+
         if ($capturedLocal instanceof DateTimeImmutable) {
             return $capturedLocal;
         }
 
         $takenAt = $media->getTakenAt();
+
         if (!$takenAt instanceof DateTimeImmutable) {
             return null;
         }
 
         $offsetMinutes = $media->getTimezoneOffsetMin();
+
         if (is_int($offsetMinutes)) {
             return $takenAt->setTimezone($this->createOffsetTimezone($offsetMinutes));
         }

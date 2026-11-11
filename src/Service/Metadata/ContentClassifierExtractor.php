@@ -120,6 +120,7 @@ final readonly class ContentClassifierExtractor implements SingleMetadataExtract
     public function supports(string $filepath, Media $media): bool
     {
         $mime = $media->getMime();
+
         if ($mime === null) {
             return true;
         }
@@ -135,6 +136,7 @@ final readonly class ContentClassifierExtractor implements SingleMetadataExtract
         $bag->setClassificationShouldHide(null);
 
         $result = $this->classify($media, $filepath);
+
         if ($result === null) {
             $media->setFeatureBag($bag);
 
@@ -168,22 +170,26 @@ final readonly class ContentClassifierExtractor implements SingleMetadataExtract
 
         if ($media->isVideo()) {
             $score = $this->scoreScreenRecording($media, $tokens);
+
             if ($score !== null) {
                 $scores[] = ['kind' => ContentKind::SCREEN_RECORDING, 'confidence' => $score];
             }
         }
 
         $screenshotScore = $this->scoreScreenshot($media, $tokens);
+
         if ($screenshotScore !== null) {
             $scores[] = ['kind' => ContentKind::SCREENSHOT, 'confidence' => $screenshotScore];
         }
 
         $mapScore = $this->scoreMap($media, $tokens);
+
         if ($mapScore !== null) {
             $scores[] = ['kind' => ContentKind::MAP, 'confidence' => $mapScore];
         }
 
         $documentScore = $this->scoreDocument($media, $tokens);
+
         if ($documentScore !== null) {
             $scores[] = ['kind' => ContentKind::DOCUMENT, 'confidence' => $documentScore];
         }
@@ -210,12 +216,14 @@ final readonly class ContentClassifierExtractor implements SingleMetadataExtract
     private function scoreScreenshot(Media $media, array $tokens): ?float
     {
         $score = 0.0;
+
         if ($this->matchesAnyKeyword($tokens, self::SCREENSHOT_KEYWORDS)) {
             $score += 0.5;
         }
 
         $width  = $media->getWidth();
         $height = $media->getHeight();
+
         if ($width === null || $height === null) {
             return $this->confidenceOrNull($score);
         }
@@ -230,21 +238,25 @@ final readonly class ContentClassifierExtractor implements SingleMetadataExtract
 
         $longSide  = max($width, $height);
         $shortSide = min($width, $height);
+
         if ($shortSide === 0) {
             return $this->confidenceOrNull($score);
         }
 
         $ratio = $longSide / (float) $shortSide;
+
         if ($longSide >= $this->screenshotMinLongSide && $ratio >= $this->screenshotAspectRatioMin && $ratio <= $this->screenshotAspectRatioMax) {
             $score += 0.35;
         }
 
         $sharpness = $media->getSharpness();
+
         if ($sharpness !== null && $sharpness <= $this->screenshotSharpnessMax) {
             $score += 0.1;
         }
 
         $colorfulness = $media->getColorfulness();
+
         if ($colorfulness !== null && $colorfulness <= $this->screenshotColorfulnessMax) {
             $score += 0.1;
         }
@@ -306,6 +318,7 @@ final readonly class ContentClassifierExtractor implements SingleMetadataExtract
     private function scoreMap(Media $media, array $tokens): ?float
     {
         $score = 0.0;
+
         if ($this->matchesAnyKeyword($tokens, self::MAP_KEYWORDS)) {
             $score += 0.5;
         }
@@ -328,22 +341,27 @@ final readonly class ContentClassifierExtractor implements SingleMetadataExtract
     private function scoreScreenRecording(Media $media, array $tokens): ?float
     {
         $score = 0.0;
+
         if ($this->matchesAnyKeyword($tokens, self::SCREEN_RECORD_KEYWORDS)) {
             $score += 0.5;
         }
 
         $fps = $media->getVideoFps();
+
         if ($fps !== null && $fps >= $this->screenRecordingFpsThreshold) {
             $cameraMake  = $media->getCameraMake();
             $cameraModel = $media->getCameraModel();
+
             if ($cameraMake === null && $cameraModel === null) {
                 $score += 0.20;
             }
         }
 
         $codec = $media->getVideoCodec();
+
         if ($codec !== null) {
             $codecLower = strtolower($codec);
+
             if (str_contains($codecLower, 'screen') || str_contains($codecLower, 'display')) {
                 $score += 0.20;
             }
@@ -373,6 +391,7 @@ final readonly class ContentClassifierExtractor implements SingleMetadataExtract
         $tokens     = [];
         $bag        = $media->getFeatureBag();
         $pathTokens = $bag->filePathTokens();
+
         if ($pathTokens !== null) {
             foreach ($this->relevantPathTokens($pathTokens) as $token) {
                 $tokens[] = $token;
@@ -380,6 +399,7 @@ final readonly class ContentClassifierExtractor implements SingleMetadataExtract
         }
 
         $hint = $bag->fileNameHint();
+
         if ($hint !== null && $hint !== '') {
             $tokens[] = strtolower($hint);
         }
@@ -388,6 +408,7 @@ final readonly class ContentClassifierExtractor implements SingleMetadataExtract
         $tokens[] = str_replace([' ', '_'], '-', $basename);
 
         $extra = preg_split('/[^a-z0-9]+/i', $basename);
+
         if ($extra === false) {
             $extra = [];
         }
@@ -413,8 +434,10 @@ final readonly class ContentClassifierExtractor implements SingleMetadataExtract
         }
 
         $normalized = [];
+
         foreach ($pathTokens as $token) {
             $lower = strtolower($token);
+
             if ($lower === '') {
                 continue;
             }
@@ -429,6 +452,7 @@ final readonly class ContentClassifierExtractor implements SingleMetadataExtract
         $tail = array_slice($normalized, -5);
 
         $filtered = [];
+
         foreach ($tail as $token) {
             if (in_array($token, self::GENERIC_PATH_TOKENS, true)) {
                 continue;
@@ -473,16 +497,19 @@ final readonly class ContentClassifierExtractor implements SingleMetadataExtract
     private function visionBoost(Media $media, array $keywords): float
     {
         $tags = $media->getSceneTags();
+
         if (!is_array($tags) || $tags === []) {
             return 0.0;
         }
 
         $maxScore = 0.0;
+
         foreach ($tags as $tag) {
             $label = $tag['label'];
             $score = $tag['score'];
 
             $labelLower = strtolower($label);
+
             foreach ($keywords as $keyword) {
                 if (str_contains($labelLower, $keyword)) {
                     $maxScore = max($maxScore, $score);

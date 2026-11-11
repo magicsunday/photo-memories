@@ -102,6 +102,7 @@ final readonly class ThisMonthOverYearsClusterStrategy implements ClusterStrateg
                 assert($takenAt instanceof DateTimeImmutable);
 
                 $local = $takenAt->setTimezone($tz);
+
                 if ((int) $local->format('n') !== $mon) {
                     return false;
                 }
@@ -129,6 +130,7 @@ final readonly class ThisMonthOverYearsClusterStrategy implements ClusterStrateg
         ];
 
         $tags = $this->collectDominantTags($picked);
+
         if ($tags !== []) {
             $params = [...$params, ...$tags];
         }
@@ -136,6 +138,7 @@ final readonly class ThisMonthOverYearsClusterStrategy implements ClusterStrateg
         $params = $this->appendLocationMetadata($picked, $params);
 
         $qualityParams = $this->qualityAggregator->buildParams($picked);
+
         foreach ($qualityParams as $qualityKey => $qualityValue) {
             if ($qualityValue !== null) {
                 $params[$qualityKey] = $qualityValue;

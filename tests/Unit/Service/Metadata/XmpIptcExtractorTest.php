@@ -32,7 +32,9 @@ final class XmpIptcExtractorTest extends TestCase
 
         /** @var string $path */
         file_put_contents($path, 'fake-image');
-        file_put_contents($path . '.xmp', <<<'XML'
+        file_put_contents(
+            $path . '.xmp',
+            <<<'XML'
 <?xml version="1.0" encoding="UTF-8"?>
 <x:xmpmeta xmlns:x="adobe:ns:meta/" xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#" xmlns:mwg-rs="http://www.metadataworkinggroup.com/schemas/regions/">
   <rdf:RDF>
@@ -78,6 +80,7 @@ XML
             }
 
             $sidecar = $path . '.xmp';
+
             if (file_exists($sidecar)) {
                 unlink($sidecar);
             }
@@ -92,7 +95,9 @@ XML
 
         /** @var string $path */
         file_put_contents($path, 'fake-image');
-        file_put_contents($path . '.xmp', <<<'XML'
+        file_put_contents(
+            $path . '.xmp',
+            <<<'XML'
 <?xml version="1.0" encoding="UTF-8"?>
 <x:xmpmeta xmlns:x="adobe:ns:meta/" xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#">
   <rdf:RDF>
@@ -130,6 +135,7 @@ XML
             }
 
             $sidecar = $path . '.xmp';
+
             if (file_exists($sidecar)) {
                 unlink($sidecar);
             }

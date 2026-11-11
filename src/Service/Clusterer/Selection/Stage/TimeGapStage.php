@@ -39,6 +39,7 @@ final class TimeGapStage implements SelectionStageInterface
 
         foreach ($candidates as $candidate) {
             $timestamp = $candidate['timestamp'] ?? null;
+
             if (!is_int($timestamp)) {
                 $selected[] = $candidate;
 

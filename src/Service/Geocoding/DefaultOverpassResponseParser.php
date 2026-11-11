@@ -40,40 +40,47 @@ final readonly class DefaultOverpassResponseParser implements OverpassResponsePa
     public function parse(array $payload, float $lat, float $lon, ?int $limit): array
     {
         $elements = $payload['elements'] ?? null;
+
         if (!is_array($elements)) {
             return [];
         }
 
         /** @var array<string,array<string,mixed>> $pois */
         $pois = [];
+
         foreach ($elements as $element) {
             if (!is_array($element)) {
                 continue;
             }
 
             $normalized = $this->elementFilter->filter($element);
+
             if ($normalized === null) {
                 continue;
             }
 
             $id = $normalized['id'];
+
             if (isset($pois[$id])) {
                 continue;
             }
 
             $selection    = $this->tagSelector->select($normalized['tags']);
             $selectedTags = $selection['tags'];
+
             if ($selectedTags === []) {
                 continue;
             }
 
             $primary = $this->primaryTagResolver->resolve($normalized['tags']);
+
             if ($primary === null) {
                 continue;
             }
 
             $names = $selection['names'];
             $name  = $this->poiNameExtractor->extract($names);
+
             if ($name === null) {
                 continue;
             }

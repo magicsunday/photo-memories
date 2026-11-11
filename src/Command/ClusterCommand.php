@@ -73,6 +73,7 @@ final class ClusterCommand extends Command
         $debugVacation = (bool) $input->getOption('debug-vacation');
 
         $debugContextActive = false;
+
         if ($this->vacationDebugContext instanceof VacationDebugContext) {
             if ($debugVacation) {
                 $this->vacationDebugContext->enable();
@@ -87,8 +88,10 @@ final class ClusterCommand extends Command
 
         try {
             $sinceValue = null;
+
             if (is_string($since) && $since !== '') {
                 $sinceValue = DateTimeImmutable::createFromFormat('Y-m-d|', $since);
+
                 if (!$sinceValue instanceof DateTimeImmutable) {
                     $io->error('Invalid "since" date. Use YYYY-MM-DD.');
 
@@ -97,6 +100,7 @@ final class ClusterCommand extends Command
             }
 
             $limitValue = null;
+
             if (is_string($limit) && $limit !== '') {
                 if (!ctype_digit($limit)) {
                     $io->error('Invalid "limit" value. Use a positive integer.');
@@ -105,6 +109,7 @@ final class ClusterCommand extends Command
                 }
 
                 $limitAsInt = (int) $limit;
+
                 if ($limitAsInt > 0) {
                     $limitValue = $limitAsInt;
                 }
@@ -132,6 +137,7 @@ final class ClusterCommand extends Command
             }
 
             $io->success(sprintf('%d Medien geladen.', $result->getLoadedMediaCount()));
+
             if ($result->getLoadedMediaCount() === 0) {
                 $io->note('Keine Medien zum Clustern vorhanden.');
 
@@ -139,6 +145,7 @@ final class ClusterCommand extends Command
             }
 
             $io->success(sprintf('%d Cluster vorgeschlagen.', $result->getDraftCount()));
+
             if ($result->getDraftCount() === 0) {
                 $io->note('Keine Cluster zu speichern.');
 
@@ -188,6 +195,7 @@ final class ClusterCommand extends Command
 
             foreach ($labels as $stage => $label) {
                 $stat = $stageStats[$stage] ?? null;
+
                 if ($stat === null) {
                     continue;
                 }
@@ -213,6 +221,7 @@ final class ClusterCommand extends Command
         }
 
         $rows = [];
+
         foreach ($topClusters as $summary) {
             $score     = $summary->getScore();
             $timeRange = $summary->getTimeRange();

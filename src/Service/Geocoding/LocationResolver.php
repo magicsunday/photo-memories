@@ -76,6 +76,7 @@ final class LocationResolver implements PoiEnsurerInterface
             'provider'        => $g->provider,
             'providerPlaceId' => $g->providerPlaceId,
         ]);
+
         if ($existing instanceof Location) {
             $this->cacheByKey[$key] = $existing;
             $this->applyGeocodeMetadata($existing, $g);
@@ -88,6 +89,7 @@ final class LocationResolver implements PoiEnsurerInterface
         $cell = $this->cellKey($g->lat, $g->lon, $this->cellDeg);
         /** @var list<Location> $near */
         $near = $repo->findBy(['cell' => $cell], orderBy: ['id' => 'ASC']);
+
         foreach ($near as $cand) {
             if ($this->similar($cand, $g)) {
                 // absichtlich NICHT unter $key cachen (anderer providerPlaceId),
@@ -178,11 +180,13 @@ final class LocationResolver implements PoiEnsurerInterface
     private function similar(Location $loc, GeocodeResult $g): bool
     {
         $score = 0;
+
         if ($loc->getCountryCode() !== null && $g->countryCode !== null && $loc->getCountryCode() === strtoupper($g->countryCode)) {
             ++$score;
         }
 
         $gc = $g->city ?? $g->town ?? $g->village;
+
         if ($loc->getCity() !== null && $gc !== null && $loc->getCity() === $gc) {
             ++$score;
         }
@@ -248,6 +252,7 @@ final class LocationResolver implements PoiEnsurerInterface
         }
 
         $usedNetwork = $this->poiEnricher->enrich($location, $geocode);
+
         if ($usedNetwork) {
             $this->lastUsedNetwork = true;
         }

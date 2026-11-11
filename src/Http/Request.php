@@ -88,6 +88,7 @@ final class Request
         }
 
         $query = [];
+
         // Normalize the query string parameters to ensure consistent string keys
         // and values, ignoring anything that cannot be represented as a string.
         foreach ($_GET as $key => $value) {
@@ -96,6 +97,7 @@ final class Request
             }
 
             $normalized = self::normalizeScalar($value);
+
             if ($normalized === null) {
                 continue;
             }
@@ -110,6 +112,7 @@ final class Request
         $headers = array_change_key_case($headers);
 
         $body = null;
+
         if (isset($server['CONTENT_LENGTH']) && $server['CONTENT_LENGTH'] !== '0') {
             $stream = file_get_contents('php://input');
             $body   = $stream !== false && $stream !== '' ? $stream : null;
@@ -136,8 +139,10 @@ final class Request
         ?string $body = null,
     ): self {
         $normalizedQuery = [];
+
         foreach ($query as $key => $value) {
             $normalized = self::normalizeScalar($value);
+
             if ($normalized === null) {
                 continue;
             }
@@ -146,6 +151,7 @@ final class Request
         }
 
         $normalizedHeaders = [];
+
         foreach ($headers as $key => $value) {
             $normalizedHeaders[strtolower($key)] = trim($value);
         }
@@ -266,6 +272,7 @@ final class Request
     public function getHost(): string
     {
         $hostHeader = $this->getHeader('host');
+
         if ($hostHeader !== null) {
             $parts = explode(':', $hostHeader);
 
@@ -273,6 +280,7 @@ final class Request
         }
 
         $serverName = $this->server['SERVER_NAME'] ?? null;
+
         if (is_string($serverName) && $serverName !== '') {
             return $serverName;
         }
@@ -286,6 +294,7 @@ final class Request
     public function getScheme(): string
     {
         $https = $this->server['HTTPS'] ?? '';
+
         if ($https === 'on' || $https === '1') {
             return 'https';
         }

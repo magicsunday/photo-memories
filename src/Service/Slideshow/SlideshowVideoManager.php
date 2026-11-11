@@ -130,12 +130,14 @@ final readonly class SlideshowVideoManager implements SlideshowVideoManagerInter
     private function sanitizeTransitions(array $transitions): array
     {
         $sanitized = [];
+
         foreach ($transitions as $transition) {
             if (!is_string($transition)) {
                 continue;
             }
 
             $trimmed = trim($transition);
+
             if ($trimmed === '') {
                 continue;
             }
@@ -159,6 +161,7 @@ final readonly class SlideshowVideoManager implements SlideshowVideoManagerInter
         bool $dryRun = false,
     ): SlideshowVideoStatus {
         $slides = $this->collectSlides($memberIds, $mediaMap);
+
         if ($slides === []) {
             $this->emitMonitoring('skipped', [
                 'itemId'      => $itemId,
@@ -175,6 +178,7 @@ final readonly class SlideshowVideoManager implements SlideshowVideoManagerInter
         $jobPath   = $this->buildJobPath($videoPath);
 
         $status = $this->getStatusForItem($itemId);
+
         if ($status->status() === SlideshowVideoStatus::STATUS_READY) {
             $this->emitMonitoring('ready', [
                 'itemId'    => $itemId,
@@ -229,6 +233,7 @@ final readonly class SlideshowVideoManager implements SlideshowVideoManagerInter
             $title,
             $subtitle,
         );
+
         if ($dryRun) {
             $storyboardPath = $this->storyboardWriter->write($job);
 
@@ -248,6 +253,7 @@ final readonly class SlideshowVideoManager implements SlideshowVideoManagerInter
         $this->ensureVideoDirectory();
 
         $writtenBytes = file_put_contents($jobPath, $job->toJson(), LOCK_EX);
+
         if ($writtenBytes === false) {
             throw new ProcessRuntimeException(sprintf('Job file "%s" could not be written.', $jobPath));
         }
@@ -256,6 +262,7 @@ final readonly class SlideshowVideoManager implements SlideshowVideoManagerInter
             $this->dispatchJob($job);
         } catch (Throwable $exception) {
             $message = $exception->getMessage();
+
             if ($message === '') {
                 $message = 'Video konnte nicht erzeugt werden.';
             }
@@ -297,11 +304,13 @@ final readonly class SlideshowVideoManager implements SlideshowVideoManagerInter
     public function getStatusForItem(string $itemId): SlideshowVideoStatus
     {
         $videoPath = $this->buildVideoPath($itemId);
+
         if (is_file($videoPath)) {
             return SlideshowVideoStatus::ready($this->buildVideoUrl($itemId), $this->slideDuration);
         }
 
         $errorPath = $this->buildErrorPath($videoPath);
+
         if (is_file($errorPath)) {
             $message = file_get_contents($errorPath);
             $message = is_string($message) && $message !== '' ? $message : 'Video konnte nicht erzeugt werden.';
@@ -310,6 +319,7 @@ final readonly class SlideshowVideoManager implements SlideshowVideoManagerInter
         }
 
         $lockPath = $this->buildLockPath($videoPath);
+
         if (is_file($lockPath)) {
             return SlideshowVideoStatus::generating($this->slideDuration);
         }
@@ -321,6 +331,7 @@ final readonly class SlideshowVideoManager implements SlideshowVideoManagerInter
     {
         $lockContent = (string) getmypid();
         $lockResult  = file_put_contents($job->lockPath(), $lockContent, LOCK_EX);
+
         if ($lockResult === false) {
             throw new ProcessRuntimeException(sprintf('Lock file "%s" could not be created.', $job->lockPath()));
         }
@@ -370,13 +381,16 @@ final readonly class SlideshowVideoManager implements SlideshowVideoManagerInter
     private function collectSlides(array $memberIds, array $mediaMap): array
     {
         $slides = [];
+
         foreach ($memberIds as $memberId) {
             $media = $mediaMap[$memberId] ?? null;
+
             if (!$media instanceof Media) {
                 continue;
             }
 
             $path = $media->getPath();
+
             if ($path !== '' && is_file($path)) {
                 $slides[] = [
                     'mediaId' => $memberId,
@@ -435,6 +449,7 @@ final readonly class SlideshowVideoManager implements SlideshowVideoManagerInter
             ];
 
             $transition = $transitionSequence[$sequenceIndex] ?? null;
+
             if (is_string($transition) && $transition !== '') {
                 $storySlide['transition'] = $transition;
             }
@@ -492,6 +507,7 @@ final readonly class SlideshowVideoManager implements SlideshowVideoManagerInter
     private function hashSeed(string $payload): string
     {
         $base = $payload;
+
         if ($this->deterministicSeed !== '') {
             $base = $this->deterministicSeed . '|' . $payload;
         }
@@ -506,6 +522,7 @@ final readonly class SlideshowVideoManager implements SlideshowVideoManagerInter
         }
 
         $trimmed = trim($value);
+
         if ($trimmed === '') {
             return null;
         }
@@ -609,6 +626,7 @@ final readonly class SlideshowVideoManager implements SlideshowVideoManagerInter
         }
 
         $trimmed = trim($value);
+
         if ($trimmed === '') {
             return null;
         }
@@ -646,6 +664,7 @@ final readonly class SlideshowVideoManager implements SlideshowVideoManagerInter
 
             if (is_resource($handle)) {
                 $status = proc_get_status($handle);
+
                 foreach ($pipes as $pipe) {
                     if (is_resource($pipe)) {
                         fclose($pipe);

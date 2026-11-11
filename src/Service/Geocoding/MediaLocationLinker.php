@@ -59,6 +59,7 @@ final class MediaLocationLinker implements MediaLocationLinkerInterface
 
         $lat = $media->getGpsLat();
         $lon = $media->getGpsLon();
+
         if ($lat === null || $lon === null) {
             return null;
         }
@@ -78,6 +79,7 @@ final class MediaLocationLinker implements MediaLocationLinkerInterface
         // 2) pre-warmed DB index
         if (!$forceRefreshLocations) {
             $fromIndex = $this->cellIndex->findByCell($cell);
+
             if ($fromIndex instanceof Location) {
                 $this->cellCache[$cell] = $fromIndex;
                 $this->ensurePois($fromIndex, $forceRefreshPois);
@@ -92,6 +94,7 @@ final class MediaLocationLinker implements MediaLocationLinkerInterface
         $acceptLanguage = $this->normalizeAcceptLanguage($acceptLanguage);
 
         $result = $this->geocoder->reverse($lat, $lon, $acceptLanguage);
+
         if (!$result instanceof GeocodeResult) {
             return null;
         }
@@ -99,6 +102,7 @@ final class MediaLocationLinker implements MediaLocationLinkerInterface
         $networkCalls = 1; // reverse geocoding uses one request
 
         $loc = $this->resolver->findOrCreate($result);
+
         if ($this->resolver->consumeLastUsedNetwork()) {
             ++$networkCalls;
         }

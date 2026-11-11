@@ -44,6 +44,7 @@ final class OnThisDayOverYearsClusterStrategyTest extends TestCase
 
                 $mediaItems = [];
                 $id         = 1;
+
                 foreach ([2019, 2020, 2021] as $year) {
                     $morning = $this->createMedia($id++, $this->dateString($year, $month, $day, '09:00:00'));
                     $this->assignTags($morning, [

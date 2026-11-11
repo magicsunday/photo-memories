@@ -102,6 +102,7 @@ final class TransitTravelDayClusterStrategyTest extends TestCase
         ];
 
         $items = [];
+
         foreach ($points as $idx => [$lat, $lon]) {
             $items[] = $this->createMedia(2400 + $idx, $day->add(new DateInterval('PT' . ($idx * 600) . 'S')), $lat, $lon);
         }
@@ -135,6 +136,7 @@ final class TransitTravelDayClusterStrategyTest extends TestCase
         ];
 
         $items = [];
+
         foreach ($points as $idx => [$lat, $lon]) {
             $items[] = $this->createMedia(2500 + $idx, $day->add(new DateInterval('PT' . ($idx * 1800) . 'S')), $lat, $lon);
         }

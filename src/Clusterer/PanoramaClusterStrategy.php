@@ -67,6 +67,7 @@ final readonly class PanoramaClusterStrategy implements ClusterStrategyInterface
             $items,
             function (Media $m): bool {
                 $flag = $m->isPanorama();
+
                 if ($flag === true) {
                     return true;
                 }
@@ -91,11 +92,14 @@ final readonly class PanoramaClusterStrategy implements ClusterStrategyInterface
                 return $ratio >= $this->minAspect;
             }
         );
+
         if (count($cand) < $this->minItemsPerRun) {
             return [];
         }
 
-        usort($cand, static fn (Media $a, Media $b): int => ($a->getTakenAt()?->getTimestamp() ?? 0) <=> ($b->getTakenAt()?->getTimestamp() ?? 0)
+        usort(
+            $cand,
+            static fn (Media $a, Media $b): int => ($a->getTakenAt()?->getTimestamp() ?? 0) <=> ($b->getTakenAt()?->getTimestamp() ?? 0)
         );
 
         /** @var list<ClusterDraft> $out */
@@ -128,6 +132,7 @@ final readonly class PanoramaClusterStrategy implements ClusterStrategyInterface
 
         foreach ($cand as $m) {
             $ts = $m->getTakenAt()?->getTimestamp();
+
             if ($ts === null) {
                 continue;
             }

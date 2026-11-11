@@ -45,8 +45,10 @@ final class DefaultExifValueAccessor implements ExifValueAccessorInterface
         foreach ($candidates as $candidate) {
             if (is_string($candidate) && $candidate !== '') {
                 $normalized = substr($candidate, 0, 19);
+
                 if ($this->looksLikeExifDate($normalized)) {
                     $value = $this->normalizeExifDate($normalized);
+
                     try {
                         return new DateTimeImmutable($value);
                     } catch (Throwable) {
@@ -79,6 +81,7 @@ final class DefaultExifValueAccessor implements ExifValueAccessorInterface
             }
 
             $normalized = trim($candidate, " \t\n\r\0\x0B");
+
             if ($normalized === '') {
                 continue;
             }
@@ -121,6 +124,7 @@ final class DefaultExifValueAccessor implements ExifValueAccessorInterface
     public function intFromScalarOrArray(mixed $value): ?int
     {
         $int = $this->intOrNull($value);
+
         if ($int !== null) {
             return $int;
         }
@@ -189,18 +193,21 @@ final class DefaultExifValueAccessor implements ExifValueAccessorInterface
     {
         $latitude  = $this->coordinateToFloat($gps['GPSLatitude'] ?? null, $gps['GPSLatitudeRef'] ?? null);
         $longitude = $this->coordinateToFloat($gps['GPSLongitude'] ?? null, $gps['GPSLongitudeRef'] ?? null);
+
         if ($latitude === null || $longitude === null) {
             return null;
         }
 
         $altitude    = $this->floatOrRational($gps['GPSAltitude'] ?? null);
         $altitudeRef = $this->intOrNull($gps['GPSAltitudeRef'] ?? null);
+
         if ($altitude !== null && $altitudeRef === 1) {
             $altitude = -$altitude;
         }
 
         $speedValue = $this->floatOrRational($gps['GPSSpeed'] ?? null);
         $speed      = null;
+
         if ($speedValue !== null) {
             $reference = is_string($gps['GPSSpeedRef'] ?? null) ? $gps['GPSSpeedRef'] : 'K';
             $speed     = match (strtoupper($reference)) {
@@ -250,6 +257,7 @@ final class DefaultExifValueAccessor implements ExifValueAccessorInterface
         $degrees = $this->floatOrRational($value[0] ?? null);
         $minutes = $this->floatOrRational($value[1] ?? null);
         $seconds = $this->floatOrRational($value[2] ?? null);
+
         if ($degrees === null || $minutes === null || $seconds === null) {
             return null;
         }

@@ -285,6 +285,7 @@ final class MetaExportStageTest extends TestCase
         }
 
         $entries = scandir($directory);
+
         if ($entries === false) {
             return;
         }
@@ -299,8 +300,10 @@ final class MetaExportStageTest extends TestCase
             }
 
             $path = $directory . '/' . $entry;
+
             if (is_dir($path)) {
                 $this->removeDirectory($path);
+
                 continue;
             }
 

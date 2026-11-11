@@ -54,11 +54,13 @@ final class VideoFrameSampler implements VideoFrameSamplerInterface
         ?callable $processRunner = null,
     ) {
         $normalizedFfmpeg = trim($ffmpegBinary);
+
         if ($normalizedFfmpeg === '') {
             $normalizedFfmpeg = 'ffmpeg';
         }
 
         $normalizedFfprobe = trim($ffprobeBinary);
+
         if ($normalizedFfprobe === '') {
             $normalizedFfprobe = 'ffprobe';
         }
@@ -85,17 +87,20 @@ final class VideoFrameSampler implements VideoFrameSamplerInterface
         }
 
         $videoPath = $media->getPath();
+
         if ($videoPath === '' || !is_file($videoPath) || !is_readable($videoPath)) {
             return null;
         }
 
         $posterPath = $this->createPosterFrame($media, $videoPath);
+
         if (!is_string($posterPath) || $posterPath === '') {
             return null;
         }
 
         try {
             $matrix = $loader($posterPath);
+
             if (!is_array($matrix)) {
                 return null;
             }
@@ -109,11 +114,13 @@ final class VideoFrameSampler implements VideoFrameSamplerInterface
     private function createPosterFrame(Media $media, string $videoPath): ?string
     {
         $tempFile = tempnam(sys_get_temp_dir(), 'mem_vframe_');
+
         if (!is_string($tempFile)) {
             return null;
         }
 
         $posterPath = $tempFile . '.jpg';
+
         if (is_file($tempFile)) {
             unlink($tempFile);
         }
@@ -134,6 +141,7 @@ final class VideoFrameSampler implements VideoFrameSamplerInterface
         $command[] = $posterPath;
 
         $result = $this->runProcess($command, $this->processTimeout);
+
         if (($result['exitCode'] ?? -1) !== 0 || !is_file($posterPath)) {
             $this->cleanupPosterFrame($posterPath);
 
@@ -157,6 +165,7 @@ final class VideoFrameSampler implements VideoFrameSamplerInterface
 
         if ($duration !== null && $duration > 0.0) {
             $candidate = $duration * 0.25;
+
             if ($candidate < 0.3) {
                 $candidate = min(0.3, $duration);
             }
@@ -169,6 +178,7 @@ final class VideoFrameSampler implements VideoFrameSamplerInterface
         }
 
         $target = max(0.0, min(2.0, $this->posterFrameSecond));
+
         if ($target < 0.5) {
             return 0.5;
         }
@@ -192,11 +202,13 @@ final class VideoFrameSampler implements VideoFrameSamplerInterface
         ];
 
         $result = $this->runProcess($command, max(1.0, $this->processTimeout / 2.0));
+
         if (($result['exitCode'] ?? -1) !== 0) {
             return null;
         }
 
         $output = trim($result['stdout'] ?? '');
+
         if ($output === '') {
             $output = trim($result['stderr'] ?? '');
         }
@@ -210,6 +222,7 @@ final class VideoFrameSampler implements VideoFrameSamplerInterface
         }
 
         $duration = (float) $output;
+
         if ($duration <= 0.0) {
             return null;
         }
@@ -225,8 +238,10 @@ final class VideoFrameSampler implements VideoFrameSamplerInterface
     private function runProcess(array $command, float $timeout): array
     {
         $runner = $this->processRunner;
+
         if ($runner !== null) {
             $result = $runner($command, $timeout);
+
             if (is_array($result)) {
                 return [
                     'exitCode' => $result['exitCode'] ?? null,

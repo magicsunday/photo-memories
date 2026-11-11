@@ -56,31 +56,37 @@ final readonly class MemoryDatasetLoader
     public function load(string $dataset): MemoryDataset
     {
         $datasetPath = rtrim($this->fixturesBaseDir, '/') . '/' . $dataset;
+
         if (!is_dir($datasetPath)) {
             throw new InvalidArgumentException(sprintf('Dataset "%s" does not exist under "%s".', $dataset, $this->fixturesBaseDir));
         }
 
         $metadataPath = $datasetPath . '/metadata.json';
+
         if (!file_exists($metadataPath)) {
             throw new InvalidArgumentException(sprintf('Dataset "%s" is missing metadata.json.', $dataset));
         }
 
         $metadata = json_decode((string) file_get_contents($metadataPath), true, 512, JSON_THROW_ON_ERROR);
+
         if (!is_array($metadata)) {
             throw new RuntimeException(sprintf('Metadata for "%s" must decode to an array.', $dataset));
         }
 
         $name = $metadata['dataset'] ?? $dataset;
+
         if (!is_string($name) || $name === '') {
             throw new InvalidArgumentException(sprintf('Dataset name for "%s" must be a non-empty string.', $dataset));
         }
 
         $title = $metadata['title'] ?? '';
+
         if (!is_string($title) || $title === '') {
             throw new InvalidArgumentException(sprintf('Dataset "%s" requires a title.', $dataset));
         }
 
         $themes = $metadata['themes'] ?? [];
+
         if (!is_array($themes) || $themes === []) {
             throw new InvalidArgumentException(sprintf('Dataset "%s" must declare at least one theme.', $dataset));
         }
@@ -94,12 +100,14 @@ final readonly class MemoryDatasetLoader
         }, $themes);
 
         $primaryCluster = $metadata['primary_cluster'] ?? null;
+
         if (!is_string($primaryCluster) || $primaryCluster === '') {
             throw new InvalidArgumentException(sprintf('Dataset "%s" must define a primary_cluster.', $dataset));
         }
 
         $storyboard  = $metadata['storyboard'] ?? [];
         $transitions = $storyboard['transitions'] ?? [];
+
         if (!is_array($transitions)) {
             throw new InvalidArgumentException(sprintf('Dataset "%s" storyboard transitions must be an array.', $dataset));
         }
@@ -113,6 +121,7 @@ final readonly class MemoryDatasetLoader
         }, $transitions);
 
         $clusters = $metadata['clusters'] ?? [];
+
         if (!is_array($clusters) || $clusters === []) {
             throw new InvalidArgumentException(sprintf('Dataset "%s" must contain at least one cluster.', $dataset));
         }
@@ -123,6 +132,7 @@ final readonly class MemoryDatasetLoader
             }
 
             $items = $cluster['items'] ?? [];
+
             if (!is_array($items) || $items === []) {
                 throw new InvalidArgumentException(sprintf('Dataset "%s" cluster "%s" must include at least one item.', $dataset, (string) ($cluster['id'] ?? '?')));
             }
@@ -133,11 +143,13 @@ final readonly class MemoryDatasetLoader
                 }
 
                 $preview = $item['preview'] ?? $item['filename'] ?? null;
+
                 if (!is_string($preview) || $preview === '') {
                     throw new InvalidArgumentException(sprintf('Dataset "%s" cluster "%s" item is missing a preview reference.', $dataset, (string) ($cluster['id'] ?? '?')));
                 }
 
                 $previewPath = $datasetPath . '/' . ltrim($preview, '/');
+
                 if (!file_exists($previewPath)) {
                     throw new InvalidArgumentException(sprintf('Preview "%s" referenced by dataset "%s" does not exist.', $preview, $dataset));
                 }
@@ -145,11 +157,13 @@ final readonly class MemoryDatasetLoader
         }
 
         $expectedPath = $datasetPath . '/expected.yaml';
+
         if (!file_exists($expectedPath)) {
             throw new InvalidArgumentException(sprintf('Dataset "%s" is missing expected.yaml.', $dataset));
         }
 
         $expected = Yaml::parseFile($expectedPath);
+
         if (!is_array($expected)) {
             throw new RuntimeException(sprintf('Expected YAML for "%s" must parse to an array.', $dataset));
         }

@@ -84,11 +84,13 @@ final readonly class PerceptualHashExtractor implements SingleMetadataExtractorI
         }
 
         $normalizedFfmpegBinary = trim($ffmpegBinary);
+
         if ($normalizedFfmpegBinary === '') {
             $normalizedFfmpegBinary = 'ffmpeg';
         }
 
         $normalizedFfprobeBinary = trim($ffprobeBinary);
+
         if ($normalizedFfprobeBinary === '') {
             $normalizedFfprobeBinary = 'ffprobe';
         }
@@ -121,6 +123,7 @@ final readonly class PerceptualHashExtractor implements SingleMetadataExtractorI
 
         if ($this->isVideoMedia($media)) {
             $posterPath = $this->createPosterFrame($filepath);
+
             if (!is_string($posterPath) || !is_file($posterPath)) {
                 return $media;
             }
@@ -128,6 +131,7 @@ final readonly class PerceptualHashExtractor implements SingleMetadataExtractorI
             $sourcePath = $posterPath;
         } else {
             $resolved = $this->resolveImageSource($media);
+
             if (is_string($resolved)) {
                 $sourcePath = $resolved;
             }
@@ -141,6 +145,7 @@ final readonly class PerceptualHashExtractor implements SingleMetadataExtractorI
 
         try {
             $adapter = $this->createImageAdapter($sourcePath);
+
             if (!$adapter instanceof ImageAdapterInterface) {
                 return $media;
             }
@@ -230,11 +235,13 @@ final readonly class PerceptualHashExtractor implements SingleMetadataExtractorI
         }
 
         $steps = (int) round($rotationDeg / 90.0);
+
         if ($steps === 0) {
             return $matrix;
         }
 
         $steps %= 4;
+
         if ($steps < 0) {
             $steps += 4;
         }
@@ -255,11 +262,13 @@ final readonly class PerceptualHashExtractor implements SingleMetadataExtractorI
     private function rotateMatrixClockwise(array $matrix): array
     {
         $height = count($matrix);
+
         if ($height === 0) {
             return $matrix;
         }
 
         $width = count($matrix[0]);
+
         if ($width === 0) {
             return $matrix;
         }
@@ -268,6 +277,7 @@ final readonly class PerceptualHashExtractor implements SingleMetadataExtractorI
 
         for ($x = 0; $x < $width; ++$x) {
             $row = [];
+
             for ($y = $height - 1; $y >= 0; --$y) {
                 $row[] = $matrix[$y][$x];
             }
@@ -286,11 +296,13 @@ final readonly class PerceptualHashExtractor implements SingleMetadataExtractorI
     private function rotateMatrixCounterClockwise(array $matrix): array
     {
         $height = count($matrix);
+
         if ($height === 0) {
             return $matrix;
         }
 
         $width = count($matrix[0]);
+
         if ($width === 0) {
             return $matrix;
         }
@@ -299,6 +311,7 @@ final readonly class PerceptualHashExtractor implements SingleMetadataExtractorI
 
         for ($x = $width - 1; $x >= 0; --$x) {
             $row = [];
+
             for ($y = 0; $y < $height; ++$y) {
                 $row[] = $matrix[$y][$x];
             }
@@ -317,11 +330,13 @@ final readonly class PerceptualHashExtractor implements SingleMetadataExtractorI
     private function rotateMatrix180(array $matrix): array
     {
         $height = count($matrix);
+
         if ($height === 0) {
             return $matrix;
         }
 
         $width = count($matrix[0]);
+
         if ($width === 0) {
             return $matrix;
         }
@@ -330,6 +345,7 @@ final readonly class PerceptualHashExtractor implements SingleMetadataExtractorI
 
         for ($y = $height - 1; $y >= 0; --$y) {
             $row = [];
+
             for ($x = $width - 1; $x >= 0; --$x) {
                 $row[] = $matrix[$y][$x];
             }
@@ -374,17 +390,20 @@ final readonly class PerceptualHashExtractor implements SingleMetadataExtractorI
     private function computePhash128(array $g, int $k): array
     {
         $n = count($g);
+
         if ($n < 1 || $n !== count($g[0])) {
             return ['00000000000000000000000000000000', '0'];
         }
 
         $blockSize = min($k, $n);
+
         if ($blockSize < 4) {
             $blockSize = min(4, $n);
         }
 
         $bitCount = 128;
         $maxBits  = $blockSize * $blockSize;
+
         if ($maxBits < $bitCount) {
             $bitCount = $maxBits;
         }
@@ -393,6 +412,7 @@ final readonly class PerceptualHashExtractor implements SingleMetadataExtractorI
 
         $coeffs   = [];
         $coeffs[] = $dct[0][0];
+
         for ($i = 0; $i < $blockSize; ++$i) {
             for ($j = 0; $j < $blockSize; ++$j) {
                 if ($i === 0 && $j === 0) {
@@ -411,6 +431,7 @@ final readonly class PerceptualHashExtractor implements SingleMetadataExtractorI
 
         if ($count > 0) {
             $mid = (int) floor($count / 2);
+
             if (($count % 2) === 1) {
                 $median = $nonDc[$mid];
             } else {
@@ -440,12 +461,14 @@ final readonly class PerceptualHashExtractor implements SingleMetadataExtractorI
         $hex128 = strtolower($this->bitsToHex($bits, $bitCount));
 
         $bits64 = substr($bits, 0, 64);
+
         if (strlen($bits64) < 64) {
             $bits64 = str_pad($bits64, 64, '0');
         }
 
         $hex64 = strtolower($this->bitsToHex($bits64, 64));
         $bin   = hex2bin($hex64);
+
         if ($bin === false || strlen($bin) !== 8) {
             return [$hex128, '0'];
         }
@@ -467,6 +490,7 @@ final readonly class PerceptualHashExtractor implements SingleMetadataExtractorI
         $small = $this->resizeMatrixAverage($g, 8, 8);
         $sum   = 0.0;
         $cnt   = 0;
+
         for ($y = 0; $y < 8; ++$y) {
             for ($x = 0; $x < 8; ++$x) {
                 $sum += $small[$y][$x];
@@ -477,6 +501,7 @@ final readonly class PerceptualHashExtractor implements SingleMetadataExtractorI
         $avg = $sum / (float) $cnt;
 
         $bits = '';
+
         for ($y = 0; $y < 8; ++$y) {
             for ($x = 0; $x < 8; ++$x) {
                 $bits .= ($small[$y][$x] > $avg) ? '1' : '0';
@@ -495,6 +520,7 @@ final readonly class PerceptualHashExtractor implements SingleMetadataExtractorI
     {
         $small = $this->resizeMatrixAverage($g, 9, 8); // 9x8 for horizontal diffs
         $bits  = '';
+
         for ($y = 0; $y < 8; ++$y) {
             for ($x = 0; $x < 8; ++$x) {
                 $bits .= ($small[$y][$x] > $small[$y][$x + 1]) ? '1' : '0';
@@ -523,6 +549,7 @@ final readonly class PerceptualHashExtractor implements SingleMetadataExtractorI
         for ($y = 0; $y < $N; ++$y) {
             for ($u = 0; $u < $N; ++$u) {
                 $sum = 0.0;
+
                 for ($x = 0; $x < $N; ++$x) {
                     $sum += $g[$y][$x] * $cosT[$u][$x];
                 }
@@ -532,9 +559,11 @@ final readonly class PerceptualHashExtractor implements SingleMetadataExtractorI
         }
 
         $out = array_fill(0, $N, array_fill(0, $N, 0.0));
+
         for ($v = 0; $v < $N; ++$v) {
             for ($u = 0; $u < $N; ++$u) {
                 $sum = 0.0;
+
                 for ($y = 0; $y < $N; ++$y) {
                     $sum += $tmp[$y][$u] * $cosT[$v][$y];
                 }
@@ -555,12 +584,14 @@ final readonly class PerceptualHashExtractor implements SingleMetadataExtractorI
     {
         static $cache = [];
         $key          = (string) $N;
+
         if (isset($cache[$key])) {
             return $cache[$key];
         }
 
         $t  = array_fill(0, $N, array_fill(0, $N, 0.0));
         $pi = acos(-1.0);
+
         for ($u = 0; $u < $N; ++$u) {
             for ($x = 0; $x < $N; ++$x) {
                 $t[$u][$x] = cos(($pi / (2.0 * $N)) * (2.0 * $x + 1.0) * $u);
@@ -581,6 +612,7 @@ final readonly class PerceptualHashExtractor implements SingleMetadataExtractorI
     {
         $H = count($g);
         $W = $H > 0 ? count($g[0]) : 0;
+
         if ($W < 1) {
             return array_fill(0, $h, array_fill(0, $w, 0.0));
         }
@@ -592,11 +624,13 @@ final readonly class PerceptualHashExtractor implements SingleMetadataExtractorI
         for ($yy = 0; $yy < $h; ++$yy) {
             $y0 = (int) floor($yy * $sy);
             $y1 = (int) min($H, ceil(($yy + 1) * $sy));
+
             for ($xx = 0; $xx < $w; ++$xx) {
                 $x0  = (int) floor($xx * $sx);
                 $x1  = (int) min($W, ceil(($xx + 1) * $sx));
                 $sum = 0.0;
                 $cnt = 0;
+
                 for ($y = $y0; $y < $y1; ++$y) {
                     for ($x = $x0; $x < $x1; ++$x) {
                         $sum += $g[$y][$x];

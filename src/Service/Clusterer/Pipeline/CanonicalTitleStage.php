@@ -59,6 +59,7 @@ final readonly class CanonicalTitleStage implements ClusterConsolidationStageInt
     public function process(array $drafts, ?callable $progress = null): array
     {
         $total = count($drafts);
+
         if ($progress !== null) {
             $progress(0, $total);
         }
@@ -72,11 +73,13 @@ final readonly class CanonicalTitleStage implements ClusterConsolidationStageInt
 
             $params = $draft->getParams();
             $title  = $this->buildTitle($params, $summary);
+
             if ($title !== '') {
                 $draft->setParam('canonical_title', $title);
             }
 
             $subtitle = $this->buildSubtitle($params, $summary);
+
             if ($subtitle !== '') {
                 $draft->setParam('canonical_subtitle', $subtitle);
             }
@@ -100,17 +103,20 @@ final readonly class CanonicalTitleStage implements ClusterConsolidationStageInt
     {
         if ($summary instanceof RouteSummary) {
             $label = trim($summary->routeLabel);
+
             if ($label !== '') {
                 return $label;
             }
         }
 
         $routeParts = $this->resolveRouteParts($params);
+
         if ($routeParts !== []) {
             return implode(' → ', $routeParts);
         }
 
         $countries = $this->resolveCountries($params);
+
         if ($countries !== []) {
             return implode(' → ', $countries);
         }
@@ -126,24 +132,29 @@ final readonly class CanonicalTitleStage implements ClusterConsolidationStageInt
         $parts = [];
 
         $label = $params['classification_label'] ?? null;
+
         if (is_string($label) && $label !== '') {
             $parts[] = $label;
         }
 
         $duration = $this->resolveDurationLabel($params);
+
         if ($duration !== '') {
             $parts[] = $duration;
         }
 
         $range = $this->formatDateRange($params['time_range'] ?? null);
+
         if ($range !== '') {
             $parts[] = $range;
         }
 
         if ($summary instanceof RouteSummary) {
             $summaryMetrics = $this->resolveSummaryMetrics($summary);
+
             if ($summaryMetrics === []) {
                 $travelMetrics = $this->resolveTravelMetrics($params);
+
                 if ($travelMetrics !== '') {
                     $parts[] = $travelMetrics;
                 }
@@ -154,6 +165,7 @@ final readonly class CanonicalTitleStage implements ClusterConsolidationStageInt
             }
         } else {
             $travelMetrics = $this->resolveTravelMetrics($params);
+
             if ($travelMetrics !== '') {
                 $parts[] = $travelMetrics;
             }
@@ -170,16 +182,19 @@ final readonly class CanonicalTitleStage implements ClusterConsolidationStageInt
         $metrics = [];
 
         $distanceLabel = trim($summary->distanceLabel);
+
         if ($distanceLabel !== '') {
             $metrics[] = $distanceLabel;
         }
 
         $legLabel = trim($summary->legLabel);
+
         if ($legLabel !== '') {
             $metrics[] = $legLabel;
         }
 
         $stopLabel = trim($summary->stopLabel);
+
         if ($stopLabel !== '') {
             $metrics[] = $stopLabel;
         }
@@ -195,6 +210,7 @@ final readonly class CanonicalTitleStage implements ClusterConsolidationStageInt
     private function resolveRouteParts(array $params): array
     {
         $summaryLabels = $this->resolveStaypointLeaders($params);
+
         if ($summaryLabels !== []) {
             return $summaryLabels;
         }
@@ -202,6 +218,7 @@ final readonly class CanonicalTitleStage implements ClusterConsolidationStageInt
         $parts = [];
 
         $staypointParts = $params['primaryStaypointLocationParts'] ?? null;
+
         if (is_array($staypointParts)) {
             foreach ($staypointParts as $part) {
                 if (!is_string($part)) {
@@ -209,6 +226,7 @@ final readonly class CanonicalTitleStage implements ClusterConsolidationStageInt
                 }
 
                 $trimmed = trim($part);
+
                 if ($trimmed !== '') {
                     $parts[] = $trimmed;
                 }
@@ -217,6 +235,7 @@ final readonly class CanonicalTitleStage implements ClusterConsolidationStageInt
 
         if ($parts === []) {
             $location = $params['place_location'] ?? null;
+
             if (is_string($location) && $location !== '') {
                 $candidates = array_map(
                     trim(...),
@@ -226,6 +245,7 @@ final readonly class CanonicalTitleStage implements ClusterConsolidationStageInt
                     $candidates,
                     static fn (string $segment): bool => $segment !== '',
                 );
+
                 if ($candidates !== []) {
                     $parts = $candidates;
                 }
@@ -234,8 +254,10 @@ final readonly class CanonicalTitleStage implements ClusterConsolidationStageInt
 
         if ($parts === []) {
             $place = $params['place'] ?? null;
+
             if (is_string($place)) {
                 $trimmed = trim($place);
+
                 if ($trimmed !== '') {
                     $parts[] = $trimmed;
                 }
@@ -257,13 +279,16 @@ final readonly class CanonicalTitleStage implements ClusterConsolidationStageInt
     private function resolveStaypointLeaders(array $params): array
     {
         $summary = $this->extractMemberQualitySummary($params);
+
         if ($summary === []) {
             return [];
         }
 
         $candidates = $summary['staypoint_leaders'] ?? null;
+
         if (!is_array($candidates) || $candidates === []) {
             $telemetry = $summary['selection_telemetry'] ?? null;
+
             if (is_array($telemetry)) {
                 $candidates = $telemetry['staypoint_leaders'] ?? ($telemetry['staypoint_labels'] ?? null);
             }
@@ -274,8 +299,10 @@ final readonly class CanonicalTitleStage implements ClusterConsolidationStageInt
         }
 
         $labels = [];
+
         foreach ($candidates as $candidate) {
             $label = null;
+
             if (is_string($candidate)) {
                 $label = $candidate;
             } elseif (is_array($candidate)) {
@@ -287,6 +314,7 @@ final readonly class CanonicalTitleStage implements ClusterConsolidationStageInt
             }
 
             $trimmed = trim($label);
+
             if ($trimmed === '') {
                 continue;
             }
@@ -307,11 +335,13 @@ final readonly class CanonicalTitleStage implements ClusterConsolidationStageInt
     private function extractMemberQualitySummary(array $params): array
     {
         $memberQuality = $params['member_quality'] ?? null;
+
         if (!is_array($memberQuality)) {
             return [];
         }
 
         $summary = $memberQuality['summary'] ?? null;
+
         if (!is_array($summary)) {
             return [];
         }
@@ -327,14 +357,17 @@ final readonly class CanonicalTitleStage implements ClusterConsolidationStageInt
     private function resolveCountries(array $params): array
     {
         $countries = $params['countries'] ?? null;
+
         if (!is_array($countries) || $countries === []) {
             return [];
         }
 
         $resolved = [];
+
         foreach ($countries as $country) {
             if (is_scalar($country)) {
                 $trimmed = trim((string) $country);
+
                 if ($trimmed !== '') {
                     $resolved[] = $trimmed;
                 }
@@ -350,11 +383,13 @@ final readonly class CanonicalTitleStage implements ClusterConsolidationStageInt
     private function resolveDurationLabel(array $params): string
     {
         $days = $params['away_days'] ?? ($params['total_days'] ?? null);
+
         if (!is_numeric($days)) {
             return '';
         }
 
         $value = (int) $days;
+
         if ($value <= 0) {
             return '';
         }
@@ -370,12 +405,14 @@ final readonly class CanonicalTitleStage implements ClusterConsolidationStageInt
 
         $from = $range['from'];
         $to   = $range['to'];
+
         if (!is_numeric($from) || !is_numeric($to)) {
             return '';
         }
 
         $fromTs = (int) $from;
         $toTs   = (int) $to;
+
         if ($fromTs <= 0 || $toTs <= 0) {
             return '';
         }
@@ -424,6 +461,7 @@ final readonly class CanonicalTitleStage implements ClusterConsolidationStageInt
     private function resolveDistanceLabel(array $params): string
     {
         $distance = $params['total_travel_km'] ?? null;
+
         if (!is_numeric($distance)) {
             $distance = $this->extractDistanceFromSegments($params['travel_segments'] ?? null);
         }
@@ -433,11 +471,13 @@ final readonly class CanonicalTitleStage implements ClusterConsolidationStageInt
         }
 
         $value = (float) $distance;
+
         if ($value <= 0.0) {
             return '';
         }
 
         $rounded = round($value);
+
         if ($rounded <= 0.0) {
             return '';
         }
@@ -453,6 +493,7 @@ final readonly class CanonicalTitleStage implements ClusterConsolidationStageInt
     private function resolveLegLabel(array $params): string
     {
         $legCount = $this->determineLegCount($params);
+
         if ($legCount === null || $legCount <= 0) {
             return '';
         }
@@ -466,13 +507,16 @@ final readonly class CanonicalTitleStage implements ClusterConsolidationStageInt
     private function determineLegCount(array $params): ?int
     {
         $segmentCount = $this->countSegments($params['travel_segments'] ?? null);
+
         if ($segmentCount !== null) {
             return $segmentCount;
         }
 
         $waypointLabels = $this->collectWaypointLabels($params['travel_waypoints'] ?? null);
+
         if ($waypointLabels !== []) {
             $count = count($waypointLabels);
+
             if ($count >= 2) {
                 return $count - 1;
             }
@@ -480,6 +524,7 @@ final readonly class CanonicalTitleStage implements ClusterConsolidationStageInt
 
         $routeParts = $this->resolveRouteParts($params);
         $routeCount = count($routeParts);
+
         if ($routeCount >= 2) {
             return $routeCount - 1;
         }
@@ -502,6 +547,7 @@ final readonly class CanonicalTitleStage implements ClusterConsolidationStageInt
             }
 
             $distance = $segment['distance_km'] ?? ($segment['distanceKm'] ?? null);
+
             if (!is_numeric($distance)) {
                 continue;
             }
@@ -561,11 +607,13 @@ final readonly class CanonicalTitleStage implements ClusterConsolidationStageInt
             }
 
             $label = $waypoint['label'] ?? ($waypoint['city'] ?? null);
+
             if (!is_string($label)) {
                 continue;
             }
 
             $trimmed = trim($label);
+
             if ($trimmed === '') {
                 continue;
             }

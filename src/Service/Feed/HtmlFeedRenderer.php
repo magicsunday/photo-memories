@@ -129,6 +129,7 @@ HTML;
                 : $this->renderEmptyState($emptyMessage);
 
             $classes = ['stage-section'];
+
             if ($stage === $activeStage) {
                 $classes[] = 'is-active';
             }
@@ -204,6 +205,7 @@ CARD;
             $variant = $chip['variant'];
 
             $classes = ['chip'];
+
             if ($variant === 'curated') {
                 $classes[] = 'chip-curated';
             } elseif ($variant === 'tag') {
@@ -224,6 +226,7 @@ CARD;
     private function renderImages(array $images): string
     {
         $out = [];
+
         foreach ($images as $img) {
             $href = htmlspecialchars($img['href'], ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
             $alt  = htmlspecialchars($img['alt'], ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
@@ -248,6 +251,7 @@ IMG;
         }
 
         $items = [];
+
         foreach ($details as $detail) {
             $items[] = '<li>' . htmlspecialchars($detail, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') . '</li>';
         }

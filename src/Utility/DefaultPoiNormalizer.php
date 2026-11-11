@@ -45,6 +45,7 @@ final class DefaultPoiNormalizer implements PoiNormalizerInterface
 
         $tags    = [];
         $rawTags = $poi['tags'] ?? null;
+
         if (is_array($rawTags)) {
             foreach ($rawTags as $tagKey => $tagValue) {
                 if (!is_string($tagKey)) {
@@ -90,12 +91,14 @@ final class DefaultPoiNormalizer implements PoiNormalizerInterface
         if (is_array($raw)) {
             if (array_key_exists('default', $raw)) {
                 $rawDefault = $raw['default'];
+
                 if (is_string($rawDefault) && $rawDefault !== '') {
                     $default = $rawDefault;
                 }
             }
 
             $rawLocalized = $raw['localized'] ?? null;
+
             if (is_array($rawLocalized)) {
                 foreach ($rawLocalized as $locale => $value) {
                     if (!is_string($locale)) {
@@ -103,6 +106,7 @@ final class DefaultPoiNormalizer implements PoiNormalizerInterface
                     }
 
                     $localeKey = strtolower(str_replace(' ', '_', $locale));
+
                     if ($localeKey === '') {
                         continue;
                     }
@@ -120,6 +124,7 @@ final class DefaultPoiNormalizer implements PoiNormalizerInterface
             }
 
             $rawAlternates = $raw['alternates'] ?? null;
+
             if (is_array($rawAlternates)) {
                 foreach ($rawAlternates as $alternate) {
                     if (!is_string($alternate)) {
@@ -127,6 +132,7 @@ final class DefaultPoiNormalizer implements PoiNormalizerInterface
                     }
 
                     $trimmed = trim($alternate);
+
                     if ($trimmed === '') {
                         continue;
                     }
@@ -155,6 +161,7 @@ final class DefaultPoiNormalizer implements PoiNormalizerInterface
     private function coalesceName(array $names): ?string
     {
         $default = $names['default'];
+
         if ($default !== null && $default !== '') {
             return $default;
         }
@@ -163,6 +170,7 @@ final class DefaultPoiNormalizer implements PoiNormalizerInterface
             $names['localized'],
             static fn (string $value): bool => $value !== ''
         );
+
         if ($localized !== null) {
             return $localized;
         }

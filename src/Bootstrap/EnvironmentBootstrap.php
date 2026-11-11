@@ -48,6 +48,7 @@ final class EnvironmentBootstrap
 
         // 1) Current working directory
         $cwd = getcwd();
+
         if (is_string($cwd)) {
             $candidates[] = $cwd . DIRECTORY_SEPARATOR . '.env';
         }
@@ -55,6 +56,7 @@ final class EnvironmentBootstrap
         // 2) Directory of running PHAR (if any)
         try {
             $pharPath = Phar::running(false); // '' if not in PHAR
+
             if ($pharPath !== '') {
                 $candidates[] = dirname($pharPath) . DIRECTORY_SEPARATOR . '.env';
             }

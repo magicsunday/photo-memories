@@ -109,6 +109,7 @@ final readonly class CommandLineFaceDetectionBackend implements FaceDetectionBac
         }
 
         $output = trim($process->getOutput());
+
         if ($output === '') {
             $output = trim($process->getErrorOutput());
         }
@@ -125,6 +126,7 @@ final readonly class CommandLineFaceDetectionBackend implements FaceDetectionBac
             512,
             JSON_THROW_ON_ERROR
         );
+
         if (!is_array($decoded)) {
             $this->availability->markUnavailable();
 
@@ -138,6 +140,7 @@ final readonly class CommandLineFaceDetectionBackend implements FaceDetectionBac
         }
 
         $faces = $decoded['faces'] ?? $decoded['detections'] ?? null;
+
         if (!is_array($faces)) {
             $this->availability->markAvailable();
 
@@ -145,6 +148,7 @@ final readonly class CommandLineFaceDetectionBackend implements FaceDetectionBac
         }
 
         $count = 0;
+
         foreach ($faces as $face) {
             if (is_array($face)) {
                 ++$count;

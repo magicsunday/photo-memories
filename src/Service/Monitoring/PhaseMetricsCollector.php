@@ -41,6 +41,7 @@ final class PhaseMetricsCollector
     public function end(string $phase): void
     {
         $startedAt = $this->phaseStart[$phase] ?? null;
+
         if ($startedAt === null) {
             return;
         }
@@ -122,11 +123,13 @@ final class PhaseMetricsCollector
     private function median(array $values): float
     {
         $count = count($values);
+
         if ($count === 0) {
             return 0.0;
         }
 
         $middle = (int) ($count / 2);
+
         if ($count % 2 === 1) {
             return $values[$middle];
         }
@@ -140,11 +143,13 @@ final class PhaseMetricsCollector
     private function percentile(array $values, float $ratio): float
     {
         $count = count($values);
+
         if ($count === 0) {
             return 0.0;
         }
 
         $index = (int) ceil($ratio * $count) - 1;
+
         if ($index < 0) {
             $index = 0;
         }

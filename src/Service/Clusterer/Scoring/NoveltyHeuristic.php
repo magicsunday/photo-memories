@@ -102,6 +102,7 @@ final class NoveltyHeuristic extends AbstractClusterScoreHeuristic
     {
         $params  = $cluster->getParams();
         $novelty = $this->floatOrNull($params['novelty'] ?? null);
+
         if ($novelty === null) {
             $stats       = $this->stats ?? $this->buildCorpusStats($mediaMap, [$cluster]);
             $novelty     = $this->computeNovelty($cluster, $mediaMap, $stats);
@@ -149,28 +150,33 @@ final class NoveltyHeuristic extends AbstractClusterScoreHeuristic
         $phash      = [];
 
         $total = 0;
+
         foreach ($mediaMap as $m) {
             ++$total;
 
             $dev = $m->getCameraModel();
+
             if (is_string($dev) && $dev !== '') {
                 $device[$dev] = ($device[$dev] ?? 0) + 1;
             }
 
             $lat = $m->getGpsLat();
             $lon = $m->getGpsLon();
+
             if ($lat !== null && $lon !== null) {
                 $cell        = $this->gridCell($lat, $lon);
                 $grid[$cell] = ($grid[$cell] ?? 0) + 1;
             }
 
             $t = $m->getTakenAt();
+
             if ($t instanceof DateTimeImmutable) {
                 $d       = (int) $t->format('z') + 1;
                 $doy[$d] = ($doy[$d] ?? 0) + 1;
             }
 
             $prefix = $this->phashPrefix($m->getPhash());
+
             if ($prefix !== null) {
                 $phash[$prefix] = ($phash[$prefix] ?? 0) + 1;
             }
@@ -179,11 +185,13 @@ final class NoveltyHeuristic extends AbstractClusterScoreHeuristic
         foreach ($clusters as $cluster) {
             $params = $cluster->getParams();
             $meta   = $params['staypoints'] ?? null;
+
             if (!is_array($meta)) {
                 continue;
             }
 
             $counts = $this->sanitizeStringIntMap($meta['counts'] ?? null);
+
             foreach ($counts as $key => $count) {
                 $staypoints[$key] = ($staypoints[$key] ?? 0) + $count;
             }
@@ -247,14 +255,17 @@ final class NoveltyHeuristic extends AbstractClusterScoreHeuristic
     private function scoreStaypointRarity(ClusterDraft $cluster, array $stats): float
     {
         $keys = $this->staypointKeys($cluster);
+
         if ($keys !== []) {
             $counts = [];
+
             foreach ($keys as $key) {
                 $counts[$key] = ($counts[$key] ?? 0) + 1;
             }
 
             $bestKey = null;
             $best    = 0;
+
             foreach ($counts as $key => $count) {
                 if ($count > $best) {
                     $best    = $count;
@@ -286,6 +297,7 @@ final class NoveltyHeuristic extends AbstractClusterScoreHeuristic
     {
         $keys      = array_values($this->staypointKeys($cluster));
         $threshold = (int) ($stats['rareStaypointThreshold'] ?? $this->rareStaypointThreshold);
+
         if ($keys === []) {
             return 0.5;
         }
@@ -295,8 +307,10 @@ final class NoveltyHeuristic extends AbstractClusterScoreHeuristic
         }
 
         $rare = 0;
+
         foreach ($keys as $key) {
             $count = (int) ($stats['staypoint'][$key] ?? 0);
+
             if ($count === 0 || $count <= $threshold) {
                 ++$rare;
             }
@@ -317,11 +331,13 @@ final class NoveltyHeuristic extends AbstractClusterScoreHeuristic
     private function scoreTimeRarity(ClusterDraft $cluster, array $mediaMap, array $stats): float
     {
         $days = $this->collectClusterDays($cluster, $mediaMap);
+
         if ($days === []) {
             return 0.5;
         }
 
         $acc = 0.0;
+
         foreach ($days as $d) {
             $cnt = (int) ($stats['doy'][$d] ?? 0);
             $max = (int) ($stats['max']['doy'] ?? 0);
@@ -341,6 +357,7 @@ final class NoveltyHeuristic extends AbstractClusterScoreHeuristic
     private function scoreDeviceRarity(ClusterDraft $cluster, array $mediaMap, array $stats): float
     {
         $majorDev = $this->majorityDevice($cluster, $mediaMap);
+
         if ($majorDev === null) {
             return 0.5;
         }
@@ -361,6 +378,7 @@ final class NoveltyHeuristic extends AbstractClusterScoreHeuristic
     private function scoreContentRarity(ClusterDraft $cluster, array $mediaMap, array $stats): float
     {
         $prefix = $this->majorityPhashPrefix($cluster, $mediaMap);
+
         if ($prefix === null) {
             return 0.5;
         }
@@ -386,6 +404,7 @@ final class NoveltyHeuristic extends AbstractClusterScoreHeuristic
 
         $params  = $cluster->getParams();
         $history = $params['novelty_history'] ?? $params['feed_history'] ?? null;
+
         if (!is_array($history)) {
             return 0.5;
         }
@@ -393,11 +412,14 @@ final class NoveltyHeuristic extends AbstractClusterScoreHeuristic
         $components = [];
 
         $phashHistory = $this->sanitizeStringIntMap($history['phash_prefixes'] ?? null);
+
         if ($phashHistory !== []) {
             $prefix = $this->majorityPhashPrefix($cluster, $mediaMap);
+
             if ($prefix !== null) {
                 $cnt = ($phashHistory[$prefix] ?? 0);
                 $max = $this->maxVal($phashHistory);
+
                 if ($max <= 0) {
                     $max = max(1, count($phashHistory));
                 }
@@ -407,15 +429,19 @@ final class NoveltyHeuristic extends AbstractClusterScoreHeuristic
         }
 
         $windowHistory = $this->sanitizeStringIntMap($history['day_windows'] ?? null);
+
         if ($windowHistory !== []) {
             $windows = $this->collectHistoryWindows($cluster, $mediaMap);
+
             if ($windows !== []) {
                 $max = $this->maxVal($windowHistory);
+
                 if ($max <= 0) {
                     $max = max(1, count($windowHistory));
                 }
 
                 $acc = 0.0;
+
                 foreach ($windows as $window) {
                     $acc += $this->rarityFromCounts($windowHistory[$window] ?? 0, $max);
                 }
@@ -438,18 +464,22 @@ final class NoveltyHeuristic extends AbstractClusterScoreHeuristic
     {
         $params = $cluster->getParams();
         $meta   = $params['staypoints'] ?? null;
+
         if (!is_array($meta)) {
             return [];
         }
 
         $keys = $meta['keys'] ?? null;
+
         if (!is_array($keys)) {
             return [];
         }
 
         $filtered = [];
+
         foreach ($cluster->getMembers() as $id) {
             $key = $keys[$id] ?? null;
+
             if (is_string($key) && $key !== '') {
                 $filtered[$id] = $key;
             }
@@ -468,6 +498,7 @@ final class NoveltyHeuristic extends AbstractClusterScoreHeuristic
         }
 
         $filtered = [];
+
         foreach ($input as $key => $value) {
             if (!is_string($key)) {
                 continue;
@@ -475,6 +506,7 @@ final class NoveltyHeuristic extends AbstractClusterScoreHeuristic
 
             if (is_int($value)) {
                 $filtered[$key] = $value;
+
                 continue;
             }
 
@@ -494,6 +526,7 @@ final class NoveltyHeuristic extends AbstractClusterScoreHeuristic
     private function maxVal(array $map): int
     {
         $max = 0;
+
         foreach ($map as $v) {
             if ($v > $max) {
                 $max = $v;
@@ -550,6 +583,7 @@ final class NoveltyHeuristic extends AbstractClusterScoreHeuristic
         if (is_array($tr) && isset($tr['from'], $tr['to'])) {
             $from = (int) $tr['from'];
             $to   = (int) $tr['to'];
+
             if ($to < $from) {
                 [$from, $to] = [$to, $from];
             }
@@ -587,6 +621,7 @@ final class NoveltyHeuristic extends AbstractClusterScoreHeuristic
         foreach ($c->getMembers() as $id) {
             $m = $mediaMap[$id] ?? null;
             $t = $m instanceof Media ? $m->getTakenAt() : null;
+
             if ($t instanceof DateTimeImmutable) {
                 $out[] = (int) $t->format('z') + 1;
             }
@@ -608,11 +643,13 @@ final class NoveltyHeuristic extends AbstractClusterScoreHeuristic
 
         foreach ($cluster->getMembers() as $id) {
             $media = $mediaMap[$id] ?? null;
+
             if (!$media instanceof Media) {
                 continue;
             }
 
             $takenAt = $media->getTakenAt();
+
             if (!$takenAt instanceof DateTimeImmutable) {
                 continue;
             }
@@ -634,13 +671,16 @@ final class NoveltyHeuristic extends AbstractClusterScoreHeuristic
     private function majorityDevice(ClusterDraft $c, array $mediaMap): ?string
     {
         $cnt = [];
+
         foreach ($c->getMembers() as $id) {
             $m = $mediaMap[$id] ?? null;
+
             if (!$m instanceof Media) {
                 continue;
             }
 
             $dev = $m->getCameraModel();
+
             if (is_string($dev) && $dev !== '') {
                 $cnt[$dev] = ($cnt[$dev] ?? 0) + 1;
             }
@@ -648,6 +688,7 @@ final class NoveltyHeuristic extends AbstractClusterScoreHeuristic
 
         $best  = null;
         $bestN = 0;
+
         foreach ($cnt as $k => $n) {
             if ($n > $bestN) {
                 $best  = $k;
@@ -670,11 +711,13 @@ final class NoveltyHeuristic extends AbstractClusterScoreHeuristic
 
         foreach ($c->getMembers() as $id) {
             $m = $mediaMap[$id] ?? null;
+
             if (!$m instanceof Media) {
                 continue;
             }
 
             $ph = $m->getPhash();
+
             if (!is_string($ph)) {
                 continue;
             }
@@ -691,6 +734,7 @@ final class NoveltyHeuristic extends AbstractClusterScoreHeuristic
 
         $bestKey = null;
         $bestN   = 0;
+
         foreach ($cnt as $k => $n) {
             if ($n > $bestN) {
                 $bestN   = $n;

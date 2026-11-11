@@ -84,6 +84,7 @@ final class DefaultHomeLocatorTest extends TestCase
 
         for ($i = 0; $i < 5; ++$i) {
             $day = $daylightStart->add(new DateInterval('P' . $i . 'D'));
+
             for ($sample = 0; $sample < 3; ++$sample) {
                 $timestamp = $day->setTime(9 + ($sample * 3), 0, 0);
                 $items[]   = $this->makeMediaFixture(
@@ -130,6 +131,7 @@ final class DefaultHomeLocatorTest extends TestCase
 
         $items = [];
         $start = new DateTimeImmutable('2024-05-01 09:00:00', new DateTimeZone('UTC'));
+
         for ($i = 0; $i < 6; ++$i) {
             $items[] = $this->makeMediaFixture(
                 1000 + $i,
@@ -231,6 +233,7 @@ final class DefaultHomeLocatorTest extends TestCase
         }
 
         $berlinNightStart = new DateTimeImmutable('2024-01-02 23:15:00', $tz);
+
         for ($i = 0; $i < 5; ++$i) {
             $night   = $berlinNightStart->add(new DateInterval('P' . ($i * 2) . 'D'));
             $items[] = $this->makeMediaFixture(
@@ -267,6 +270,7 @@ final class DefaultHomeLocatorTest extends TestCase
         }
 
         $munichNightStart = new DateTimeImmutable('2024-06-02 22:45:00', $tz);
+
         for ($i = 0; $i < 20; ++$i) {
             $night   = $munichNightStart->add(new DateInterval('P' . $i . 'D'));
             $offset  = $i < 18 ? 0.18 + ($i * 0.001) : 0.28 + (($i - 18) * 0.02);

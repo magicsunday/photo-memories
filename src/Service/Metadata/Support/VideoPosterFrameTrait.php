@@ -50,11 +50,13 @@ trait VideoPosterFrameTrait
         }
 
         $tempFile = tempnam(sys_get_temp_dir(), 'mem_poster_');
+
         if (!is_string($tempFile)) {
             return null;
         }
 
         $posterPath = $tempFile . '.jpg';
+
         if (is_file($tempFile)) {
             unlink($tempFile);
         }
@@ -104,11 +106,13 @@ trait VideoPosterFrameTrait
     private function resolvePosterTime(string $videoPath): float
     {
         $targetTime = max(0.0, min(2.0, $this->posterFrameSecond));
+
         if ($targetTime < 1.0) {
             $targetTime = 1.0;
         }
 
         $duration = $this->probeVideoDuration($videoPath);
+
         if ($duration !== null && $duration > 0.0 && $targetTime > $duration) {
             return max(0.0, $duration - 0.1);
         }
@@ -143,11 +147,13 @@ trait VideoPosterFrameTrait
         }
 
         $output = $process->getOutput();
+
         if ($output === '') {
             $output = $process->getErrorOutput();
         }
 
         $output = trim($output);
+
         if ($output === '') {
             return null;
         }

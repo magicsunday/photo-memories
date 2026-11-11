@@ -47,6 +47,7 @@ final class PersonSignatureHelper
         }
 
         $persons = $media->getPersons();
+
         if ($persons === null) {
             return [];
         }
@@ -57,6 +58,7 @@ final class PersonSignatureHelper
         )));
 
         $ids = [];
+
         foreach ($normalised as $name) {
             if ($name === '') {
                 continue;
@@ -71,6 +73,7 @@ final class PersonSignatureHelper
     public function idFromName(string $name): ?int
     {
         $normalized = mb_strtolower(trim($name));
+
         if ($normalized === '') {
             return null;
         }

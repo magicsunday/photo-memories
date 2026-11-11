@@ -89,6 +89,7 @@ final class PersistenceBatchStage implements FinalizableMediaIngestionStageInter
 
         foreach ($this->pendingMedia as $media) {
             $id = $media->getId();
+
             if ($id !== null) {
                 $this->persistedMediaTracker->record($id);
             }

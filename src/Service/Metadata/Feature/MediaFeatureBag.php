@@ -108,6 +108,7 @@ final class MediaFeatureBag
 
         /** @var array<string, array<string, FeatureValue>> $typed */
         $typed = [];
+
         foreach ($features as $namespace => $payload) {
             /** @var array<string, FeatureValue> $typedPayload */
             $typedPayload               = $payload;
@@ -378,6 +379,7 @@ final class MediaFeatureBag
         }
 
         $confidence = (float) $value;
+
         if ($confidence < 0.0 || $confidence > 1.0) {
             throw new InvalidArgumentException('Classification confidence must be between 0.0 and 1.0.');
         }

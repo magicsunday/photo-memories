@@ -73,6 +73,7 @@ final class ClusterMemberSelectionService implements ClusterMemberSelectionServi
     public function curate(ClusterDraft $draft): ClusterDraft
     {
         $members = $draft->getMembers();
+
         if ($members === []) {
             return $draft;
         }
@@ -105,6 +106,7 @@ final class ClusterMemberSelectionService implements ClusterMemberSelectionServi
         $phaseMetrics?->begin('summarising');
         /** @var array<string, DaySummary> $daySummaries */
         $daySummaries = $this->buildDaySummaries($media);
+
         if ($phaseMetrics instanceof PhaseMetricsCollector) {
             $this->recordSummaryMetrics($daySummaries, $phaseMetrics);
         }
@@ -127,6 +129,7 @@ final class ClusterMemberSelectionService implements ClusterMemberSelectionServi
         $this->daySummaries = $daySummaries;
         $phaseMetrics?->begin('selecting');
         $result = $this->memberSelector->select($daySummaries, $profile->getHome(), $profile->getOptions());
+
         if ($phaseMetrics instanceof PhaseMetricsCollector) {
             $this->recordSelectionMetrics(
                 $result->getTelemetry(),
@@ -308,6 +311,7 @@ final class ClusterMemberSelectionService implements ClusterMemberSelectionServi
         $params['member_selection'] = $metadata['presentation'];
 
         $memberQuality = $params['member_quality'] ?? [];
+
         if (!is_array($memberQuality)) {
             $memberQuality = [];
         }
@@ -315,6 +319,7 @@ final class ClusterMemberSelectionService implements ClusterMemberSelectionServi
         $memberQuality['ordered'] = $metadata['ordered'];
 
         $summary = $memberQuality['summary'] ?? [];
+
         if (!is_array($summary)) {
             $summary = [];
         }
@@ -330,6 +335,7 @@ final class ClusterMemberSelectionService implements ClusterMemberSelectionServi
 
         $photoCount = 0;
         $videoCount = 0;
+
         foreach ($curatedMembers as $item) {
             if ($item->isVideo()) {
                 ++$videoCount;
@@ -384,8 +390,10 @@ final class ClusterMemberSelectionService implements ClusterMemberSelectionServi
 
             $phashTelemetry = $telemetry['phash'] ?? null;
             $consecutive    = [];
+
             if (is_array($phashTelemetry)) {
                 $values = $phashTelemetry['consecutive_hamming'] ?? null;
+
                 if (is_array($values)) {
                     foreach ($values as $sample) {
                         if (is_int($sample) || is_float($sample)) {
@@ -399,6 +407,7 @@ final class ClusterMemberSelectionService implements ClusterMemberSelectionServi
         }
 
         $rejections = [];
+
         if (isset($telemetry['rejections']) && is_array($telemetry['rejections'])) {
             $rejections = $this->normaliseCounts($telemetry['rejections']);
         }
@@ -482,17 +491,21 @@ final class ClusterMemberSelectionService implements ClusterMemberSelectionServi
 
         foreach ($daySummaries as $summary) {
             $gpsMembers = $summary['gpsMembers'] ?? null;
+
             if (is_array($gpsMembers) && $gpsMembers !== []) {
                 ++$gpsDays;
             }
 
             $staypointCountValue = $summary['staypointCount'] ?? null;
+
             if (is_int($staypointCountValue)) {
                 $staypointCount += $staypointCountValue;
+
                 continue;
             }
 
             $staypoints = $summary['staypoints'] ?? null;
+
             if (is_array($staypoints)) {
                 $staypointCount += count($staypoints);
             }
@@ -518,6 +531,7 @@ final class ClusterMemberSelectionService implements ClusterMemberSelectionServi
     ): void {
         $counts          = [];
         $telemetryCounts = $telemetry['counts'] ?? null;
+
         if (is_array($telemetryCounts)) {
             $counts = $this->normaliseCounts($telemetryCounts);
         }
@@ -538,6 +552,7 @@ final class ClusterMemberSelectionService implements ClusterMemberSelectionServi
         $phaseMetrics->addCounts('selecting', 'members', $counts);
 
         $rejections = $telemetry['rejections'] ?? null;
+
         if (is_array($rejections)) {
             $phaseMetrics->addCounts('selecting', 'rejections', $this->normaliseCounts($rejections));
         }
@@ -584,6 +599,7 @@ final class ClusterMemberSelectionService implements ClusterMemberSelectionServi
     private function normaliseCounts(array $values): array
     {
         $result = [];
+
         foreach ($values as $key => $value) {
             if ($value === null) {
                 continue;
@@ -615,6 +631,7 @@ final class ClusterMemberSelectionService implements ClusterMemberSelectionServi
 
         foreach ($members as $media) {
             $timestamp = $this->resolveTimestamp($media);
+
             if ($previousTimestamp !== null) {
                 $samples[] = max(0, $timestamp - $previousTimestamp);
             }
@@ -623,6 +640,7 @@ final class ClusterMemberSelectionService implements ClusterMemberSelectionServi
         }
 
         $average = 0.0;
+
         if ($samples !== []) {
             $average = array_sum($samples) / count($samples);
         }
@@ -638,6 +656,7 @@ final class ClusterMemberSelectionService implements ClusterMemberSelectionServi
     private function countPerDay(array $members): array
     {
         $distribution = [];
+
         foreach ($members as $media) {
             $objectId = spl_object_id($media);
             $dayKey   = $this->dayIndex[$objectId] ?? null;
@@ -660,6 +679,7 @@ final class ClusterMemberSelectionService implements ClusterMemberSelectionServi
     private function collectHashSamples(array $members): array
     {
         $hashes = [];
+
         foreach ($members as $media) {
             $id                                   = $media->getId();
             $hashes[$id ?? spl_object_id($media)] = $this->resolvePhashHex($media);
@@ -672,16 +692,19 @@ final class ClusterMemberSelectionService implements ClusterMemberSelectionServi
     {
         $params        = $draft->getParams();
         $memberQuality = $params['member_quality'] ?? null;
+
         if (!is_array($memberQuality)) {
             return 0;
         }
 
         $ordered = $memberQuality['ordered'] ?? null;
+
         if (!is_array($ordered)) {
             return 0;
         }
 
         $count = 0;
+
         foreach ($ordered as $value) {
             if (is_int($value)) {
                 ++$count;
@@ -725,6 +748,7 @@ final class ClusterMemberSelectionService implements ClusterMemberSelectionServi
         $rawTelemetry = $result->getTelemetry();
 
         $rejections = [];
+
         if (isset($rawTelemetry['rejections']) && is_array($rawTelemetry['rejections'])) {
             $rejections = $this->normaliseCounts($rawTelemetry['rejections']);
         }
@@ -837,6 +861,7 @@ final class ClusterMemberSelectionService implements ClusterMemberSelectionServi
     private function resolveTimezoneIdentifier(Media $media, ?array $summary): string
     {
         $identifier = null;
+
         if ($summary !== null && isset($summary['localTimezoneIdentifier']) && is_string($summary['localTimezoneIdentifier'])) {
             $identifier = $summary['localTimezoneIdentifier'];
         }
@@ -846,6 +871,7 @@ final class ClusterMemberSelectionService implements ClusterMemberSelectionServi
         }
 
         $takenAt = $media->getTakenAt();
+
         if ($takenAt instanceof DateTimeImmutable) {
             return $takenAt->getTimezone()->getName();
         }
@@ -907,6 +933,7 @@ final class ClusterMemberSelectionService implements ClusterMemberSelectionServi
         }
 
         $average = null;
+
         if ($count > 0) {
             $average = $sum / $count;
         }
@@ -939,16 +966,19 @@ final class ClusterMemberSelectionService implements ClusterMemberSelectionServi
         array $phash,
     ): array {
         $keepRatio = 0.0;
+
         if ($preCount > 0) {
             $keepRatio = $postCount / $preCount;
         }
 
         $averagePerDay = 0.0;
+
         if ($perDayDistribution !== []) {
             $averagePerDay = array_sum($perDayDistribution) / count($perDayDistribution);
         }
 
         $averagePerBucket = 0.0;
+
         if ($perBucket !== []) {
             $averagePerBucket = array_sum($perBucket) / count($perBucket);
         }
@@ -1033,6 +1063,7 @@ final class ClusterMemberSelectionService implements ClusterMemberSelectionServi
     private function resolveTimestamp(Media $media): int
     {
         $key = spl_object_id($media);
+
         if (isset($this->timestampCache[$key])) {
             return $this->timestampCache[$key];
         }
@@ -1048,11 +1079,13 @@ final class ClusterMemberSelectionService implements ClusterMemberSelectionServi
     private function resolvePhashHex(Media $media): ?string
     {
         $key = spl_object_id($media);
+
         if (array_key_exists($key, $this->phashCache)) {
             return $this->phashCache[$key];
         }
 
         $hash = $media->getPhash64();
+
         if (is_string($hash) && $hash !== '') {
             $this->phashCache[$key] = $hash;
 
@@ -1060,6 +1093,7 @@ final class ClusterMemberSelectionService implements ClusterMemberSelectionServi
         }
 
         $hash = $media->getPhash();
+
         if (is_string($hash) && $hash !== '') {
             $this->phashCache[$key] = $hash;
 

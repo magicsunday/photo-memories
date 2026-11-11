@@ -79,6 +79,7 @@ final class HybridClusterer implements HybridClustererInterface
             }
 
             $strategyHandle = null;
+
             if ($makeProgressHandle !== null) {
                 $strategyHandle = $makeProgressHandle($s->name(), $idx, $total);
             }

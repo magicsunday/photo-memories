@@ -64,6 +64,7 @@ final class Calendar
             $y . '-12-25' => '1. Weihnachtstag',
             $y . '-12-26' => '2. Weihnachtstag',
         ];
+
         if (isset($fixed[$key])) {
             return $fixed[$key];
         }

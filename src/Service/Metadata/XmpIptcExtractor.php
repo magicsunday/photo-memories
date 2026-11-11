@@ -57,15 +57,19 @@ final readonly class XmpIptcExtractor implements SingleMetadataExtractorInterfac
 
         $info = [];
         @getimagesize($filepath, $info);
+
         if (isset($info['APP13'])) {
             $iptc = @iptcparse($info['APP13']);
+
             if (is_array($iptc)) {
                 $kw = $this->fromIptcStrings($iptc['2#025'] ?? null);
+
                 if ($kw !== []) {
                     $keywords = array_values(array_unique(array_merge($keywords, $kw)));
                 }
 
                 $pp = $this->fromIptcStrings($iptc['2#122'] ?? null);
+
                 if ($pp !== []) {
                     $persons = array_values(array_unique(array_merge($persons, $pp)));
                 }
@@ -73,10 +77,12 @@ final readonly class XmpIptcExtractor implements SingleMetadataExtractorInterfac
         }
 
         $sidecar = $filepath . '.xmp';
+
         if (is_file($sidecar)) {
             $this->parseXmpXml($filepath, (string) @file_get_contents($sidecar), $keywords, $persons);
         } else {
             $blob = @file_get_contents($filepath, false, null, 0, 256 * 1024);
+
             if (is_string($blob) && $blob !== '') {
                 $this->parseXmpXml($filepath, $blob, $keywords, $persons);
             }
@@ -102,6 +108,7 @@ final readonly class XmpIptcExtractor implements SingleMetadataExtractorInterfac
         if (is_array($v)) {
             /** @var list<string> $out */
             $out = [];
+
             foreach ($v as $s) {
                 if (is_string($s) && $s !== '') {
                     $out[] = $s;
@@ -125,9 +132,11 @@ final readonly class XmpIptcExtractor implements SingleMetadataExtractorInterfac
         }
 
         $kwMatches = [];
+
         if (preg_match_all('~<rdf:li[^>]*>(.*?)</rdf:li>~si', $xml, $kwMatches) > 0) {
             foreach ($kwMatches[1] as $w) {
                 $w = trim(strip_tags($w));
+
                 if ($w !== '') {
                     $keywords[] = $w;
                 }
@@ -135,9 +144,11 @@ final readonly class XmpIptcExtractor implements SingleMetadataExtractorInterfac
         }
 
         $pMatches = [];
+
         if (preg_match_all('~<mwg-rs:Name[^>]*>(.*?)</mwg-rs:Name>~si', $xml, $pMatches) > 0) {
             foreach ($pMatches[1] as $p) {
                 $p = trim(strip_tags($p));
+
                 if ($p !== '') {
                     $persons[] = $p;
                 }
@@ -164,6 +175,7 @@ final readonly class XmpIptcExtractor implements SingleMetadataExtractorInterfac
         }
 
         $matches = [];
+
         if (preg_match_all(
             '~<(?:xmp:CreateDate|photoshop:DateCreated|exif:DateTimeOriginal)>([^<]+)</[^>]+>~i',
             $xml,
@@ -174,6 +186,7 @@ final readonly class XmpIptcExtractor implements SingleMetadataExtractorInterfac
 
         foreach ($matches[1] as $value) {
             $candidate = trim(strip_tags($value));
+
             if ($candidate === '') {
                 continue;
             }

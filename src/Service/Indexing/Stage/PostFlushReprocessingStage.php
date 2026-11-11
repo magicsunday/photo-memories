@@ -43,6 +43,7 @@ final readonly class PostFlushReprocessingStage implements MediaIngestionStageIn
     public function finalize(MediaIngestionContext $context): void
     {
         $persistedIds = $this->persistedMediaTracker->drain();
+
         if ($persistedIds === [] || $context->isDryRun()) {
             return;
         }

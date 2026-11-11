@@ -43,6 +43,7 @@ final class GpsMetricsStageTest extends TestCase
 
         $items = [];
         $start = new DateTimeImmutable('2024-04-01 08:00:00', new DateTimeZone('Europe/Berlin'));
+
         for ($i = 0; $i < 3; ++$i) {
             $timestamp = $start->add(new DateInterval('PT' . ($i * 2) . 'H'));
             $items[]   = $this->makeMediaFixture(
@@ -88,6 +89,7 @@ final class GpsMetricsStageTest extends TestCase
 
         $items = [];
         $start = new DateTimeImmutable('2024-05-01 07:00:00', new DateTimeZone('Europe/Berlin'));
+
         for ($i = 0; $i < 2; ++$i) {
             $items[] = $this->makeMediaFixture(
                 200 + $i,

@@ -67,6 +67,7 @@ final class Phash
     private static function bitcount(int $v): int
     {
         $c = 0;
+
         while ($v !== 0) {
             $v &= $v - 1;
             ++$c;

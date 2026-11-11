@@ -52,11 +52,13 @@ trait ProgressAwareClusterTrait
         $state = $progressStates[$stateKey] ?? ['done' => 0, 'max' => 0];
 
         $max = max(0, $max);
+
         if ($max > $state['max']) {
             $state['max'] = $max;
         }
 
         $done = max(0, $done);
+
         if ($state['max'] > 0) {
             $done = min($done, $state['max']);
         }

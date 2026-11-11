@@ -68,6 +68,7 @@ final readonly class FfprobeMetadataExtractor implements SingleMetadataExtractor
     public function extract(string $filepath, Media $media): Media
     {
         $media->setIsVideo(true);
+
         if (!is_file($filepath)) {
             return $media;
         }
@@ -86,6 +87,7 @@ final readonly class FfprobeMetadataExtractor implements SingleMetadataExtractor
         ];
 
         $out = $this->runCommand($media, $command, 'ffprobe.streams');
+
         if ($this->telemetry instanceof MediaIngestionTelemetryInterface) {
             $this->telemetry->recordFfprobeAvailability($filepath, $out !== null);
         }
@@ -100,6 +102,7 @@ final readonly class FfprobeMetadataExtractor implements SingleMetadataExtractor
             512,
             JSON_THROW_ON_ERROR
         );
+
         if (!is_array($payload)) {
             return $media;
         }
@@ -111,22 +114,27 @@ final readonly class FfprobeMetadataExtractor implements SingleMetadataExtractor
         $media->setVideoStreams($normalisedStreams !== [] ? $normalisedStreams : null);
 
         $primaryStream = $this->firstStream($streamsRaw);
+
         if ($primaryStream !== null) {
             $codec = $primaryStream['codec_name'] ?? null;
+
             if (is_string($codec) && $codec !== '') {
                 $media->setVideoCodec($codec);
+
                 if (MediaFormatGuesser::isHevcCodec($codec)) {
                     $media->setIsHevc(true);
                 }
             }
 
             $fps = $this->parseFps(is_string($primaryStream['avg_frame_rate'] ?? null) ? $primaryStream['avg_frame_rate'] : null);
+
             if ($fps !== null) {
                 $media->setVideoFps($fps);
                 $media->setIsSlowMo($fps >= $this->slowMoFpsThreshold);
             }
 
             $rotation = $this->parseStreamRotation($primaryStream);
+
             if ($rotation !== null) {
                 $media->setVideoRotationDeg($rotation);
             }
@@ -136,11 +144,13 @@ final readonly class FfprobeMetadataExtractor implements SingleMetadataExtractor
             $media->setVideoHasStabilization($stabilised);
 
             $width = $this->parseStreamDimension($primaryStream, 'width', 'coded_width');
+
             if ($width !== null && $media->getWidth() === null) {
                 $media->setWidth($width);
             }
 
             $height = $this->parseStreamDimension($primaryStream, 'height', 'coded_height');
+
             if ($height !== null && $media->getHeight() === null) {
                 $media->setHeight($height);
             }
@@ -148,6 +158,7 @@ final readonly class FfprobeMetadataExtractor implements SingleMetadataExtractor
 
         if (is_array($format)) {
             $duration = $this->parseFloat($format['duration'] ?? null);
+
             if ($duration !== null) {
                 $media->setVideoDurationS($duration);
             }
@@ -155,6 +166,7 @@ final readonly class FfprobeMetadataExtractor implements SingleMetadataExtractor
 
         if ($this->shouldExtractQuickTimeMetadata($media)) {
             $this->applyQuickTimeMetadata($filepath, $media);
+
             if ($this->telemetry instanceof MediaIngestionTelemetryInterface && $media->getTimeSource() === TimeSource::VIDEO_QUICKTIME) {
                 $this->telemetry->recordQuickTimeTimezoneHit($filepath);
             }
@@ -177,6 +189,7 @@ final readonly class FfprobeMetadataExtractor implements SingleMetadataExtractor
                 if (is_array($result)) {
                     $exitCode = $result['exitCode'] ?? 0;
                     $stdout   = $result['stdout'] ?? '';
+
                     if ($exitCode !== 0) {
                         $stderr = trim((string) ($result['stderr'] ?? ''));
                         IndexLogHelper::appendEntry(
@@ -304,15 +317,18 @@ final readonly class FfprobeMetadataExtractor implements SingleMetadataExtractor
     private function parseStreamRotation(array $stream): ?float
     {
         $tags = $stream['tags'] ?? null;
+
         if (is_array($tags)) {
             $rotateRaw = $tags['rotate'] ?? null;
             $rotation  = $this->parseFloat(is_scalar($rotateRaw) && !is_bool($rotateRaw) ? $rotateRaw : null);
+
             if ($rotation !== null) {
                 return $rotation;
             }
         }
 
         $sideData = $stream['side_data_list'] ?? null;
+
         if (!is_array($sideData)) {
             return null;
         }
@@ -325,6 +341,7 @@ final readonly class FfprobeMetadataExtractor implements SingleMetadataExtractor
             foreach (['rotation', 'Rotation', 'angle', 'Angle'] as $rotationKey) {
                 if (array_key_exists($rotationKey, $entry)) {
                     $value = $this->parseFloat($entry[$rotationKey]);
+
                     if ($value !== null) {
                         return $value;
                     }
@@ -332,8 +349,10 @@ final readonly class FfprobeMetadataExtractor implements SingleMetadataExtractor
             }
 
             $displayMatrix = $entry['displaymatrix'] ?? $entry['display_matrix'] ?? null;
+
             if (is_array($displayMatrix)) {
                 $value = $this->parseFloat($displayMatrix['rotation'] ?? $displayMatrix['Rotation'] ?? null);
+
                 if ($value !== null) {
                     return $value;
                 }
@@ -358,6 +377,7 @@ final readonly class FfprobeMetadataExtractor implements SingleMetadataExtractor
             }
 
             $value = $this->extractStabilisationFromEntry($entry);
+
             if ($value !== null) {
                 return $value;
             }
@@ -372,6 +392,7 @@ final readonly class FfprobeMetadataExtractor implements SingleMetadataExtractor
     private function parseStreamDimension(array $stream, string $dimensionKey, string $fallbackKey): ?int
     {
         $value = $stream[$dimensionKey] ?? null;
+
         if ($value === null && array_key_exists($fallbackKey, $stream)) {
             $value = $stream[$fallbackKey];
         }
@@ -385,8 +406,10 @@ final readonly class FfprobeMetadataExtractor implements SingleMetadataExtractor
     private function extractStabilisationFromEntry(array $entry): ?bool
     {
         $type = $entry['side_data_type'] ?? null;
+
         if (is_string($type)) {
             $normalisedType = strtolower($type);
+
             if ($normalisedType === 'camera motion' || $normalisedType === 'camera_motion') {
                 return true;
             }
@@ -396,6 +419,7 @@ final readonly class FfprobeMetadataExtractor implements SingleMetadataExtractor
             if (array_key_exists($key, $entry)) {
                 $rawValue = $entry[$key];
                 $value    = $this->normaliseBoolean(is_scalar($rawValue) ? $rawValue : null);
+
                 if ($value !== null) {
                     return $value;
                 }
@@ -408,6 +432,7 @@ final readonly class FfprobeMetadataExtractor implements SingleMetadataExtractor
             }
 
             $nested = $this->extractStabilisationFromEntry($value);
+
             if ($nested !== null) {
                 return $nested;
             }
@@ -455,6 +480,7 @@ final readonly class FfprobeMetadataExtractor implements SingleMetadataExtractor
         }
 
         $normalised = strtolower(trim($value));
+
         if ($normalised === '') {
             return null;
         }
@@ -480,11 +506,13 @@ final readonly class FfprobeMetadataExtractor implements SingleMetadataExtractor
     private function applyQuickTimeMetadata(string $filepath, Media $media): void
     {
         $currentSource = $media->getTimeSource();
+
         if ($currentSource instanceof TimeSource && $currentSource !== TimeSource::FILE_MTIME) {
             return;
         }
 
         $capture = $this->probeQuickTimeCapture($filepath, $media);
+
         if ($capture === null) {
             return;
         }
@@ -493,6 +521,7 @@ final readonly class FfprobeMetadataExtractor implements SingleMetadataExtractor
 
         $media->setTakenAt($takenAt);
         $media->setCapturedLocal($takenAt);
+
         if ($tzId !== null) {
             $media->setTzId($tzId);
         }
@@ -528,6 +557,7 @@ final readonly class FfprobeMetadataExtractor implements SingleMetadataExtractor
 
         if (is_string($v)) {
             $trimmed = trim($v);
+
             if ($trimmed === '') {
                 return null;
             }
@@ -555,6 +585,7 @@ final readonly class FfprobeMetadataExtractor implements SingleMetadataExtractor
         }
 
         $trimmed = trim($value);
+
         if ($trimmed === '' || !is_numeric($trimmed)) {
             return null;
         }
@@ -585,6 +616,7 @@ final readonly class FfprobeMetadataExtractor implements SingleMetadataExtractor
         ];
 
         $out = $this->runCommand($media, $command, 'ffprobe.quicktime');
+
         if ($out === null) {
             return null;
         }
@@ -595,16 +627,19 @@ final readonly class FfprobeMetadataExtractor implements SingleMetadataExtractor
             512,
             JSON_THROW_ON_ERROR
         );
+
         if (!is_array($data)) {
             return null;
         }
 
         $format = $data['format'] ?? null;
+
         if (!is_array($format)) {
             return null;
         }
 
         $tags = $format['tags'] ?? null;
+
         if (!is_array($tags)) {
             return null;
         }
@@ -617,6 +652,7 @@ final readonly class FfprobeMetadataExtractor implements SingleMetadataExtractor
 
         foreach ($candidates as $value) {
             $instant = $this->parseQuickTimeDate($value);
+
             if (!$instant instanceof DateTimeImmutable) {
                 continue;
             }
@@ -655,6 +691,7 @@ final readonly class FfprobeMetadataExtractor implements SingleMetadataExtractor
         }
 
         $candidates = [$value];
+
         if (!str_contains($value, 'Z') && !str_contains($value, '+') && !str_contains($value, '-')) {
             $candidates[] = $value . 'Z';
         }
@@ -673,6 +710,7 @@ final readonly class FfprobeMetadataExtractor implements SingleMetadataExtractor
     private function handleBinaryMissing(Throwable $exception): void
     {
         $message = $exception->getMessage();
+
         if ($message === '') {
             return;
         }
@@ -686,6 +724,7 @@ final readonly class FfprobeMetadataExtractor implements SingleMetadataExtractor
         ];
 
         $lowerMessage = strtolower($message);
+
         foreach ($needles as $needle) {
             if (str_contains($lowerMessage, strtolower($needle))) {
                 $this->telemetry?->recordFfprobeBinaryMissing();

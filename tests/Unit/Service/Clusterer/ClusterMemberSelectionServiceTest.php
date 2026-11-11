@@ -48,11 +48,16 @@ final class ClusterMemberSelectionServiceTest extends TestCase
             {
             }
 
+            /**
+             * @return Media[]
+             */
             public function findByIds(array $ids, bool $onlyVideos = false): array
             {
                 $result = [];
+
                 foreach ($ids as $id) {
                     $index = (int) $id - 1;
+
                     if (isset($this->media[$index])) {
                         $result[] = $this->media[$index];
                     }
@@ -148,11 +153,16 @@ final class ClusterMemberSelectionServiceTest extends TestCase
             {
             }
 
+            /**
+             * @return Media[]
+             */
             public function findByIds(array $ids, bool $onlyVideos = false): array
             {
                 $result = [];
+
                 foreach ($ids as $id) {
                     $index = (int) $id - 1;
+
                     if (isset($this->media[$index])) {
                         $result[] = $this->media[$index];
                     }
@@ -231,14 +241,19 @@ final class ClusterMemberSelectionServiceTest extends TestCase
             {
             }
 
+            /**
+             * @return Media[]
+             */
             public function findByIds(array $ids, bool $onlyVideos = false): array
             {
                 $map = [];
+
                 foreach ($this->media as $item) {
                     $map[$item->getId()] = $item;
                 }
 
                 $result = [];
+
                 foreach ($ids as $id) {
                     if (isset($map[$id])) {
                         $result[] = $map[$id];
@@ -300,11 +315,16 @@ final class ClusterMemberSelectionServiceTest extends TestCase
             {
             }
 
+            /**
+             * @return Media[]
+             */
             public function findByIds(array $ids, bool $onlyVideos = false): array
             {
                 $result = [];
+
                 foreach ($ids as $id) {
                     $index = (int) $id - 1;
+
                     if (isset($this->media[$index])) {
                         $result[] = $this->media[$index];
                     }

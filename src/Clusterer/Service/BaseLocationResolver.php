@@ -81,6 +81,7 @@ final class BaseLocationResolver implements BaseLocationResolverInterface
         array $home,
     ): ?array {
         $windowStart = DateTimeImmutable::createFromFormat('Y-m-d H:i:s', $summary['date'] . ' 18:00:00', $timezone);
+
         if ($windowStart === false) {
             return null;
         }
@@ -88,6 +89,7 @@ final class BaseLocationResolver implements BaseLocationResolverInterface
         $windowEnd = $windowStart->modify('+16 hours');
 
         $candidates = [];
+
         foreach ($summary['staypoints'] as $staypoint) {
             if ($this->staypointOverlapsWindow($staypoint, $windowStart, $windowEnd)) {
                 $candidates[] = $staypoint;
@@ -223,6 +225,7 @@ final class BaseLocationResolver implements BaseLocationResolverInterface
     private function fallbackBaseLocation(array $summary, array $home): ?array
     {
         $gpsMembers = $summary['gpsMembers'];
+
         if ($gpsMembers === []) {
             return null;
         }

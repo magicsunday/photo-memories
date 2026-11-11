@@ -458,16 +458,19 @@ final class OverlapResolverStageTest extends TestCase
         $loserExact  = array_merge($commonExact, ['loser-only']);
 
         $commonNear = [];
+
         for ($i = 0; $i < 49; ++$i) {
             $commonNear[] = 'common-' . $i;
         }
 
         $winnerNear = $commonNear;
+
         for ($i = 0; $i < 26; ++$i) {
             $winnerNear[] = 'winner-' . $i;
         }
 
         $loserNear = $commonNear;
+
         for ($i = 0; $i < 25; ++$i) {
             $loserNear[] = 'loser-' . $i;
         }
@@ -569,6 +572,9 @@ final class OverlapResolverStageTest extends TestCase
         return $metrics;
     }
 
+    /**
+     * @param array<string, bool|float|int|null> $metrics
+     */
     private function invokeShouldMerge(OverlapResolverStage $stage, array $metrics): bool
     {
         $shouldMerge = new ReflectionMethod(OverlapResolverStage::class, 'shouldMerge');
@@ -631,6 +637,10 @@ final class OverlapResolverStageTest extends TestCase
         return $entry;
     }
 
+    /**
+     * @param int[] $primaryMembers
+     * @param int[] $secondaryMembers
+     */
     private function expectedMergedMembers(array $primaryMembers, array $secondaryMembers): array
     {
         $merged = $primaryMembers;
@@ -692,15 +702,18 @@ final class OverlapResolverStageTest extends TestCase
         while ($ia < $na && $ib < $nb) {
             $va = $a[$ia];
             $vb = $b[$ib];
+
             if ($va === $vb) {
                 ++$inter;
                 ++$ia;
                 ++$ib;
+
                 continue;
             }
 
             if ($va < $vb) {
                 ++$ia;
+
                 continue;
             }
 
@@ -723,6 +736,7 @@ final class OverlapResolverStageTest extends TestCase
         array $extraParams = [],
     ): ClusterDraft {
         $params = ['score' => $score];
+
         if ($classification !== null) {
             $params['classification'] = $classification;
         }

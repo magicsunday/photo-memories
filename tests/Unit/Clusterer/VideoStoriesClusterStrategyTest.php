@@ -57,11 +57,13 @@ final class VideoStoriesClusterStrategyTest extends TestCase
             $video = $this->createVideo(3300 + $i, $base->add(new DateInterval('PT' . ($i * 1800) . 'S')), $munich);
 
             $duration = $durations[$i];
+
             if ($duration !== null) {
                 $video->setVideoDurationS($duration);
             }
 
             $isSlowMo = $slowMoFlags[$i];
+
             if ($isSlowMo !== null) {
                 $video->setIsSlowMo($isSlowMo);
             }

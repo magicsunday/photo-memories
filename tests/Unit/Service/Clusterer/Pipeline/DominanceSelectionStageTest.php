@@ -328,6 +328,7 @@ final class DominanceSelectionStageTest extends TestCase
     private function createDraft(string $algorithm, float $score, array $members, ?string $classification = null): ClusterDraft
     {
         $params = ['score' => $score];
+
         if ($classification !== null) {
             $params['classification'] = $classification;
         }

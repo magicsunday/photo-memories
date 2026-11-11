@@ -93,7 +93,7 @@ abstract class AbstractClusterScoreHeuristic implements ClusterScoreHeuristicInt
                 continue;
             }
 
-            $sum += $this->clamp01($value) * $weight;
+            $sum       += $this->clamp01($value) * $weight;
             $weightSum += $weight;
         }
 
@@ -107,6 +107,7 @@ abstract class AbstractClusterScoreHeuristic implements ClusterScoreHeuristicInt
     protected function balancedScore(float $value, float $target, float $tolerance): float
     {
         $delta = abs($value - $target);
+
         if ($delta >= $tolerance) {
             return 0.0;
         }

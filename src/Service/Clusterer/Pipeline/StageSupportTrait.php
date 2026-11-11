@@ -69,6 +69,7 @@ trait StageSupportTrait
         ksort($components);
 
         $parts = [];
+
         foreach ($components as $key => $value) {
             $normalized = $this->normalizeComponentValue($value);
             $parts[]    = strtolower($key) . '=' . $normalized;
@@ -102,6 +103,7 @@ trait StageSupportTrait
 
             if (array_is_list($value)) {
                 $normalized = [];
+
                 foreach ($value as $item) {
                     $normalized[] = $this->normalizeComponentValue($item);
                 }
@@ -111,6 +113,7 @@ trait StageSupportTrait
 
             ksort($value);
             $normalized = [];
+
             foreach ($value as $k => $v) {
                 $normalized[] = strtolower((string) $k) . ':' . $this->normalizeComponentValue($v);
             }
@@ -136,15 +139,18 @@ trait StageSupportTrait
         while ($ia < $na && $ib < $nb) {
             $va = $a[$ia];
             $vb = $b[$ib];
+
             if ($va === $vb) {
                 ++$inter;
                 ++$ia;
                 ++$ib;
+
                 continue;
             }
 
             if ($va < $vb) {
                 ++$ia;
+
                 continue;
             }
 
@@ -162,6 +168,7 @@ trait StageSupportTrait
     protected function computeScore(ClusterDraft $draft, ?array $normalizedMembers = null): float
     {
         $score = (float) ($draft->getParams()['score'] ?? 0.0);
+
         if ($score > 0.0) {
             return $score;
         }
@@ -170,20 +177,26 @@ trait StageSupportTrait
         $memberCount = count($members);
 
         $summary = $this->extractMemberQualitySummary($draft->getParams());
+
         if ($summary !== []) {
             $selectionCounts = $summary['selection_counts'] ?? null;
+
             if (is_array($selectionCounts)) {
                 $raw = $selectionCounts['raw'] ?? null;
+
                 if (is_numeric($raw)) {
                     $rawCount = (int) $raw;
+
                     if ($rawCount > $memberCount) {
                         $memberCount = $rawCount;
                     }
                 }
 
                 $curated = $selectionCounts['curated'] ?? null;
+
                 if ($memberCount === 0 && is_numeric($curated)) {
                     $curatedCount = (int) $curated;
+
                     if ($curatedCount > 0) {
                         $memberCount = $curatedCount;
                     }
@@ -202,11 +215,13 @@ trait StageSupportTrait
     private function extractMemberQualitySummary(array $params): array
     {
         $memberQuality = $params['member_quality'] ?? null;
+
         if (!is_array($memberQuality)) {
             return [];
         }
 
         $summary = $memberQuality['summary'] ?? null;
+
         if (!is_array($summary)) {
             return [];
         }
@@ -217,12 +232,14 @@ trait StageSupportTrait
     protected function hasValidTimeRange(ClusterDraft $draft, int $minValidYear): bool
     {
         $range = $draft->getParams()['time_range'] ?? null;
+
         if (!is_array($range) || !isset($range['from'], $range['to'])) {
             return false;
         }
 
         $from = (int) $range['from'];
         $to   = (int) $range['to'];
+
         if ($from <= 0 || $to <= 0 || $to < $from) {
             return false;
         }
@@ -238,6 +255,7 @@ trait StageSupportTrait
     protected function resolveGroup(string $algorithm, array $algorithmGroups, string $defaultGroup): string
     {
         $group = $algorithmGroups[$algorithm] ?? null;
+
         if (is_string($group) && $group !== '') {
             return $group;
         }
@@ -248,6 +266,7 @@ trait StageSupportTrait
     protected function isSubStory(ClusterDraft $draft): bool
     {
         $flag = $draft->getParams()['is_sub_story'] ?? false;
+
         if (!is_bool($flag)) {
             return false;
         }
