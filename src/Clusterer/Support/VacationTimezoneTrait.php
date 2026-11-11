@@ -34,6 +34,7 @@ trait VacationTimezoneTrait
     private function resolveSummaryTimezone(array $summary, array $home): DateTimeZone
     {
         $identifier = $summary['localTimezoneIdentifier'];
+
         if ($identifier !== '') {
             try {
                 return new DateTimeZone($identifier);
@@ -59,7 +60,8 @@ trait VacationTimezoneTrait
         $minutes    = $absMinutes % 60;
 
         return new DateTimeZone(
-            sprintf('%s%02d:%02d', $sign, $hours, $minutes));
+            sprintf('%s%02d:%02d', $sign, $hours, $minutes)
+        );
     }
 
     /**
@@ -74,13 +76,16 @@ trait VacationTimezoneTrait
     private function resolveMediaTimezone(Media $media, DateTimeImmutable $takenAt, array $home): DateTimeZone
     {
         $offset = $media->getTimezoneOffsetMin();
+
         if ($offset !== null) {
             return $this->createTimezoneFromOffset($offset);
         }
 
         $location = $media->getLocation();
+
         if ($location instanceof Location) {
             $identifier = $this->extractTimezoneIdentifierFromLocation($location);
+
             if ($identifier !== null) {
                 try {
                     return new DateTimeZone($identifier);
@@ -91,11 +96,13 @@ trait VacationTimezoneTrait
         }
 
         $timezone = $takenAt->getTimezone();
+
         if ($timezone instanceof DateTimeZone) {
             return $timezone;
         }
 
         $homeOffset = $home['timezone_offset'] ?? null;
+
         if ($homeOffset !== null) {
             return $this->createTimezoneFromOffset($homeOffset);
         }
@@ -106,23 +113,27 @@ trait VacationTimezoneTrait
     private function extractTimezoneIdentifierFromLocation(Location $location): ?string
     {
         $pois = $location->getPois();
+
         if (!is_array($pois)) {
             return null;
         }
 
         foreach ($pois as $poi) {
             $direct = $poi['timezone'] ?? null;
+
             if (is_string($direct) && $direct !== '') {
                 return $direct;
             }
 
             $tags = $poi['tags'] ?? null;
+
             if (!is_array($tags)) {
                 continue;
             }
 
             foreach (['timezone', 'opening_hours:timezone', 'tz'] as $key) {
                 $value = $tags[$key] ?? null;
+
                 if (is_string($value) && $value !== '') {
                     return $value;
                 }

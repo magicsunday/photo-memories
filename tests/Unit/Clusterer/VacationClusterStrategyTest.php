@@ -140,6 +140,9 @@ final class VacationClusterStrategyTest extends TestCase
             {
             }
 
+            /**
+             * @param Media[] $items
+             */
             public function buildDaySummaries(array $items, array $home): array
             {
                 $this->capturedOrder = array_map(static fn (Media $media): int => $media->getId(), $items);
@@ -198,6 +201,9 @@ final class VacationClusterStrategyTest extends TestCase
             {
             }
 
+            /**
+             * @return ClusterDraft[]
+             */
             public function detectSegments(array $days, array $home): array
             {
                 $day = $days['2024-01-05'];
@@ -609,8 +615,10 @@ final class VacationClusterStrategyTest extends TestCase
 
         $id        = 1000;
         $startHome = new DateTimeImmutable('2024-05-20 09:00:00', new DateTimeZone('UTC'));
+
         for ($i = 0; $i < 8; ++$i) {
             $day = $startHome->add(new DateInterval('P' . $i . 'D'));
+
             for ($sample = 0; $sample < 3; ++$sample) {
                 $timestamp = $day->setTime(9 + ($sample * 3), 0, 0);
                 $items[]   = $this->makeMediaFixture(
@@ -662,8 +670,10 @@ final class VacationClusterStrategyTest extends TestCase
 
         $tripStart       = new DateTimeImmutable('2024-06-10 07:00:00', new DateTimeZone('UTC'));
         $vacationDayById = [];
+
         foreach ($tracks as $dayIndex => $coordinates) {
             $dayStart = $tripStart->add(new DateInterval('P' . $dayIndex . 'D'));
+
             foreach ($coordinates as $pointIndex => $data) {
                 $timestamp = $dayStart->add(new DateInterval('PT' . ($pointIndex * 4) . 'H'));
                 $media     = $this->makeMediaFixture(
@@ -741,8 +751,10 @@ final class VacationClusterStrategyTest extends TestCase
         $clamped = $this->clampMemberList($cluster->getMembers(), 20);
 
         $coverage = [];
+
         foreach ($clamped as $memberId) {
             $day = $vacationDayById[$memberId] ?? null;
+
             if ($day === null) {
                 continue;
             }
@@ -751,6 +763,7 @@ final class VacationClusterStrategyTest extends TestCase
         }
 
         self::assertGreaterThanOrEqual(4, count($coverage));
+
         foreach ([0, 1, 2, 3] as $requiredDay) {
             self::assertArrayHasKey($requiredDay, $coverage);
         }
@@ -768,8 +781,10 @@ final class VacationClusterStrategyTest extends TestCase
         /** @var array<int,int> $dayByMember */
         $dayByMember      = [];
         $maxMembersPerDay = 0;
+
         foreach ($dayMembers as $day => $ids) {
             $count = count($ids);
+
             if ($count > $maxMembersPerDay) {
                 $maxMembersPerDay = $count;
             }
@@ -780,6 +795,7 @@ final class VacationClusterStrategyTest extends TestCase
         }
 
         $balancedMembers = [];
+
         for ($index = 0; $index < $maxMembersPerDay; ++$index) {
             foreach ($dayMembers as $ids) {
                 if (isset($ids[$index])) {
@@ -790,6 +806,7 @@ final class VacationClusterStrategyTest extends TestCase
 
         $mediaById     = [];
         $baseTimestamp = new DateTimeImmutable('2024-07-01 09:00:00', new DateTimeZone('UTC'));
+
         foreach ($dayMembers as $day => $ids) {
             foreach ($ids as $offset => $id) {
                 $timestamp = $baseTimestamp
@@ -848,11 +865,16 @@ final class VacationClusterStrategyTest extends TestCase
             {
             }
 
+            /**
+             * @return Media[]
+             */
             public function findByIds(array $ids, bool $onlyVideos = false): array
             {
                 $result = [];
+
                 foreach ($ids as $id) {
                     $media = $this->map[$id] ?? null;
+
                     if ($media instanceof Media) {
                         $result[] = $media;
                     }
@@ -886,6 +908,7 @@ final class VacationClusterStrategyTest extends TestCase
         // quality-ranked overlay lives separately under member_quality.quality_ranked.ordered.
         $params      = $draft->getParams();
         $rankedOrder = $params['member_quality']['quality_ranked']['ordered'] ?? [];
+
         if (is_array($rankedOrder) && $rankedOrder !== []) {
             self::assertNotSame($rankedOrder, $draft->getMembers());
         }
@@ -901,8 +924,10 @@ final class VacationClusterStrategyTest extends TestCase
         self::assertCount(20, $clamped);
 
         $daysSeen = [];
+
         foreach ($clamped as $memberId) {
             $day = $dayByMember[$memberId] ?? null;
+
             if ($day !== null) {
                 $daysSeen[$day] = true;
             }
@@ -1053,8 +1078,10 @@ final class VacationClusterStrategyTest extends TestCase
 
         $id            = 2000;
         $homeSeedStart = new DateTimeImmutable('2024-07-04 09:00:00', new DateTimeZone('UTC'));
+
         for ($i = 0; $i < 2; ++$i) {
             $day = $homeSeedStart->add(new DateInterval('P' . $i . 'D'));
+
             for ($sample = 0; $sample < 3; ++$sample) {
                 $timestamp = $day->setTime(9 + ($sample * 3), 0, 0);
                 $items[]   = $this->makeMediaFixture(
@@ -1072,6 +1099,7 @@ final class VacationClusterStrategyTest extends TestCase
         }
 
         $weekendStart = new DateTimeImmutable('2024-07-06 09:00:00', new DateTimeZone('UTC'));
+
         for ($day = 0; $day < 2; ++$day) {
             $dayStart = $weekendStart->add(new DateInterval('P' . $day . 'D'));
             $items[]  = $this->makeMediaFixture(
@@ -1168,8 +1196,10 @@ final class VacationClusterStrategyTest extends TestCase
 
         $id            = 4000;
         $homeSeedStart = new DateTimeImmutable('2024-12-20 09:00:00', new DateTimeZone('UTC'));
+
         for ($i = 0; $i < 3; ++$i) {
             $day = $homeSeedStart->add(new DateInterval('P' . $i . 'D'));
+
             for ($sample = 0; $sample < 3; ++$sample) {
                 $timestamp = $day->setTime(9 + ($sample * 3), 0, 0);
                 $items[]   = $this->makeMediaFixture(
@@ -1187,6 +1217,7 @@ final class VacationClusterStrategyTest extends TestCase
         }
 
         $tripStart = new DateTimeImmutable('2024-12-23 09:00:00', new DateTimeZone('UTC'));
+
         for ($day = 0; $day < 2; ++$day) {
             $dayStart = $tripStart->add(new DateInterval('P' . $day . 'D'));
             $items[]  = $this->makeMediaFixture(
@@ -1296,8 +1327,10 @@ final class VacationClusterStrategyTest extends TestCase
 
         $id            = 5000;
         $homeSeedStart = new DateTimeImmutable('2024-07-01 09:00:00', new DateTimeZone('UTC'));
+
         for ($i = 0; $i < 5; ++$i) {
             $day = $homeSeedStart->add(new DateInterval('P' . $i . 'D'));
+
             for ($sample = 0; $sample < 3; ++$sample) {
                 $timestamp = $day->setTime(9 + ($sample * 3), 0, 0);
                 $items[]   = $this->makeMediaFixture(
@@ -1315,8 +1348,10 @@ final class VacationClusterStrategyTest extends TestCase
         }
 
         $tripStart = new DateTimeImmutable('2024-07-10 09:00:00', new DateTimeZone('UTC'));
+
         for ($day = 0; $day < 2; ++$day) {
             $dayStart = $tripStart->add(new DateInterval('P' . $day . 'D'));
+
             for ($photo = 0; $photo < 3; ++$photo) {
                 $timestamp = $dayStart->add(new DateInterval('PT' . ($photo * 3) . 'H'));
                 $items[]   = $this->makeMediaFixture(
@@ -1347,6 +1382,7 @@ final class VacationClusterStrategyTest extends TestCase
         }
 
         $returnDay = new DateTimeImmutable('2024-07-12 08:00:00', new DateTimeZone('UTC'));
+
         for ($photo = 0; $photo < 2; ++$photo) {
             $timestamp = $returnDay->add(new DateInterval('PT' . ($photo * 2) . 'H'));
             $items[]   = $this->makeMediaFixture(
@@ -1363,8 +1399,10 @@ final class VacationClusterStrategyTest extends TestCase
         }
 
         $homeReturn = new DateTimeImmutable('2024-07-13 09:00:00', new DateTimeZone('UTC'));
+
         for ($i = 0; $i < 3; ++$i) {
             $day = $homeReturn->add(new DateInterval('P' . $i . 'D'));
+
             for ($sample = 0; $sample < 3; ++$sample) {
                 $timestamp = $day->setTime(9 + ($sample * 3), 0, 0);
                 $items[]   = $this->makeMediaFixture(
@@ -1433,8 +1471,10 @@ final class VacationClusterStrategyTest extends TestCase
 
         $id            = 6000;
         $homeSeedStart = new DateTimeImmutable('2024-06-01 09:00:00', new DateTimeZone('UTC'));
+
         for ($i = 0; $i < 4; ++$i) {
             $day = $homeSeedStart->add(new DateInterval('P' . $i . 'D'));
+
             for ($sample = 0; $sample < 3; ++$sample) {
                 $timestamp = $day->setTime(9 + ($sample * 3), 0, 0);
                 $items[]   = $this->makeMediaFixture(
@@ -1453,6 +1493,7 @@ final class VacationClusterStrategyTest extends TestCase
 
         $tripStart      = new DateTimeImmutable('2024-06-10 08:00:00', new DateTimeZone('UTC'));
         $sparsePhotoIds = [];
+
         for ($day = 0; $day < 3; ++$day) {
             $dayStart   = $tripStart->add(new DateInterval('P' . $day . 'D'));
             $photoCount = $day === 1 ? 2 : 4;
@@ -1585,8 +1626,10 @@ final class VacationClusterStrategyTest extends TestCase
 
         $id            = 9000;
         $homeSeedStart = new DateTimeImmutable('2024-04-10 09:00:00', new DateTimeZone('UTC'));
+
         for ($i = 0; $i < 3; ++$i) {
             $day = $homeSeedStart->add(new DateInterval('P' . $i . 'D'));
+
             for ($sample = 0; $sample < 3; ++$sample) {
                 $timestamp = $day->setTime(9 + ($sample * 3), 0, 0);
                 $items[]   = $this->makeMediaFixture(
@@ -1631,10 +1674,13 @@ final class VacationClusterStrategyTest extends TestCase
         ];
 
         $tripStart = new DateTimeImmutable('2024-04-15 09:00:00', new DateTimeZone('UTC'));
+
         foreach ($dayClusters as $dayIndex => $clustersForDay) {
             $dayStart = $tripStart->add(new DateInterval('P' . $dayIndex . 'D'));
+
             foreach ($clustersForDay as $clusterIndex => $clusterData) {
                 $baseHour = $clusterIndex === 0 ? 9 : 14;
+
                 foreach ($clusterData['points'] as $pointIndex => $coordinates) {
                     $timestamp = $dayStart->setTime($baseHour, 0, 0)->add(new DateInterval('PT' . ($pointIndex * 30) . 'M'));
                     $items[]   = $this->makeMediaFixture(
@@ -1668,6 +1714,7 @@ final class VacationClusterStrategyTest extends TestCase
         }
 
         $returnNight = new DateTimeImmutable('2024-04-18 22:15:00', new DateTimeZone('UTC'));
+
         for ($i = 0; $i < 3; ++$i) {
             $timestamp = $returnNight->add(new DateInterval('P' . $i . 'D'));
             $items[]   = $this->makeMediaFixture(
@@ -1729,8 +1776,10 @@ final class VacationClusterStrategyTest extends TestCase
         $id    = 6000;
 
         $homeBaseline = new DateTimeImmutable('2024-03-24 09:00:00', new DateTimeZone('Europe/Berlin'));
+
         for ($i = 0; $i < 3; ++$i) {
             $day = $homeBaseline->add(new DateInterval('P' . $i . 'D'));
+
             for ($sample = 0; $sample < 3; ++$sample) {
                 $timestamp = $day->setTime(9 + ($sample * 3), 0, 0);
                 $items[]   = $this->makeMediaFixture(
@@ -1749,6 +1798,7 @@ final class VacationClusterStrategyTest extends TestCase
 
         $tripStart   = new DateTimeImmutable('2024-03-30 09:00:00', new DateTimeZone('Europe/Berlin'));
         $lastNightId = null;
+
         for ($day = 0; $day < 4; ++$day) {
             $dayStart = $tripStart->add(new DateInterval('P' . $day . 'D'));
 
@@ -1784,8 +1834,10 @@ final class VacationClusterStrategyTest extends TestCase
         }
 
         $returnBaseline = new DateTimeImmutable('2024-04-04 09:00:00', new DateTimeZone('Europe/Berlin'));
+
         for ($i = 0; $i < 2; ++$i) {
             $day = $returnBaseline->add(new DateInterval('P' . $i . 'D'));
+
             for ($sample = 0; $sample < 3; ++$sample) {
                 $timestamp = $day->setTime(9 + ($sample * 3), 0, 0);
                 $items[]   = $this->makeMediaFixture(
@@ -1911,6 +1963,7 @@ final class VacationClusterStrategyTest extends TestCase
         });
 
         $base = new DateTimeImmutable('2024-08-10 12:00:00', new DateTimeZone('UTC'));
+
         for ($i = 0; $i < 4; ++$i) {
             $timestamp = $base->add(new DateInterval('P' . $i . 'D'));
             $items[]   = $this->makeMediaFixture(

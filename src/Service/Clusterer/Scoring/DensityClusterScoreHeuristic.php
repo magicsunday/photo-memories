@@ -35,6 +35,7 @@ final class DensityClusterScoreHeuristic extends AbstractTimeRangeClusterScoreHe
 
         if ($density === null) {
             $density = 0.0;
+
             if ($timeRange !== null) {
                 $duration = max(1, $timeRange['to'] - $timeRange['from']);
                 $n        = max(1, count($cluster->getMembers()));

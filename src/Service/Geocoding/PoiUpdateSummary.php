@@ -45,6 +45,7 @@ final readonly class PoiUpdateSummary
     public function render(SymfonyStyle $io): void
     {
         $io->writeln(
-            sprintf('✅ %d Orte verarbeitet, %d aktualisiert, %d Netzabfragen.', $this->processed, $this->updated, $this->networkCalls));
+            sprintf('✅ %d Orte verarbeitet, %d aktualisiert, %d Netzabfragen.', $this->processed, $this->updated, $this->networkCalls)
+        );
     }
 }

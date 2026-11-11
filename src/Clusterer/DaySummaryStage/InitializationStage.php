@@ -190,6 +190,7 @@ final readonly class InitializationStage implements DaySummaryStageInterface
 
             $lat = $media->getGpsLat();
             $lon = $media->getGpsLon();
+
             if ($lat !== null && $lon !== null) {
                 $summary['gpsMembers'][] = $media;
             }
@@ -203,9 +204,11 @@ final readonly class InitializationStage implements DaySummaryStageInterface
             ++$summary['timezoneIdentifierVotes'][$timezoneName];
 
             $location = $media->getLocation();
+
             if ($location instanceof Location) {
                 $countryCode = $location->getCountryCode();
                 $country     = $countryCode ?? $location->getCountry();
+
                 if ($country !== null) {
                     $summary['countryCodes'][strtolower($country)] = true;
                 }
@@ -262,6 +265,7 @@ final readonly class InitializationStage implements DaySummaryStageInterface
         ksort($days, SORT_STRING);
 
         $keys = array_keys($days);
+
         if ($keys === []) {
             return $days;
         }
@@ -276,6 +280,7 @@ final readonly class InitializationStage implements DaySummaryStageInterface
         }
 
         $cursor = $first;
+
         while ($cursor <= $last) {
             $key = $cursor->format('Y-m-d');
             $days[$key] ??= $this->createSyntheticDaySummary($key);

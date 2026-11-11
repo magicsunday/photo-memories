@@ -91,6 +91,7 @@ final class PoiClusterScoreHeuristic extends AbstractClusterScoreHeuristic
     private function computePoiScore(ClusterDraft $cluster): float
     {
         $params = $cluster->getParams();
+
         if (isset($params['poi_score']) && is_numeric($params['poi_score'])) {
             return $this->clamp01((float) $params['poi_score']);
         }
@@ -101,6 +102,7 @@ final class PoiClusterScoreHeuristic extends AbstractClusterScoreHeuristic
         $tags          = is_array($params['poi_tags'] ?? null) ? $params['poi_tags'] : [];
 
         $score = 0.0;
+
         if ($label !== null) {
             $score += 0.45;
         }
@@ -156,8 +158,10 @@ final class PoiClusterScoreHeuristic extends AbstractClusterScoreHeuristic
         $mediaItems = $this->collectMediaItems($cluster, $mediaMap);
 
         $hashCounts = [];
+
         foreach ($mediaItems as $media) {
             $hash = $this->normalisePhash($media->getPhash());
+
             if ($hash === null) {
                 continue;
             }
@@ -224,13 +228,16 @@ final class PoiClusterScoreHeuristic extends AbstractClusterScoreHeuristic
         }
 
         $bestMatch = null;
+
         foreach ($this->iconicSignatures as $label => $signature) {
             $signatureHash = $this->normalisePhash($signature);
+
             if ($signatureHash === null) {
                 continue;
             }
 
             $similarity = $this->phashSimilarity($hash, $signatureHash);
+
             if ($bestMatch === null || $similarity > $bestMatch['similarity']) {
                 $bestMatch = [
                     'label'      => $label,
@@ -257,11 +264,13 @@ final class PoiClusterScoreHeuristic extends AbstractClusterScoreHeuristic
     private function phashSimilarity(string $hashA, string $hashB): float
     {
         $len = min(strlen($hashA), strlen($hashB));
+
         if ($len <= 0) {
             return 0.0;
         }
 
         $distance = 0;
+
         for ($i = 0; $i < $len; ++$i) {
             $distance += $this->bitCount(hexdec($hashA[$i]) ^ hexdec($hashB[$i]));
         }

@@ -158,6 +158,7 @@ final class DuplicateParameterGuardCompilerPass implements CompilerPassInterface
         foreach ($lines as $index => $line) {
             $lineNumber = $index + 1;
             $trimmed    = ltrim($line);
+
             if ($trimmed === '') {
                 continue;
             }

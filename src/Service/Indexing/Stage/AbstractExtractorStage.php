@@ -34,6 +34,7 @@ abstract class AbstractExtractorStage implements MediaIngestionStageInterface
         }
 
         $media = $context->getMedia();
+
         if (!$media instanceof Media) {
             return true;
         }
@@ -49,6 +50,7 @@ abstract class AbstractExtractorStage implements MediaIngestionStageInterface
     protected function runExtractors(MediaIngestionContext $context, iterable $extractors): MediaIngestionContext
     {
         $media = $context->getMedia();
+
         if (!$media instanceof Media) {
             return $context;
         }
@@ -67,6 +69,7 @@ abstract class AbstractExtractorStage implements MediaIngestionStageInterface
                 $media->setIndexedAt(new DateTimeImmutable());
 
                 $exceptionMessage = trim($exception->getMessage());
+
                 if ($exceptionMessage === '') {
                     $media->setIndexLog(null);
                 } else {
@@ -85,6 +88,7 @@ abstract class AbstractExtractorStage implements MediaIngestionStageInterface
         $media->setIndexedAt(new DateTimeImmutable());
 
         $log = $media->getIndexLog();
+
         if ($log === null || $log === '') {
             $media->setIndexLog(null);
         }

@@ -49,6 +49,7 @@ final readonly class BurstDetector implements SingleMetadataExtractorInterface
     public function extract(string $filepath, Media $media): Media
     {
         $existingBurst = $media->getBurstUuid();
+
         if ($existingBurst !== null && $media->isBurstRepresentative() !== null) {
             return $media;
         }
@@ -68,6 +69,7 @@ final readonly class BurstDetector implements SingleMetadataExtractorInterface
         }
 
         $members = $this->collectMembers($media, $takenAt, $phash);
+
         if (count($members) < 2) {
             return $media;
         }
@@ -107,15 +109,18 @@ final readonly class BurstDetector implements SingleMetadataExtractorInterface
         $members   = [$media];
 
         $candidates = $this->mediaRepository->findNearestByPhash($phash, 8, 16);
+
         foreach ($candidates as $candidateRow) {
             $candidate = $candidateRow['media'];
 
             $path = $candidate->getPath();
+
             if (isset($seenPaths[$path])) {
                 continue;
             }
 
             $candidateTaken = $candidate->getTakenAt();
+
             if (!$candidateTaken instanceof DateTimeImmutable) {
                 continue;
             }
@@ -164,6 +169,7 @@ final readonly class BurstDetector implements SingleMetadataExtractorInterface
 
                 if ($leftTaken instanceof DateTimeImmutable && $rightTaken instanceof DateTimeImmutable) {
                     $cmp = $leftTaken->getTimestamp() <=> $rightTaken->getTimestamp();
+
                     if ($cmp !== 0) {
                         return $cmp;
                     }

@@ -236,11 +236,13 @@ final readonly class FeedUserPreferenceStorage
         }
 
         $raw = file_get_contents($this->storagePath);
+
         if ($raw === false) {
             throw new RuntimeException('Konnte Präferenzdatei nicht lesen: ' . $this->storagePath);
         }
 
         $decoded = json_decode($raw, true, 512, JSON_THROW_ON_ERROR);
+
         if (!is_array($decoded)) {
             $decoded = ['users' => []];
         }
@@ -258,11 +260,13 @@ final readonly class FeedUserPreferenceStorage
     private function persist(array $data): void
     {
         $directory = dirname($this->storagePath);
+
         if (!is_dir($directory) && !@mkdir($directory, 0775, true) && !is_dir($directory)) {
             throw new RuntimeException('Konnte Verzeichnis für Präferenzen nicht anlegen: ' . $directory);
         }
 
         $payload = json_encode($data, JSON_THROW_ON_ERROR | JSON_PRETTY_PRINT);
+
         if (@file_put_contents($this->storagePath, $payload) === false) {
             throw new RuntimeException('Konnte Präferenzen nicht speichern: ' . $this->storagePath);
         }
@@ -309,6 +313,7 @@ final readonly class FeedUserPreferenceStorage
                 if (!is_array($profileData)) {
                     $profileData = self::PROFILE_DEFAULTS;
                     $changed     = true;
+
                     continue;
                 }
 
@@ -338,6 +343,7 @@ final readonly class FeedUserPreferenceStorage
         }
 
         $result = [];
+
         foreach ($value as $entry) {
             if (is_string($entry) && $entry !== '') {
                 $result[] = $entry;

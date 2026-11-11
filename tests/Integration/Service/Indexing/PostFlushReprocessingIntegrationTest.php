@@ -75,6 +75,7 @@ final class PostFlushReprocessingIntegrationTest extends TestCase
 
         $burstUuid = $stored[0]->getBurstUuid();
         self::assertNotNull($burstUuid);
+
         foreach ($stored as $media) {
             self::assertSame($burstUuid, $media->getBurstUuid());
             self::assertNotNull($media->getBurstIndex());
@@ -137,9 +138,13 @@ final class PostFlushReprocessingIntegrationTest extends TestCase
         self::assertSame($photo->getLivePairChecksum(), $video->getLivePairChecksum());
     }
 
+    /**
+     * @param string[] $files
+     */
     private function runPipeline(DefaultMediaIngestionPipeline $pipeline, array $files): void
     {
         $output = new NullOutput();
+
         foreach ($files as $file) {
             $pipeline->process($file, false, false, false, false, $output);
         }
@@ -175,6 +180,7 @@ final class PostFlushReprocessingIntegrationTest extends TestCase
                     }
 
                     $objectId = spl_object_id($target);
+
                     if (!isset($assigned[$objectId])) {
                         $this->assignId($target, $nextId++);
                         $assigned[$objectId] = true;
@@ -272,8 +278,10 @@ final readonly class InMemoryMediaRepository extends MediaRepository
     public function findByIds(array $ids, bool $onlyVideos = false): array
     {
         $result = [];
+
         foreach (array_unique($ids) as $id) {
             $media = $this->storage[$id] ?? null;
+
             if (!$media instanceof Media) {
                 continue;
             }
@@ -292,13 +300,16 @@ final readonly class InMemoryMediaRepository extends MediaRepository
     public function findNearestByPhash(string $phashHex, int $maxHamming, int $limit = 20): array
     {
         $phashHex = strtolower(trim($phashHex));
+
         if ($phashHex === '' || $maxHamming < 0) {
             return [];
         }
 
         $candidates = [];
+
         foreach ($this->storage as $media) {
             $otherPhash = $media->getPhash();
+
             if ($otherPhash === null) {
                 continue;
             }
@@ -308,6 +319,7 @@ final readonly class InMemoryMediaRepository extends MediaRepository
             }
 
             $distance = $this->calculateHammingDistance($phashHex, strtolower($otherPhash));
+
             if ($distance > $maxHamming) {
                 continue;
             }
@@ -322,6 +334,7 @@ final readonly class InMemoryMediaRepository extends MediaRepository
             $candidates,
             static function (array $left, array $right): int {
                 $distanceComparison = $left['distance'] <=> $right['distance'];
+
                 if ($distanceComparison !== 0) {
                     return $distanceComparison;
                 }
@@ -345,11 +358,13 @@ final readonly class InMemoryMediaRepository extends MediaRepository
     public function findBurstMembers(string $burstUuid, ?string $excludePath = null): array
     {
         $burstUuid = trim($burstUuid);
+
         if ($burstUuid === '') {
             return [];
         }
 
         $items = [];
+
         foreach ($this->storage as $media) {
             if ($media->getBurstUuid() !== $burstUuid) {
                 continue;
@@ -377,6 +392,7 @@ final readonly class InMemoryMediaRepository extends MediaRepository
 
                 if ($leftTaken instanceof DateTimeImmutable && $rightTaken instanceof DateTimeImmutable) {
                     $comparison = $leftTaken->getTimestamp() <=> $rightTaken->getTimestamp();
+
                     if ($comparison !== 0) {
                         return $comparison;
                     }
@@ -425,6 +441,7 @@ final readonly class InMemoryMediaRepository extends MediaRepository
         $right  = str_pad($right, $length, '0');
 
         $distance = 0;
+
         for ($index = 0; $index < $length; ++$index) {
             $leftNibble  = (int) base_convert($left[$index], 16, 10);
             $rightNibble = (int) base_convert($right[$index], 16, 10);
@@ -437,6 +454,7 @@ final readonly class InMemoryMediaRepository extends MediaRepository
     private function bitCount(int $value): int
     {
         $count = 0;
+
         while ($value > 0) {
             $count += $value & 1;
             $value >>= 1;
@@ -458,6 +476,7 @@ final readonly class FixtureSeedStage implements MediaIngestionStageInterface
     public function process(MediaIngestionContext $context): MediaIngestionContext
     {
         $factory = $this->factories[$context->getFilePath()] ?? null;
+
         if ($factory === null) {
             return $context;
         }

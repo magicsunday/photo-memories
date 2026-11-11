@@ -28,12 +28,14 @@ trait PathTokensTrait
         $delims = ['/', '\\', '-', '_', '.', ' '];
         $tmp    = str_replace($delims, ' ', $lower);
         $parts  = preg_split('~\s+~', $tmp);
+
         if ($parts === false) {
             $parts = [];
         }
 
         /** @var list<string> $out */
         $out = [];
+
         foreach ($parts as $p) {
             if ($p !== '' && strlen($p) <= 64) {
                 $out[] = $p;

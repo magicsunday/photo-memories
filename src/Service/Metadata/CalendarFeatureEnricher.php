@@ -34,6 +34,7 @@ final class CalendarFeatureEnricher implements SingleMetadataExtractorInterface
     public function extract(string $filepath, Media $media): Media
     {
         $t = $media->getTakenAt();
+
         if (!$t instanceof DateTimeImmutable) {
             return $media;
         }
@@ -83,6 +84,7 @@ final class CalendarFeatureEnricher implements SingleMetadataExtractorInterface
             '12-25' => 'de-xmas1',
             '12-26' => 'de-xmas2',
         ];
+
         if (isset($fixed[$md])) {
             return [true, $fixed[$md] . '-' . $y];
         }
@@ -97,10 +99,12 @@ final class CalendarFeatureEnricher implements SingleMetadataExtractorInterface
             +39 => 'de-ascension',
             +50 => 'de-whitmonday',
         ];
+
         foreach ($rel as $off => $code) {
             $target = $origin->modify(sprintf('%+d day', $off));
 
             $ymd = $target->format('Y-m-d');
+
             if ($ymd === sprintf('%04d-%02d-%02d', $y, $m, $d)) {
                 return [true, $code . '-' . $y];
             }

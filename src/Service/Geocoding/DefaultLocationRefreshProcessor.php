@@ -84,6 +84,7 @@ final readonly class DefaultLocationRefreshProcessor implements LocationRefreshP
                 }
 
                 $this->locationResolver->ensurePois($location, $refreshPois);
+
                 if ($this->locationResolver->consumeLastUsedNetwork()) {
                     ++$poiNetworkCalls;
                 }
@@ -168,6 +169,7 @@ final readonly class DefaultLocationRefreshProcessor implements LocationRefreshP
     private function formatProgressLabel(string $label): string
     {
         $normalized = preg_replace('/\s+/u', ' ', trim($label));
+
         if (!is_string($normalized) || $normalized === '') {
             $normalized = $label;
         }
@@ -184,13 +186,16 @@ final readonly class DefaultLocationRefreshProcessor implements LocationRefreshP
     private function resolveProgressLabel(Location $location): string
     {
         $displayName = trim($location->getDisplayName());
+
         if ($displayName !== '') {
             return $displayName;
         }
 
         $city = $location->getCity();
+
         if (is_string($city)) {
             $city = trim($city);
+
             if ($city !== '') {
                 return $city;
             }

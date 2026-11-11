@@ -83,8 +83,10 @@ final class TransportDayExtender
         $firstKey   = $run[0];
         $firstIndex = $indexByKey[$firstKey] ?? null;
         $firstLean  = $this->countLeanDaysAtBoundary($extended, $days, true);
+
         if ($firstIndex !== null && $firstIndex > 0) {
             $candidateKey = $orderedKeys[$firstIndex - 1];
+
             if (
                 !in_array($candidateKey, $extended, true)
                 && $this->shouldExtendWithDay($candidateKey, $firstKey, $days, $firstLean)
@@ -98,8 +100,10 @@ final class TransportDayExtender
         $lastIndex    = $indexByKey[$lastKey] ?? null;
         $lastLean     = $this->countLeanDaysAtBoundary($extended, $days, false);
         $orderedCount = count($orderedKeys);
+
         if ($lastIndex !== null && $lastIndex + 1 < $orderedCount) {
             $candidateKey = $orderedKeys[$lastIndex + 1];
+
             if (
                 !in_array($candidateKey, $extended, true)
                 && $this->shouldExtendWithDay($candidateKey, $lastKey, $days, $lastLean)
@@ -118,11 +122,13 @@ final class TransportDayExtender
     private function shouldExtendWithDay(string $candidateKey, string $anchorKey, array $days, int $leanStreakAtBoundary): bool
     {
         $candidate = $days[$candidateKey] ?? null;
+
         if ($candidate === null) {
             return false;
         }
 
         $isLeanCandidate = $this->isLeanDay($candidate);
+
         if ($isLeanCandidate) {
             if ($this->maxLeanBridgeDays === 0) {
                 return false;
@@ -133,6 +139,7 @@ final class TransportDayExtender
             }
 
             $anchor = $days[$anchorKey] ?? null;
+
             if ($anchor === null) {
                 return false;
             }
@@ -167,16 +174,20 @@ final class TransportDayExtender
     private function hasStrongStaypoint(array $summary): bool
     {
         $staypoints = $summary['staypoints'] ?? [];
+
         foreach ($staypoints as $staypoint) {
             $dwell = $this->extractDwellSeconds($staypoint);
+
             if ($dwell !== null && $dwell >= self::MIN_STAYPOINT_BRIDGE_DWELL_SECONDS) {
                 return true;
             }
         }
 
         $dominantStaypoints = $summary['dominantStaypoints'] ?? [];
+
         foreach ($dominantStaypoints as $staypoint) {
             $dwell = $this->extractDwellSeconds($staypoint);
+
             if ($dwell !== null && $dwell >= self::MIN_STAYPOINT_BRIDGE_DWELL_SECONDS) {
                 return true;
             }
@@ -209,11 +220,13 @@ final class TransportDayExtender
         }
 
         $ratio = $summary['transitRatio'] ?? 0.0;
+
         if ($ratio >= $this->transitRatioThreshold) {
             return true;
         }
 
         $avgSpeed = $summary['avgSpeedKmh'] ?? 0.0;
+
         if ($avgSpeed >= $this->transitSpeedThreshold) {
             return true;
         }
@@ -229,6 +242,7 @@ final class TransportDayExtender
     private function isLeanDay(array $summary): bool
     {
         $dominantStaypoints = $summary['dominantStaypoints'] ?? [];
+
         if ($dominantStaypoints !== []) {
             return false;
         }
@@ -251,6 +265,7 @@ final class TransportDayExtender
 
         foreach ($keys as $key) {
             $summary = $days[$key] ?? null;
+
             if ($summary === null) {
                 break;
             }
@@ -294,6 +309,7 @@ final class TransportDayExtender
     private function resolveReferenceCoordinate(array $summary): ?array
     {
         $baseLocation = $summary['baseLocation'] ?? null;
+
         if (is_array($baseLocation)) {
             return [
                 'lat' => (float) $baseLocation['lat'],
@@ -302,6 +318,7 @@ final class TransportDayExtender
         }
 
         $dominantStaypoints = $summary['dominantStaypoints'] ?? [];
+
         if ($dominantStaypoints !== []) {
             $staypoint = $dominantStaypoints[0];
 
@@ -312,6 +329,7 @@ final class TransportDayExtender
         }
 
         $gpsMembers = $summary['gpsMembers'] ?? [];
+
         if ($gpsMembers !== []) {
             $centroid = MediaMath::centroid($gpsMembers);
 
@@ -362,9 +380,11 @@ final class TransportDayExtender
         }
 
         $cursor = $start->modify('+1 day');
+
         while ($cursor < $end) {
             $key     = $cursor->format('Y-m-d');
             $summary = $days[$key] ?? null;
+
             if ($summary === null) {
                 return false;
             }

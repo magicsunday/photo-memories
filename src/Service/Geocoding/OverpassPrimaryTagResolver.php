@@ -29,6 +29,7 @@ final readonly class OverpassPrimaryTagResolver implements OverpassPrimaryTagRes
     {
         foreach ($this->configuration->getAllowedTagMap() as $key => $values) {
             $value = $this->stringOrNull($tags[$key] ?? null);
+
             if ($value === null) {
                 continue;
             }

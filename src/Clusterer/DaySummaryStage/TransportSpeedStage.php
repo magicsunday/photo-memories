@@ -60,11 +60,13 @@ final readonly class TransportSpeedStage implements DaySummaryStageInterface
             $summary['hasHighSpeedTransit'] = false;
 
             $travelKm = (float) ($summary['travelKm'] ?? 0.0);
+
             if ($travelKm > self::HIGH_TRAVEL_THRESHOLD_KM) {
                 $summary['hasHighSpeedTransit'] = true;
             }
 
             $gpsMembers = $summary['gpsMembers'] ?? [];
+
             if ($gpsMembers === []) {
                 continue;
             }
@@ -80,6 +82,7 @@ final readonly class TransportSpeedStage implements DaySummaryStageInterface
             $maxSpeedKmh   = 0.0;
 
             $previous = null;
+
             foreach ($gpsMembers as $gpsMedia) {
                 $currentLat  = $gpsMedia->getGpsLat();
                 $currentLon  = $gpsMedia->getGpsLon();
@@ -93,14 +96,18 @@ final readonly class TransportSpeedStage implements DaySummaryStageInterface
                     assert($previousLat !== null && $previousLon !== null && $previousTime instanceof DateTimeImmutable);
 
                     $deltaSeconds = $currentTime->getTimestamp() - $previousTime->getTimestamp();
+
                     if ($deltaSeconds <= 0) {
                         $previous = $gpsMedia;
+
                         continue;
                     }
 
                     $deltaMinutes = $deltaSeconds / 60.0;
+
                     if ($deltaMinutes < $this->minLegDurationMinutes) {
                         $previous = $gpsMedia;
+
                         continue;
                     }
 
@@ -113,6 +120,7 @@ final readonly class TransportSpeedStage implements DaySummaryStageInterface
 
                     if ($distanceKm < $this->minLegDistanceKm) {
                         $previous = $gpsMedia;
+
                         continue;
                     }
 
@@ -129,6 +137,7 @@ final readonly class TransportSpeedStage implements DaySummaryStageInterface
             if ($speedSamples > 0) {
                 $summary['avgSpeedKmh'] = $totalSpeedKmh / $speedSamples;
                 $summary['maxSpeedKmh'] = $maxSpeedKmh;
+
                 if ($maxSpeedKmh >= $this->highSpeedThresholdKmh) {
                     $summary['hasHighSpeedTransit'] = true;
                 }

@@ -42,20 +42,25 @@ trait ClusterLocationMetadataTrait
     private function appendLocationMetadata(array $members, array $params): array
     {
         $place = $this->locationHelper->majorityLabel($members);
+
         if (is_string($place)) {
             $normalizedPlace = $this->normalizeLocationComponent($place);
+
             if ($normalizedPlace !== '') {
                 $params['place'] = $normalizedPlace;
             }
         }
 
         $components = $this->locationHelper->majorityLocationComponents($members);
+
         if ($components !== []) {
             $locationParts = [];
 
             $city = $components['city'] ?? null;
+
             if (is_string($city)) {
                 $normalizedCity = $this->normalizeLocationComponent($city);
+
                 if ($normalizedCity !== '') {
                     $params['place_city'] = $normalizedCity;
                     $locationParts[]      = $normalizedCity;
@@ -63,10 +68,13 @@ trait ClusterLocationMetadataTrait
             }
 
             $region = $components['region'] ?? null;
+
             if (is_string($region)) {
                 $normalizedRegion = $this->normalizeLocationComponent($region);
+
                 if ($normalizedRegion !== '') {
                     $params['place_region'] = $normalizedRegion;
+
                     if ($locationParts === [] || !in_array($normalizedRegion, $locationParts, true)) {
                         $locationParts[] = $normalizedRegion;
                     }
@@ -74,10 +82,13 @@ trait ClusterLocationMetadataTrait
             }
 
             $country = $components['country'] ?? null;
+
             if (is_string($country)) {
                 $normalizedCountry = $this->normalizeLocationComponent($country);
+
                 if ($normalizedCountry !== '') {
                     $params['place_country'] = $normalizedCountry;
+
                     if ($locationParts === [] || !in_array($normalizedCountry, $locationParts, true)) {
                         $locationParts[] = $normalizedCountry;
                     }
@@ -90,23 +101,28 @@ trait ClusterLocationMetadataTrait
         }
 
         $poi = $this->locationHelper->majorityPoiContext($members);
+
         if ($poi !== null) {
             $label = $poi['label'];
+
             if ($label !== '') {
                 $params['poi_label'] = $label;
             }
 
             $categoryKey = $poi['categoryKey'];
+
             if ($categoryKey !== null && $categoryKey !== '') {
                 $params['poi_category_key'] = $categoryKey;
             }
 
             $categoryValue = $poi['categoryValue'];
+
             if ($categoryValue !== null && $categoryValue !== '') {
                 $params['poi_category_value'] = $categoryValue;
             }
 
             $tags = $poi['tags'];
+
             if ($tags !== []) {
                 $params['poi_tags'] = $tags;
             }
@@ -132,11 +148,13 @@ trait ClusterLocationMetadataTrait
     private function normalizeLocationComponent(string $value): string
     {
         $trimmed = trim($value);
+
         if ($trimmed === '') {
             return '';
         }
 
         $lowerCase = mb_strtolower($trimmed, 'UTF-8');
+
         if ($trimmed === $lowerCase) {
             return mb_convert_case($trimmed, MB_CASE_TITLE, 'UTF-8');
         }

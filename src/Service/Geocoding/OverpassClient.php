@@ -96,11 +96,13 @@ final class OverpassClient
     private function userAgentWithContact(): string
     {
         $email = $this->contactEmail;
+
         if ($email === null) {
             return $this->userAgent;
         }
 
         $trimmed = trim($email);
+
         if ($trimmed === '') {
             return $this->userAgent;
         }

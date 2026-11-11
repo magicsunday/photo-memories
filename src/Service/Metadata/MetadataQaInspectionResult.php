@@ -74,6 +74,7 @@ final readonly class MetadataQaInspectionResult
         }
 
         $message = 'Warnung: fehlende Zeit-Features (' . implode(', ', $this->missingFeatures) . ').';
+
         if ($this->suggestions !== []) {
             $message .= ' Empfehlung: ' . implode('; ', $this->suggestions) . '.';
         }

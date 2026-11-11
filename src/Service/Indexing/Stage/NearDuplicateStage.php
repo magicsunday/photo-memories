@@ -42,6 +42,7 @@ final readonly class NearDuplicateStage implements MediaIngestionStageInterface
         }
 
         $media = $context->getMedia();
+
         if (!$media instanceof Media) {
             return $context;
         }
@@ -51,11 +52,13 @@ final readonly class NearDuplicateStage implements MediaIngestionStageInterface
         }
 
         $phash = $media->getPhash();
+
         if ($phash === null || $phash === '') {
             return $context;
         }
 
         $candidates = $this->mediaRepository->findNearestByPhash($phash, $this->maxHammingDistance);
+
         if ($candidates === []) {
             return $context;
         }

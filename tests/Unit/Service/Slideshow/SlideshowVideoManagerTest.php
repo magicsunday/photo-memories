@@ -48,6 +48,7 @@ final class SlideshowVideoManagerTest extends TestCase
     public function testEnsureForItemGeneratesVideoInline(): void
     {
         $baseDir = sys_get_temp_dir() . '/memories-slideshow-' . uniqid('', true);
+
         if (!is_dir($baseDir) && !mkdir($baseDir, 0775, true) && !is_dir($baseDir)) {
             self::fail(sprintf('Could not create temporary directory "%s".', $baseDir));
         }
@@ -129,6 +130,7 @@ final class SlideshowVideoManagerTest extends TestCase
 
             $transitionDurations = $generator->capturedJob->transitionDurations();
             self::assertCount(2, $transitionDurations);
+
             foreach ($transitionDurations as $duration) {
                 self::assertGreaterThanOrEqual(0.6, $duration);
                 self::assertLessThanOrEqual(1.0, $duration);
@@ -158,6 +160,7 @@ final class SlideshowVideoManagerTest extends TestCase
     public function testEnsureForItemDryRunExportsStoryboard(): void
     {
         $baseDir = sys_get_temp_dir() . '/memories-slideshow-' . uniqid('', true);
+
         if (!is_dir($baseDir) && !mkdir($baseDir, 0775, true) && !is_dir($baseDir)) {
             self::fail(sprintf('Could not create temporary directory "%s".', $baseDir));
         }
@@ -287,6 +290,7 @@ final class SlideshowVideoManagerTest extends TestCase
     public function testEnsureForItemReturnsErrorWhenGenerationFails(): void
     {
         $baseDir = sys_get_temp_dir() . '/memories-slideshow-' . uniqid('', true);
+
         if (!is_dir($baseDir) && !mkdir($baseDir, 0775, true) && !is_dir($baseDir)) {
             self::fail(sprintf('Could not create temporary directory "%s".', $baseDir));
         }
@@ -338,6 +342,7 @@ final class SlideshowVideoManagerTest extends TestCase
         }
 
         $items = scandir($path);
+
         if ($items === false) {
             return;
         }
@@ -352,8 +357,10 @@ final class SlideshowVideoManagerTest extends TestCase
             }
 
             $full = $path . '/' . $item;
+
             if (is_dir($full)) {
                 $this->cleanupDirectory($full);
+
                 continue;
             }
 

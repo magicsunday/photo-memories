@@ -87,6 +87,7 @@ final class WeekendGetawaysOverYearsClusterStrategyTest extends TestCase
 
         foreach ($items as $media) {
             $takenAt = $media->getTakenAt();
+
             if (!$takenAt instanceof DateTimeImmutable) {
                 continue;
             }
@@ -263,6 +264,7 @@ final class WeekendGetawaysOverYearsClusterStrategyTest extends TestCase
 
         if ($withCoreDayContext) {
             $takenAt = $media->getTakenAt();
+
             if ($takenAt instanceof DateTimeImmutable) {
                 $dayKey                  = $takenAt->setTimezone(new DateTimeZone('Europe/Berlin'))->format('Y-m-d');
                 $vacation['day_context'] = [

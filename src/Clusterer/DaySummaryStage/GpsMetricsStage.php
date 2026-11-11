@@ -73,11 +73,13 @@ final readonly class GpsMetricsStage implements DaySummaryStageInterface
             $summary['travelKm']      = 0.0;
 
             $gpsMembers = $summary['gpsMembers'];
+
             if ($gpsMembers !== []) {
                 usort($gpsMembers, static fn (Media $a, Media $b): int => $a->getTakenAt() <=> $b->getTakenAt());
 
                 $travelKm = 0.0;
                 $previous = null;
+
                 foreach ($gpsMembers as $gpsMedia) {
                     $lat     = $gpsMedia->getGpsLat();
                     $lon     = $gpsMedia->getGpsLon();
@@ -103,6 +105,7 @@ final readonly class GpsMetricsStage implements DaySummaryStageInterface
                 $summary['travelKm'] = $travelKm;
 
                 $centroid = MediaMath::centroid($gpsMembers);
+
                 foreach ($gpsMembers as $gpsMedia) {
                     $gpsLat = $gpsMedia->getGpsLat();
                     $gpsLon = $gpsMedia->getGpsLon();
@@ -156,6 +159,7 @@ final readonly class GpsMetricsStage implements DaySummaryStageInterface
                 );
 
                 $dwellSeconds = 0;
+
                 foreach ($summary['staypoints'] as $staypoint) {
                     $dwellSeconds += $staypoint['dwell'];
                 }

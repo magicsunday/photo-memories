@@ -104,6 +104,9 @@ final class TimeSlotDiversificationStageTest extends TestCase
         self::assertSame(1, $reasons[SelectionTelemetry::REASON_TIME_SLOT]);
     }
 
+    /**
+     * @param array<string, int> $dayQuotas
+     */
     private function createPolicy(
         int $targetTotal,
         int $minSpacingSeconds,

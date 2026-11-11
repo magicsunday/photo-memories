@@ -84,6 +84,7 @@ final class NewYearEveClusterStrategyTest extends TestCase
         );
 
         $items = [];
+
         for ($i = 0; $i < 6; ++$i) {
             $items[] = $this->createMedia(
                 2200 + $i,

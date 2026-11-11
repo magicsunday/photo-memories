@@ -188,11 +188,13 @@ final readonly class MemoryFeedBuilder implements FeedBuilderInterface
             }
 
             $dayKey = $this->dayKey($c);
+
             if ($dayKey === null) {
                 continue;
             }
 
             $cap = ($dayCount[$dayKey] ?? 0);
+
             if ($cap >= $maxPerDay) {
                 continue;
             }
@@ -207,12 +209,14 @@ final readonly class MemoryFeedBuilder implements FeedBuilderInterface
             // simple diversity: limit repeats
             if (is_string($place)) {
                 $key = sprintf('%s|%s', $dayKey, $place);
+
                 if (($seenPlace[$key] ?? 0) >= 2) { // max 2 per place/day
                     continue;
                 }
             }
 
             $algKey = sprintf('%s|%s', $dayKey, $alg);
+
             if (($seenAlg[$algKey] ?? 0) >= 2) { // max 2 per algo/day
                 continue;
             }
@@ -222,6 +226,7 @@ final readonly class MemoryFeedBuilder implements FeedBuilderInterface
                 $c->getMembers(),
                 $c->getAlgorithm() === 'video_stories'
             );
+
             if ($members === []) {
                 continue;
             }
@@ -237,10 +242,12 @@ final readonly class MemoryFeedBuilder implements FeedBuilderInterface
 
             $coverId = $c->getCoverMediaId();
             $cover   = null;
+
             if ($coverId !== null) {
                 foreach ($members as $member) {
                     if ($member->getId() === $coverId) {
                         $cover = $member;
+
                         break;
                     }
                 }
@@ -258,6 +265,7 @@ final readonly class MemoryFeedBuilder implements FeedBuilderInterface
 
             if ($overlay !== null) {
                 $curated = $this->applyCuratedOverlay($members, $overlay);
+
                 if ($curated !== null) {
                     $members     = $curated;
                     $usedCurated = true;
@@ -285,6 +293,7 @@ final readonly class MemoryFeedBuilder implements FeedBuilderInterface
 
             if (!isset($params['scene_tags'])) {
                 $aggregated = $this->aggregateSceneTags($members, 5);
+
                 if ($aggregated !== []) {
                     $params['scene_tags'] = $aggregated;
                 }
@@ -307,6 +316,7 @@ final readonly class MemoryFeedBuilder implements FeedBuilderInterface
             );
 
             $dayCount[$dayKey] = $cap + 1;
+
             if (is_string($place)) {
                 $seenPlace[sprintf('%s|%s', $dayKey, $place)] = ($seenPlace[sprintf('%s|%s', $dayKey, $place)] ?? 0) + 1;
             }
@@ -320,12 +330,14 @@ final readonly class MemoryFeedBuilder implements FeedBuilderInterface
         }
 
         $indexed = [];
+
         foreach ($result as $index => $item) {
             $indexed[] = ['item' => $item, 'index' => $index];
         }
 
         usort($indexed, static function (array $a, array $b): int {
             $scoreComparison = $b['item']->getScore() <=> $a['item']->getScore();
+
             if ($scoreComparison !== 0) {
                 return $scoreComparison;
             }
@@ -372,6 +384,7 @@ final readonly class MemoryFeedBuilder implements FeedBuilderInterface
 
         foreach ($clusterPersons as $index => $person) {
             $normalized = $clusterPersonLookup[$index] ?? null;
+
             if ($normalized === null) {
                 continue;
             }
@@ -386,8 +399,10 @@ final readonly class MemoryFeedBuilder implements FeedBuilderInterface
         }
 
         $preferenceHiddenPersons = $this->normaliseMatchIndex($preferences->getHiddenPersons());
+
         foreach ($clusterPersons as $index => $person) {
             $normalized = $clusterPersonLookup[$index] ?? null;
+
             if ($normalized === null) {
                 continue;
             }
@@ -403,6 +418,7 @@ final readonly class MemoryFeedBuilder implements FeedBuilderInterface
 
         $placeCandidates = [];
         $primaryPlace    = $this->normaliseScalarString($params['place'] ?? null);
+
         if ($primaryPlace !== null) {
             $placeCandidates[] = $primaryPlace;
         }
@@ -414,8 +430,10 @@ final readonly class MemoryFeedBuilder implements FeedBuilderInterface
         $placeLookup = $this->normaliseMatchIndex($placeCandidates);
 
         $preferenceFavouritePlaces = $this->normaliseMatchIndex($preferences->getFavouritePlaces());
+
         foreach ($placeCandidates as $index => $place) {
             $normalized = $placeLookup[$index] ?? null;
+
             if ($normalized === null) {
                 continue;
             }
@@ -430,8 +448,10 @@ final readonly class MemoryFeedBuilder implements FeedBuilderInterface
         }
 
         $preferenceHiddenPlaces = $this->normaliseMatchIndex($preferences->getHiddenPlaces());
+
         foreach ($placeCandidates as $index => $place) {
             $normalized = $placeLookup[$index] ?? null;
+
             if ($normalized === null) {
                 continue;
             }
@@ -448,8 +468,10 @@ final readonly class MemoryFeedBuilder implements FeedBuilderInterface
         $clusterDates = $this->extractTimeRangeDates($params['time_range'] ?? null);
         $dateLookup   = $this->normaliseMatchIndex($clusterDates);
         $hiddenDates  = $this->normaliseMatchIndex($preferences->getHiddenDates());
+
         foreach ($clusterDates as $index => $date) {
             $normalized = $dateLookup[$index] ?? null;
+
             if ($normalized === null) {
                 continue;
             }
@@ -468,6 +490,7 @@ final readonly class MemoryFeedBuilder implements FeedBuilderInterface
         }
 
         $adjustedScore = $baseScore * $multiplier;
+
         if ($adjustedScore < 0.0) {
             $adjustedScore = 0.0;
         }
@@ -506,6 +529,7 @@ final readonly class MemoryFeedBuilder implements FeedBuilderInterface
 
         foreach ($members as $media) {
             $persons = $media->getPersons();
+
             if ($persons === null) {
                 continue;
             }
@@ -515,9 +539,11 @@ final readonly class MemoryFeedBuilder implements FeedBuilderInterface
             }
 
             $personLookup = $this->normaliseMatchIndex(array_values($persons));
+
             foreach ($personLookup as $normalized) {
                 if (in_array($normalized, $normalisedFavourites, true)) {
                     ++$withFavourites;
+
                     break;
                 }
             }
@@ -539,6 +565,7 @@ final readonly class MemoryFeedBuilder implements FeedBuilderInterface
 
         foreach ($values as $value) {
             $normalized = mb_strtolower(trim($value));
+
             if ($normalized === '') {
                 continue;
             }
@@ -568,6 +595,7 @@ final readonly class MemoryFeedBuilder implements FeedBuilderInterface
 
         if ($filter->hasHiddenPersons()) {
             $persons = $this->normaliseIdList($params['persons'] ?? null);
+
             if ($persons !== [] && $filter->intersectsPersons($persons)) {
                 return true;
             }
@@ -575,6 +603,7 @@ final readonly class MemoryFeedBuilder implements FeedBuilderInterface
 
         if ($filter->hasHiddenPets()) {
             $petIds = $this->normaliseIdList($params['pet_ids'] ?? null);
+
             if ($petIds !== [] && $filter->intersectsPets($petIds)) {
                 return true;
             }
@@ -582,11 +611,13 @@ final readonly class MemoryFeedBuilder implements FeedBuilderInterface
 
         if ($filter->hasHiddenPlaces()) {
             $place = $this->normaliseScalarString($params['place'] ?? null);
+
             if ($place !== null && $filter->isPlaceHidden($place)) {
                 return true;
             }
 
             $places = $params['places'] ?? null;
+
             if (is_iterable($places) && $filter->intersectsPlaces($places)) {
                 return true;
             }
@@ -594,6 +625,7 @@ final readonly class MemoryFeedBuilder implements FeedBuilderInterface
 
         if ($filter->hasHiddenDates()) {
             $dates = $this->extractTimeRangeDates($params['time_range'] ?? null);
+
             if ($dates !== [] && $filter->intersectsDates($dates)) {
                 return true;
             }
@@ -615,6 +647,7 @@ final readonly class MemoryFeedBuilder implements FeedBuilderInterface
 
         foreach ($values as $value) {
             $normalized = $this->normaliseScalarString($value);
+
             if ($normalized === null) {
                 continue;
             }
@@ -658,9 +691,11 @@ final readonly class MemoryFeedBuilder implements FeedBuilderInterface
         $dates = [];
 
         $days = $range['days'] ?? null;
+
         if (is_iterable($days)) {
             foreach ($days as $day) {
                 $normalized = $this->normaliseDateString($day);
+
                 if ($normalized === null) {
                     continue;
                 }
@@ -672,6 +707,7 @@ final readonly class MemoryFeedBuilder implements FeedBuilderInterface
         }
 
         $singleDate = $this->normaliseDateString($range['date'] ?? null);
+
         if ($singleDate !== null && !in_array($singleDate, $dates, true)) {
             $dates[] = $singleDate;
         }
@@ -685,6 +721,7 @@ final readonly class MemoryFeedBuilder implements FeedBuilderInterface
 
             while ($current <= $end) {
                 $formatted = $current->format('Y-m-d');
+
                 if (!in_array($formatted, $dates, true)) {
                     $dates[] = $formatted;
                 }
@@ -699,11 +736,13 @@ final readonly class MemoryFeedBuilder implements FeedBuilderInterface
     private function normaliseDateString(mixed $value): ?string
     {
         $text = $this->normaliseScalarString($value);
+
         if ($text === null) {
             return null;
         }
 
         $date = DateTimeImmutable::createFromFormat('Y-m-d', $text);
+
         if ($date === false) {
             return null;
         }
@@ -733,11 +772,13 @@ final readonly class MemoryFeedBuilder implements FeedBuilderInterface
     private function dayKey(ClusterDraft $c): ?string
     {
         $tr = $c->getParams()['time_range'] ?? null;
+
         if (!is_array($tr) || !isset($tr['to'])) {
             return null;
         }
 
         $to = (int) $tr['to'];
+
         if ($to <= 0) {
             return null;
         }
@@ -786,6 +827,7 @@ final readonly class MemoryFeedBuilder implements FeedBuilderInterface
 
         foreach ($members as $media) {
             $tags = $media->getSceneTags();
+
             if (!is_array($tags)) {
                 continue;
             }
@@ -795,6 +837,7 @@ final readonly class MemoryFeedBuilder implements FeedBuilderInterface
                 $score = $tag['score'];
 
                 $value = $score;
+
                 if ($value < 0.0) {
                     $value = 0.0;
                 }
@@ -804,6 +847,7 @@ final readonly class MemoryFeedBuilder implements FeedBuilderInterface
                 }
 
                 $existing = $scores[$label] ?? 0.0;
+
                 if ($value > $existing) {
                     $scores[$label] = $value;
                 }
@@ -818,6 +862,7 @@ final readonly class MemoryFeedBuilder implements FeedBuilderInterface
         $scores = array_slice($scores, 0, $limit, true);
 
         $result = [];
+
         foreach ($scores as $label => $score) {
             $result[] = ['label' => $label, 'score' => $score];
         }
@@ -838,13 +883,16 @@ final readonly class MemoryFeedBuilder implements FeedBuilderInterface
         }
 
         $map = [];
+
         foreach ($members as $media) {
             $map[$media->getId()] = $media;
         }
 
         $curated = [];
+
         foreach ($overlay['ordered'] as $id) {
             $media = $map[$id] ?? null;
+
             if ($media === null) {
                 continue;
             }
@@ -867,11 +915,13 @@ final readonly class MemoryFeedBuilder implements FeedBuilderInterface
     private function resolveCuratedOverlay(array $params, FeedPersonalizationProfile $profile): ?array
     {
         $memberQuality = $params['member_quality'] ?? null;
+
         if (!is_array($memberQuality)) {
             return null;
         }
 
         $ordered = $this->normaliseMemberIdList($memberQuality['ordered'] ?? null);
+
         if ($ordered === []) {
             return null;
         }
@@ -900,6 +950,7 @@ final readonly class MemoryFeedBuilder implements FeedBuilderInterface
     private function markFeedOverlayUsage(array $params, array $overlay, bool $used, int $appliedCount): array
     {
         $memberQuality = $params['member_quality'] ?? null;
+
         if (!is_array($memberQuality)) {
             return $params;
         }
@@ -935,6 +986,7 @@ final readonly class MemoryFeedBuilder implements FeedBuilderInterface
 
         foreach ($values as $value) {
             $id = null;
+
             if (is_int($value)) {
                 $id = $value;
             } elseif (is_string($value) && is_numeric($value)) {
@@ -969,11 +1021,14 @@ final readonly class MemoryFeedBuilder implements FeedBuilderInterface
         $policyMinimum = null;
 
         $summary = $memberQuality['summary'] ?? null;
+
         if (is_array($summary)) {
             $policyDetails = $summary['selection_policy_details'] ?? null;
+
             if (is_array($policyDetails)) {
                 $value = $policyDetails['minimum_total'] ?? null;
                 $min   = $this->normalisePositiveInt($value);
+
                 if ($min !== null) {
                     $policyMinimum = $min;
                 }
@@ -981,11 +1036,14 @@ final readonly class MemoryFeedBuilder implements FeedBuilderInterface
         }
 
         $memberSelection = $memberQuality['member_selection'] ?? null;
+
         if (is_array($memberSelection)) {
             $policy = $memberSelection['policy'] ?? null;
+
             if (is_array($policy)) {
                 $value = $policy['minimum_total'] ?? null;
                 $min   = $this->normalisePositiveInt($value);
+
                 if ($min !== null) {
                     $policyMinimum = max($policyMinimum ?? 0, $min);
                 }
@@ -998,9 +1056,11 @@ final readonly class MemoryFeedBuilder implements FeedBuilderInterface
 
         if ($minimum === null && is_array($summary)) {
             $profile = $summary['selection_profile'] ?? null;
+
             if (is_array($profile)) {
                 $value = $profile['minimum_total'] ?? null;
                 $min   = $this->normalisePositiveInt($value);
+
                 if ($min !== null) {
                     $minimum = $min;
                 }
@@ -1009,9 +1069,11 @@ final readonly class MemoryFeedBuilder implements FeedBuilderInterface
 
         if (is_array($summary)) {
             $counts = $summary['selection_counts'] ?? null;
+
             if (is_array($counts)) {
                 $value = $counts['curated'] ?? null;
                 $min   = $this->normalisePositiveInt($value);
+
                 if ($min !== null) {
                     $minimum = max($minimum ?? 0, $min);
                 }
@@ -1029,6 +1091,7 @@ final readonly class MemoryFeedBuilder implements FeedBuilderInterface
 
         if (is_string($value) && is_numeric($value)) {
             $candidate = (int) $value;
+
             if ($candidate > 0) {
                 return $candidate;
             }
@@ -1047,6 +1110,7 @@ final readonly class MemoryFeedBuilder implements FeedBuilderInterface
         }
 
         $value = $params[$key];
+
         if (is_float($value)) {
             return $value;
         }
@@ -1061,16 +1125,19 @@ final readonly class MemoryFeedBuilder implements FeedBuilderInterface
     private function calculateAgeInDays(ClusterDraft $cluster, DateTimeImmutable $reference): ?int
     {
         $range = $cluster->getParams()['time_range'] ?? null;
+
         if (!is_array($range) || !array_key_exists('to', $range)) {
             return null;
         }
 
         $timestamp = (int) $range['to'];
+
         if ($timestamp <= 0) {
             return null;
         }
 
         $seconds = $reference->getTimestamp() - $timestamp;
+
         if ($seconds <= 0) {
             return 0;
         }

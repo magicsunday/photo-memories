@@ -33,8 +33,10 @@ final class PanoramaOverYearsClusterStrategyTest extends TestCase
         );
 
         $items = [];
+
         foreach ([2018, 2019, 2020] as $year) {
             $day = new DateTimeImmutable(sprintf('%d-09-01 12:00:00', $year), new DateTimeZone('UTC'));
+
             for ($i = 0; $i < 5; ++$i) {
                 $items[] = $this->createPanorama(
                     ($year * 100) + $i,
@@ -59,8 +61,10 @@ final class PanoramaOverYearsClusterStrategyTest extends TestCase
         $strategy = new PanoramaOverYearsClusterStrategy();
 
         $items = [];
+
         foreach ([2021, 2022] as $year) {
             $day = new DateTimeImmutable(sprintf('%d-09-01 12:00:00', $year), new DateTimeZone('UTC'));
+
             for ($i = 0; $i < 5; ++$i) {
                 $items[] = $this->createPanorama(
                     ($year * 1000) + $i,
@@ -83,8 +87,10 @@ final class PanoramaOverYearsClusterStrategyTest extends TestCase
         );
 
         $items = [];
+
         foreach ([2017, 2018, 2019] as $year) {
             $day = new DateTimeImmutable(sprintf('%d-05-01 12:00:00', $year), new DateTimeZone('UTC'));
+
             for ($i = 0; $i < 3; ++$i) {
                 $items[] = $this->createFlaggedPanorama(
                     ($year * 100) + $i,
@@ -113,8 +119,10 @@ final class PanoramaOverYearsClusterStrategyTest extends TestCase
         );
 
         $items = [];
+
         foreach ([2015, 2016, 2017] as $year) {
             $day = new DateTimeImmutable(sprintf('%d-07-01 12:00:00', $year), new DateTimeZone('UTC'));
+
             for ($i = 0; $i < 3; ++$i) {
                 $items[] = $this->createFlaggedPanorama(
                     ($year * 1000) + $i,

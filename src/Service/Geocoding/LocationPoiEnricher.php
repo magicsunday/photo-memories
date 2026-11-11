@@ -93,6 +93,7 @@ final readonly class LocationPoiEnricher
     private function radiusFromBoundingBox(GeocodeResult $geocode): ?int
     {
         $bbox = $geocode->boundingBox;
+
         if (!is_array($bbox) || count($bbox) !== 4) {
             return null;
         }

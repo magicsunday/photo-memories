@@ -134,24 +134,29 @@ final class MediaMath
         }
 
         $total = count($items);
+
         if ($total === 0) {
             return null;
         }
 
         $ts = [];
+
         foreach ($items as $m) {
             $t = $m->getTakenAt();
+
             if ($t instanceof DateTimeImmutable) {
                 $ts[] = $t->getTimestamp();
             }
         }
 
         $valid = count($ts);
+
         if ($valid < $minSamples) {
             return null;
         }
 
         $coverage = $valid / (float) $total;
+
         if ($coverage < $minCoverage) {
             return null;
         }
@@ -162,6 +167,7 @@ final class MediaMath
 
         // Reject obviously bogus dates (e.g. 1970)
         $minTs = (new DateTimeImmutable(sprintf('%04d-01-01', $minValidYear)))->getTimestamp();
+
         if ($from < $minTs || $to < $minTs) {
             return null;
         }

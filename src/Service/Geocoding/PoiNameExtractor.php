@@ -23,6 +23,7 @@ final class PoiNameExtractor implements PoiNameExtractorInterface
     public function extract(array $names): ?string
     {
         $default = $names['default'];
+
         if ($default !== null) {
             return $default;
         }
@@ -31,6 +32,7 @@ final class PoiNameExtractor implements PoiNameExtractorInterface
             $names['localized'],
             static fn ($name): bool => $name !== ''
         );
+
         if ($localized !== null) {
             return $localized;
         }

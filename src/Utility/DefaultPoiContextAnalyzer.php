@@ -43,14 +43,17 @@ final readonly class DefaultPoiContextAnalyzer implements PoiContextAnalyzerInte
     public function resolvePrimaryPoi(Location $location): ?array
     {
         $pois = $location->getPois();
+
         if ($pois === null || $pois === []) {
             return null;
         }
 
         /** @var list<array<string, mixed>> $pois */
         $candidates = [];
+
         foreach ($pois as $index => $poi) {
             $normalised = $this->poiNormalizer->normalise($poi);
+
             if ($normalised === null) {
                 continue;
             }
@@ -73,17 +76,20 @@ final readonly class DefaultPoiContextAnalyzer implements PoiContextAnalyzerInte
             $candidates,
             static function (array $left, array $right): int {
                 $cmp = $right['score'] <=> $left['score'];
+
                 if ($cmp !== 0) {
                     return $cmp;
                 }
 
                 $distanceLeft  = $left['distance'];
                 $distanceRight = $right['distance'];
+
                 if ($distanceLeft !== $distanceRight) {
-                    $distanceLeft ??= INF;
+                    $distanceLeft  ??= INF;
                     $distanceRight ??= INF;
 
                     $cmp = $distanceLeft <=> $distanceRight;
+
                     if ($cmp !== 0) {
                         return $cmp;
                     }
@@ -92,6 +98,7 @@ final readonly class DefaultPoiContextAnalyzer implements PoiContextAnalyzerInte
                 $nameLeft  = $left['data']['name'] ?? '';
                 $nameRight = $right['data']['name'] ?? '';
                 $cmp       = strcmp($nameLeft, $nameRight);
+
                 if ($cmp !== 0) {
                     return $cmp;
                 }
@@ -109,16 +116,19 @@ final readonly class DefaultPoiContextAnalyzer implements PoiContextAnalyzerInte
     public function bestLabelForLocation(Location $location): ?string
     {
         $poi = $this->resolvePrimaryPoi($location);
+
         if ($poi === null) {
             return null;
         }
 
         $label = $this->poiLabelResolver->preferredLabel($poi);
+
         if ($label !== null) {
             return $label;
         }
 
         $categoryValue = $poi['categoryValue'] ?? null;
+
         if (is_string($categoryValue) && $categoryValue !== '') {
             return $categoryValue;
         }
@@ -133,16 +143,19 @@ final readonly class DefaultPoiContextAnalyzer implements PoiContextAnalyzerInte
 
         foreach ($members as $media) {
             $location = $media->getLocation();
+
             if (!$location instanceof Location) {
                 continue;
             }
 
             $poi = $this->resolvePrimaryPoi($location);
+
             if ($poi === null) {
                 continue;
             }
 
             $label = $this->poiLabelResolver->preferredLabel($poi) ?? $poi['categoryValue'];
+
             if (!is_string($label)) {
                 continue;
             }
@@ -186,6 +199,7 @@ final readonly class DefaultPoiContextAnalyzer implements PoiContextAnalyzerInte
             $counts,
             static function (array $left, array $right): int {
                 $cmp = $right['count'] <=> $left['count'];
+
                 if ($cmp !== 0) {
                     return $cmp;
                 }

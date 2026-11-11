@@ -36,16 +36,19 @@ final readonly class CompositeImageExifMetadataProcessor implements ExifMetadata
         }
 
         $compositeImage = $this->accessor->intOrNull($exif['EXIF']['CompositeImage'] ?? null);
+
         if ($compositeImage !== null) {
             $media->setCompositeImage($compositeImage);
         }
 
         $sourceCount = $this->accessor->intOrNull($exif['EXIF']['SourceImageNumberOfCompositeImage'] ?? null);
+
         if ($sourceCount !== null) {
             $media->setCompositeImageSourceCount($sourceCount);
         }
 
         $exposureTimes = $this->accessor->strOrNull($exif['EXIF']['SourceExposureTimesOfCompositeImage'] ?? null);
+
         if ($exposureTimes !== null) {
             $media->setCompositeImageExposureTimes($exposureTimes);
         }

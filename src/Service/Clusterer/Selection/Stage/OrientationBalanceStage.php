@@ -40,6 +40,7 @@ final class OrientationBalanceStage implements SelectionStageInterface
 
         foreach ($candidates as $candidate) {
             $type = $candidate['orientation'];
+
             if ($type === null) {
                 $selected[] = $candidate;
 

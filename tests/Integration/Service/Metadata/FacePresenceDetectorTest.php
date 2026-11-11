@@ -32,6 +32,7 @@ final class FacePresenceDetectorTest extends TestCase
     public function detectsFacesOnPosterFrame(): void
     {
         $videoBase = tempnam(sys_get_temp_dir(), 'video_');
+
         if ($videoBase === false) {
             self::fail('Unable to create temporary video fixture.');
         }
@@ -83,6 +84,7 @@ final class FacePresenceDetectorTest extends TestCase
     public function keepsDefaultsWhenBackendReportsNoFacesForPoster(): void
     {
         $videoBase = tempnam(sys_get_temp_dir(), 'video_');
+
         if ($videoBase === false) {
             self::fail('Unable to create temporary video fixture.');
         }
@@ -127,6 +129,7 @@ final class FacePresenceDetectorTest extends TestCase
     private function createMockFfmpegBinary(): string
     {
         $path = tempnam(sys_get_temp_dir(), 'ffmpeg_');
+
         if ($path === false) {
             self::fail('Unable to allocate temporary ffmpeg binary.');
         }
@@ -163,6 +166,7 @@ PHP;
     private function createMockFfprobeBinary(): string
     {
         $path = tempnam(sys_get_temp_dir(), 'ffprobe_');
+
         if ($path === false) {
             self::fail('Unable to allocate temporary ffprobe binary.');
         }

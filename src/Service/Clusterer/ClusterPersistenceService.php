@@ -120,6 +120,7 @@ final readonly class ClusterPersistenceService implements ClusterPersistenceInte
 
         foreach ($drafts as $draft) {
             $entity = $this->buildEntityForDraft($draft, $existing, $seenThisRun);
+
             if (!$entity instanceof Cluster) {
                 continue;
             }
@@ -230,6 +231,7 @@ final readonly class ClusterPersistenceService implements ClusterPersistenceInte
     private function computePairs(array $drafts): array
     {
         $pairs = [];
+
         foreach ($drafts as $draft) {
             $context = $this->resolveDraftContext($draft);
             $pairs[] = [
@@ -303,8 +305,10 @@ final readonly class ClusterPersistenceService implements ClusterPersistenceInte
         ?callable $onPersisted,
     ): int {
         $pairs = [];
+
         foreach ($batch as $entry) {
             $key = $entry['key'];
+
             if (isset($existing[$key])) {
                 continue;
             }
@@ -321,6 +325,7 @@ final readonly class ClusterPersistenceService implements ClusterPersistenceInte
 
         if ($pairs !== []) {
             $resolved = $this->loadExistingPairs(array_values($pairs));
+
             foreach ($resolved as $resolvedKey => $flag) {
                 $existing[$resolvedKey] = $flag;
             }
@@ -464,6 +469,7 @@ final readonly class ClusterPersistenceService implements ClusterPersistenceInte
         // Deduplicate parameters to keep the IN-clauses small
         $algs = [];
         $fps  = [];
+
         foreach ($pairs as $p) {
             $algs[$p['alg']] = true;
             $fps[$p['fp']]   = true;
@@ -477,6 +483,7 @@ final readonly class ClusterPersistenceService implements ClusterPersistenceInte
         $chunkSize = $this->fingerprintLookupBatchSize > 0 ? $this->fingerprintLookupBatchSize : 1;
 
         $existing = [];
+
         foreach (array_chunk($fpList, $chunkSize) as $chunk) {
             $rows     = $this->fetchExistingPairsChunk($algList, $chunk);
             $existing = $this->mergeExistingPairRows($existing, $rows);
@@ -605,6 +612,7 @@ final readonly class ClusterPersistenceService implements ClusterPersistenceInte
 
         $photoCount = null;
         $videoCount = null;
+
         if ($media !== []) {
             $counts     = $this->countMembersByKind($media);
             $photoCount = $counts['photos'];
@@ -615,6 +623,7 @@ final readonly class ClusterPersistenceService implements ClusterPersistenceInte
 
         if ($media !== []) {
             $qualityParams = $this->qualityAggregator->buildParams($media);
+
             foreach ($qualityParams as $qualityKey => $qualityValue) {
                 if ($qualityValue !== null) {
                     $draft->setParam($qualityKey, $qualityValue);
@@ -623,6 +632,7 @@ final readonly class ClusterPersistenceService implements ClusterPersistenceInte
             }
 
             $peopleParams = $this->peopleAggregator->buildParams($media);
+
             foreach ($peopleParams as $peopleKey => $peopleValue) {
                 $draft->setParam($peopleKey, $peopleValue);
                 $params[$peopleKey] = $peopleValue;
@@ -631,12 +641,14 @@ final readonly class ClusterPersistenceService implements ClusterPersistenceInte
             $annotations = $this->travelWaypointAnnotator->annotate($media);
 
             $waypoints = $annotations['waypoints'];
+
             if ($waypoints !== []) {
                 $draft->setParam('travel_waypoints', $waypoints);
                 $params['travel_waypoints'] = $waypoints;
             }
 
             $events = $annotations['events'];
+
             if ($events !== []) {
                 $draft->setParam('travel_events', $events);
                 $params['travel_events'] = $events;
@@ -652,6 +664,7 @@ final readonly class ClusterPersistenceService implements ClusterPersistenceInte
         $centroidLat  = $this->numericOrNull($centroid['lat']);
         $centroidLon  = $this->numericOrNull($centroid['lon']);
         $centroidCell = null;
+
         if ($centroidLat !== null && $centroidLon !== null) {
             $centroidCell = GeoCell::fromPoint($centroidLat, $centroidLon, 7);
         }
@@ -669,8 +682,10 @@ final readonly class ClusterPersistenceService implements ClusterPersistenceInte
 
         $mergeTelemetry = null;
         $metaParams     = $params['meta'] ?? null;
+
         if (is_array($metaParams)) {
             $merges = $metaParams['merges'] ?? null;
+
             if (is_array($merges) && $merges !== []) {
                 $mergeTelemetry = $merges;
             }
@@ -746,19 +761,23 @@ final readonly class ClusterPersistenceService implements ClusterPersistenceInte
         }
 
         $loaded = $this->mediaLookup->findByIds($memberIds);
+
         if ($loaded === []) {
             return [];
         }
 
         /** @var array<int, Media> $map */
         $map = [];
+
         foreach ($loaded as $media) {
             $map[$media->getId()] = $media;
         }
 
         $ordered = [];
+
         foreach ($memberIds as $id) {
             $media = $map[$id] ?? null;
+
             if ($media instanceof Media) {
                 $ordered[] = $media;
             }
@@ -779,6 +798,7 @@ final readonly class ClusterPersistenceService implements ClusterPersistenceInte
 
         foreach ($media as $item) {
             $taken = $item->getTakenAt();
+
             if (!$taken instanceof DateTimeImmutable) {
                 continue;
             }
@@ -808,6 +828,7 @@ final readonly class ClusterPersistenceService implements ClusterPersistenceInte
         foreach ($media as $item) {
             if ($item->isVideo()) {
                 ++$videos;
+
                 continue;
             }
 
@@ -826,6 +847,7 @@ final readonly class ClusterPersistenceService implements ClusterPersistenceInte
 
         foreach ($media as $item) {
             $location = $item->getLocation();
+
             if (!$location instanceof Location) {
                 continue;
             }
@@ -839,6 +861,7 @@ final readonly class ClusterPersistenceService implements ClusterPersistenceInte
         }
 
         $dominant = null;
+
         foreach ($counts as $entry) {
             if ($dominant === null || $entry['count'] > $dominant['count']) {
                 $dominant = $entry;
@@ -929,6 +952,7 @@ final readonly class ClusterPersistenceService implements ClusterPersistenceInte
         foreach ($media as $item) {
             $lat = $item->getGpsLat();
             $lon = $item->getGpsLon();
+
             if ($lat === null) {
                 continue;
             }
@@ -970,6 +994,7 @@ final readonly class ClusterPersistenceService implements ClusterPersistenceInte
 
         foreach ($media as $item) {
             $id = $item->getId();
+
             if ($id === null) {
                 continue;
             }
@@ -992,6 +1017,7 @@ final readonly class ClusterPersistenceService implements ClusterPersistenceInte
 
         $mediaMap   = $this->indexMediaById($media);
         $overlayMap = [];
+
         foreach ($overlay as $rank => $memberId) {
             $overlayMap[$memberId] = $rank;
         }
@@ -1000,11 +1026,13 @@ final readonly class ClusterPersistenceService implements ClusterPersistenceInte
 
         foreach ($memberIds as $index => $memberId) {
             $mediaItem = $mediaMap[$memberId] ?? null;
+
             if (!$mediaItem instanceof Media) {
                 continue;
             }
 
             $role = ClusterMemberRole::DUPLICATE;
+
             if ($memberId === $primaryId) {
                 $role = ClusterMemberRole::PRIMARY;
             } elseif (isset($overlayMap[$memberId])) {
@@ -1033,8 +1061,10 @@ final readonly class ClusterPersistenceService implements ClusterPersistenceInte
         }
 
         $result = [];
+
         foreach ($values as $value) {
             $id = null;
+
             if (is_int($value)) {
                 $id = $value;
             } elseif (is_string($value) && is_numeric($value)) {
@@ -1065,16 +1095,19 @@ final readonly class ClusterPersistenceService implements ClusterPersistenceInte
     private function extractMemberScores(array $params): array
     {
         $memberQuality = $params['member_quality'] ?? null;
+
         if (!is_array($memberQuality)) {
             return [];
         }
 
         $details = $memberQuality['members'] ?? null;
+
         if (!is_array($details)) {
             return [];
         }
 
         $scores = [];
+
         foreach ($details as $memberId => $detail) {
             if (is_int($memberId)) {
                 $id = $memberId;
@@ -1089,6 +1122,7 @@ final readonly class ClusterPersistenceService implements ClusterPersistenceInte
             }
 
             $score = $detail['score'] ?? ($detail['quality'] ?? null);
+
             if ($score === null) {
                 continue;
             }
@@ -1122,6 +1156,7 @@ final readonly class ClusterPersistenceService implements ClusterPersistenceInte
             }
 
             $value = trim($candidate);
+
             if ($value !== '') {
                 return $value;
             }
@@ -1176,21 +1211,25 @@ final readonly class ClusterPersistenceService implements ClusterPersistenceInte
     {
         $params        = $draft->getParams();
         $memberQuality = $params['member_quality'] ?? null;
+
         if (!is_array($memberQuality)) {
             return;
         }
 
         $summary = $memberQuality['summary'] ?? [];
+
         if (!is_array($summary)) {
             $summary = [];
         }
 
         $ordered = $memberQuality['ordered'] ?? [];
+
         if (!is_array($ordered)) {
             $ordered = [];
         }
 
         $overlayCount = 0;
+
         foreach ($ordered as $value) {
             if (is_int($value)) {
                 ++$overlayCount;
@@ -1209,6 +1248,7 @@ final readonly class ClusterPersistenceService implements ClusterPersistenceInte
         $summary['curated_overlay_count'] = $overlayCount;
 
         $selectionCounts = $summary['selection_counts'] ?? [];
+
         if (!is_array($selectionCounts)) {
             $selectionCounts = [];
         }
@@ -1246,14 +1286,17 @@ final readonly class ClusterPersistenceService implements ClusterPersistenceInte
         $params = $draft->getParams();
 
         $memberSelection = $params['member_selection'] ?? null;
+
         if (is_array($memberSelection)) {
             $policy = $memberSelection['policy'] ?? null;
+
             if (is_array($policy) && $policy !== []) {
                 return true;
             }
         }
 
         $memberQuality = $params['member_quality'] ?? null;
+
         if (!is_array($memberQuality)) {
             return false;
         }
@@ -1263,6 +1306,7 @@ final readonly class ClusterPersistenceService implements ClusterPersistenceInte
         }
 
         $summary = $memberQuality['summary'] ?? null;
+
         if (!is_array($summary)) {
             return false;
         }
@@ -1349,6 +1393,7 @@ final readonly class ClusterPersistenceService implements ClusterPersistenceInte
     {
         $params    = $cluster->getParams();
         $storyline = null;
+
         if (is_string($params['storyline'] ?? null) && $params['storyline'] !== '') {
             $storyline = $params['storyline'];
         }
@@ -1384,31 +1429,37 @@ final readonly class ClusterPersistenceService implements ClusterPersistenceInte
     {
         $params        = $draft->getParams();
         $memberQuality = $params['member_quality'] ?? [];
+
         if (!is_array($memberQuality)) {
             $memberQuality = [];
         }
 
         $summary = $memberQuality['summary'] ?? [];
+
         if (!is_array($summary)) {
             $summary = [];
         }
 
         $counts = $summary['selection_counts'] ?? [];
+
         if (!is_array($counts)) {
             $counts = [];
         }
 
         $rawCount = $counts['raw'] ?? count($draft->getMembers());
+
         if (!is_int($rawCount)) {
             $rawCount = (int) $rawCount;
         }
 
         $curatedCount = $counts['curated'] ?? ($summary['curated_overlay_count'] ?? $rawCount);
+
         if (!is_int($curatedCount)) {
             $curatedCount = (int) $curatedCount;
         }
 
         $overlayCount = $summary['curated_overlay_count'] ?? $curatedCount;
+
         if (!is_int($overlayCount)) {
             $overlayCount = (int) $overlayCount;
         }

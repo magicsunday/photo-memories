@@ -103,8 +103,10 @@ final readonly class FileJobMonitoringEmitter implements JobMonitoringEmitterInt
         }
 
         $extra = [];
+
         foreach ($context as $key => $value) {
             $normalizedKey = trim($key);
+
             if ($normalizedKey === '') {
                 continue;
             }
@@ -113,6 +115,7 @@ final readonly class FileJobMonitoringEmitter implements JobMonitoringEmitterInt
         }
 
         $metrics = $extra['phase_metrics'] ?? null;
+
         if (is_array($metrics)) {
             unset($extra['phase_metrics']);
 
@@ -123,6 +126,7 @@ final readonly class FileJobMonitoringEmitter implements JobMonitoringEmitterInt
                 'durations_ms' => 'phase_durations_ms',
             ] as $source => $target) {
                 $values = $metrics[$source] ?? null;
+
                 if (is_array($values)) {
                     $extra[$target] = $values;
                 }
@@ -228,11 +232,13 @@ final readonly class FileJobMonitoringEmitter implements JobMonitoringEmitterInt
     private function ensureDirectory(): void
     {
         $directory = dirname($this->logPath);
+
         if ($directory === '' || $directory === '.' || is_dir($directory)) {
             return;
         }
 
         $normalized = rtrim($directory, DIRECTORY_SEPARATOR);
+
         if ($normalized === '') {
             return;
         }

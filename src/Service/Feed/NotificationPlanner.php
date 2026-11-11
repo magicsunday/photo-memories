@@ -64,6 +64,7 @@ final readonly class NotificationPlanner
     public function planForItem(MemoryFeedItem $item, DateTimeImmutable $reference): array
     {
         $targetUtc = $this->resolveTargetDate($item->getParams());
+
         if (!$targetUtc instanceof DateTimeImmutable) {
             return [];
         }
@@ -82,11 +83,13 @@ final readonly class NotificationPlanner
 
             foreach ($config['lead_times'] as $leadSpec) {
                 $interval = $this->createInterval($leadSpec);
+
                 if (!$interval instanceof DateInterval) {
                     continue;
                 }
 
                 $sendAt = $target->sub($interval)->setTime($currentHour, $currentMinute, 0);
+
                 if ($sendAt < $reference) {
                     continue;
                 }
@@ -116,16 +119,19 @@ final readonly class NotificationPlanner
     private function resolveTargetDate(array $params): ?DateTimeImmutable
     {
         $range = $params['time_range'] ?? null;
+
         if (!is_array($range)) {
             return null;
         }
 
         $timestamp = $range['from'] ?? $range['to'] ?? null;
+
         if (!is_numeric($timestamp)) {
             return null;
         }
 
         $value = (int) $timestamp;
+
         if ($value <= 0) {
             return null;
         }
@@ -144,15 +150,18 @@ final readonly class NotificationPlanner
 
         foreach ($config as $channel => $options) {
             $channelName = trim($channel);
+
             if ($channelName === '') {
                 continue;
             }
 
             $leadTimes = [];
             $rawLead   = $options['lead_times'] ?? null;
+
             if (is_array($rawLead)) {
                 foreach ($rawLead as $candidate) {
                     $spec = trim($candidate);
+
                     if ($spec === '') {
                         continue;
                     }
@@ -168,6 +177,7 @@ final readonly class NotificationPlanner
             }
 
             $sendTime = null;
+
             if (array_key_exists('send_time', $options) && is_string($options['send_time'])) {
                 $sendTime = $this->normaliseSendTimeString($options['send_time']);
             }
@@ -194,6 +204,7 @@ final readonly class NotificationPlanner
     private function parseSendTime(string $value): array
     {
         $trimmed = trim($value);
+
         if ($trimmed === '') {
             return ['hour' => 9, 'minute' => 0, 'spec' => '09:00'];
         }
@@ -219,6 +230,7 @@ final readonly class NotificationPlanner
     private function createInterval(string $spec): ?DateInterval
     {
         $trimmed = trim($spec);
+
         if ($trimmed === '') {
             return null;
         }

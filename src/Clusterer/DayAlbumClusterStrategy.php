@@ -112,6 +112,7 @@ final readonly class DayAlbumClusterStrategy implements ClusterStrategyInterface
             ];
 
             $calendar = CalendarFeatureHelper::summarize($members);
+
             if ($calendar['isWeekend'] !== null) {
                 $params['isWeekend'] = $calendar['isWeekend'];
             }
@@ -127,6 +128,7 @@ final readonly class DayAlbumClusterStrategy implements ClusterStrategyInterface
             }
 
             $tags = $this->collectDominantTags($members);
+
             if ($tags !== []) {
                 $params = [...$params, ...$tags];
             }
@@ -188,6 +190,7 @@ final readonly class DayAlbumClusterStrategy implements ClusterStrategyInterface
 
         foreach ($members as $media) {
             $key = $this->locationHelper->localityKeyForMedia($media);
+
             if (!is_string($key)) {
                 continue;
             }

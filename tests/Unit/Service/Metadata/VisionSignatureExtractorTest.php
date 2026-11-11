@@ -147,6 +147,7 @@ final class VisionSignatureExtractorTest extends TestCase
     public function usesPosterFrameForVideo(): void
     {
         $videoBase = tempnam(sys_get_temp_dir(), 'vid_');
+
         if ($videoBase === false) {
             self::fail('Unable to create temporary video fixture.');
         }
@@ -200,6 +201,7 @@ final class VisionSignatureExtractorTest extends TestCase
     private function createImageWithDimensions(int $width, int $height): string
     {
         $base = tempnam(sys_get_temp_dir(), 'img_');
+
         if ($base === false) {
             self::fail('Unable to create temporary image fixture.');
         }
@@ -224,6 +226,7 @@ final class VisionSignatureExtractorTest extends TestCase
     private function createSaturatedImage(): string
     {
         $base = tempnam(sys_get_temp_dir(), 'img_');
+
         if ($base === false) {
             self::fail('Unable to create temporary image fixture.');
         }
@@ -254,6 +257,7 @@ final class VisionSignatureExtractorTest extends TestCase
 
         for ($y = 0; $y < $height; ++$y) {
             $row = [];
+
             for ($x = 0; $x < $width; ++$x) {
                 $tileX = (int) ($x / $blockSize);
                 $tileY = (int) ($y / $blockSize);
@@ -294,6 +298,7 @@ final class VisionSignatureExtractorTest extends TestCase
 
                     for ($ky = -1; $ky <= 1; ++$ky) {
                         $sampleY = $y + $ky;
+
                         if ($sampleY < 0) {
                             continue;
                         }
@@ -304,6 +309,7 @@ final class VisionSignatureExtractorTest extends TestCase
 
                         for ($kx = -1; $kx <= 1; ++$kx) {
                             $sampleX = $x + $kx;
+
                             if ($sampleX < 0) {
                                 continue;
                             }
@@ -346,6 +352,7 @@ final class VisionSignatureExtractorTest extends TestCase
     private function skipUnlessPosterStubIsExecutable(string $ffmpeg): void
     {
         $probe = tempnam(sys_get_temp_dir(), 'poster_probe_');
+
         if ($probe === false) {
             self::markTestSkipped('Unable to create a poster-frame probe file.');
         }

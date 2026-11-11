@@ -38,6 +38,7 @@ final class GoldenHourClusterStrategyTest extends TestCase
 
         $base  = new DateTimeImmutable('2024-08-10 13:00:00', new DateTimeZone('UTC'));
         $items = [];
+
         for ($i = 0; $i < 5; ++$i) {
             $items[] = $this->createMedia(
                 2700 + $i,
@@ -69,6 +70,7 @@ final class GoldenHourClusterStrategyTest extends TestCase
 
         $base  = new DateTimeImmutable('2024-08-10 18:00:00', new DateTimeZone('UTC'));
         $items = [];
+
         for ($i = 0; $i < 5; ++$i) {
             $items[] = $this->createMedia(
                 2800 + $i,
@@ -92,6 +94,7 @@ final class GoldenHourClusterStrategyTest extends TestCase
 
         $base  = new DateTimeImmutable('2024-08-10 18:00:00', new DateTimeZone('UTC'));
         $items = [];
+
         for ($i = 0; $i < 5; ++$i) {
             $items[] = $this->createMedia(
                 2900 + $i,

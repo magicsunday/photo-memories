@@ -100,6 +100,7 @@ final readonly class GoldenHourClusterStrategy implements ClusterStrategyInterfa
             function (Media $m): bool {
                 $bag          = $m->getFeatureBag();
                 $isGoldenHour = $bag->solarIsGoldenHour();
+
                 if ($isGoldenHour !== null) {
                     return $isGoldenHour;
                 }
@@ -127,11 +128,13 @@ final readonly class GoldenHourClusterStrategy implements ClusterStrategyInterfa
 
         foreach ($cand as $m) {
             $takenAt = $m->getTakenAt();
+
             if (!$takenAt instanceof DateTimeImmutable) {
                 continue;
             }
 
             $ts = $takenAt->getTimestamp();
+
             if ($lastTs !== null && ($ts - $lastTs) > $this->sessionGapSeconds) {
                 $runs[] = $buf;
                 $buf    = [];
@@ -163,11 +166,13 @@ final readonly class GoldenHourClusterStrategy implements ClusterStrategyInterfa
 
             $tagMetadata = $this->collectDominantTags($run);
             $keywords    = $tagMetadata['keywords'] ?? null;
+
             if (is_array($keywords) && $keywords !== []) {
                 $params['keywords'] = $keywords;
             }
 
             $qualityParams = $this->qualityAggregator->buildParams($run);
+
             foreach ($qualityParams as $qualityKey => $qualityValue) {
                 if ($qualityValue !== null) {
                     $params[$qualityKey] = $qualityValue;
@@ -202,6 +207,7 @@ final readonly class GoldenHourClusterStrategy implements ClusterStrategyInterfa
 
         foreach ($run as $media) {
             $tags = $media->getSceneTags();
+
             if (!is_array($tags)) {
                 continue;
             }

@@ -74,12 +74,14 @@ final class SelectionProfileProvider
         }
 
         $profile = $this->algorithmProfiles[$algorithm] ?? $this->defaultProfile;
+
         if ($profile === '') {
             $profile = $this->defaultProfile;
         }
 
         if ($algorithm === 'vacation') {
             $runtimeProfile = $this->determineVacationProfile($context, $profile);
+
             if ($runtimeProfile !== null) {
                 return $runtimeProfile;
             }
@@ -102,6 +104,7 @@ final class SelectionProfileProvider
         $minimumTotal = $this->resolveMinimumTotal($merged, $targetTotal);
 
         $faceDetectionAvailable = $this->faceDetectionAvailability?->isAvailable() ?? true;
+
         if ($profileKey === 'vacation_weekend_transit' && !$faceDetectionAvailable) {
             $merged['face_bonus']  = 0.10;
             $merged['video_bonus'] = 0.25;
@@ -190,6 +193,7 @@ final class SelectionProfileProvider
 
         foreach (['target_total', 'max_per_day', 'time_slot_hours', 'min_spacing_seconds', 'phash_min_hamming', 'max_per_staypoint', 'minimum_total', 'core_day_bonus', 'peripheral_day_penalty'] as $key) {
             $value = $values[$key] ?? null;
+
             if ($value === null) {
                 continue;
             }
@@ -207,6 +211,7 @@ final class SelectionProfileProvider
 
         foreach (['video_bonus', 'face_bonus', 'selfie_penalty', 'quality_floor', 'people_balance_weight', 'repeat_penalty', 'phash_percentile', 'spacing_progress_factor', 'cohort_repeat_penalty'] as $key) {
             $value = $values[$key] ?? null;
+
             if ($value === null) {
                 continue;
             }
@@ -218,6 +223,7 @@ final class SelectionProfileProvider
 
         foreach (['enable_people_balance'] as $key) {
             $value = $values[$key] ?? null;
+
             if ($value === null) {
                 continue;
             }
@@ -236,6 +242,7 @@ final class SelectionProfileProvider
 
             if (is_string($value)) {
                 $filtered = filter_var($value, FILTER_VALIDATE_BOOLEAN, FILTER_NULL_ON_FAILURE);
+
                 if ($filtered !== null) {
                     $result[$key] = $filtered;
                 }
@@ -256,6 +263,7 @@ final class SelectionProfileProvider
 
         if ($weekend === true) {
             $nightCount = $nights;
+
             if ($nightCount === null && $awayDays !== null) {
                 $nightCount = max(0, $awayDays - 1);
             }
@@ -288,6 +296,7 @@ final class SelectionProfileProvider
     private function intContextValue(array $context, string $key): ?int
     {
         $value = $context[$key] ?? null;
+
         if ($value === null) {
             return null;
         }
@@ -309,6 +318,7 @@ final class SelectionProfileProvider
     private function boolContextValue(array $context, string $key): ?bool
     {
         $value = $context[$key] ?? null;
+
         if ($value === null) {
             return null;
         }
@@ -319,6 +329,7 @@ final class SelectionProfileProvider
 
         if (is_numeric($value) || is_string($value)) {
             $filtered = filter_var($value, FILTER_VALIDATE_BOOLEAN, FILTER_NULL_ON_FAILURE);
+
             if ($filtered !== null) {
                 return $filtered;
             }
@@ -333,6 +344,7 @@ final class SelectionProfileProvider
     private function intValue(array $values, string $key, int $default): int
     {
         $value = $values[$key] ?? null;
+
         if ($value === null) {
             return $default;
         }
@@ -346,6 +358,7 @@ final class SelectionProfileProvider
     private function floatValue(array $values, string $key, float $default): float
     {
         $value = $values[$key] ?? null;
+
         if ($value === null) {
             return $default;
         }
@@ -359,6 +372,7 @@ final class SelectionProfileProvider
     private function boolValue(array $values, string $key, bool $default): bool
     {
         $value = $values[$key] ?? null;
+
         if ($value === null) {
             return $default;
         }
@@ -373,6 +387,7 @@ final class SelectionProfileProvider
 
         if (is_string($value)) {
             $filtered = filter_var($value, FILTER_VALIDATE_BOOLEAN, FILTER_NULL_ON_FAILURE);
+
             if ($filtered !== null) {
                 return $filtered;
             }

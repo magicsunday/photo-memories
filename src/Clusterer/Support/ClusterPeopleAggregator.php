@@ -125,6 +125,7 @@ final readonly class ClusterPeopleAggregator
 
             foreach ($persons as $person) {
                 $label = trim($person);
+
                 if ($label === '') {
                     continue;
                 }
@@ -209,6 +210,7 @@ final readonly class ClusterPeopleAggregator
                 $id = $value;
             } else {
                 $trimmed = trim($value);
+
                 if ($trimmed === '') {
                     continue;
                 }
@@ -217,6 +219,7 @@ final readonly class ClusterPeopleAggregator
                     $id = (int) $trimmed;
                 } else {
                     $id = $this->personHelper->idFromName($trimmed);
+
                     if ($id === null) {
                         continue;
                     }
@@ -255,7 +258,7 @@ final readonly class ClusterPeopleAggregator
         $weightSum = 0.0;
 
         foreach ($components as [$value, $weight]) {
-            $sum += $this->clamp01($value) * $weight;
+            $sum       += $this->clamp01($value) * $weight;
             $weightSum += $weight;
         }
 

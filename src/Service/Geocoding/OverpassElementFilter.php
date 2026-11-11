@@ -30,16 +30,19 @@ final class OverpassElementFilter implements OverpassElementFilterInterface
     public function filter(array $element): ?array
     {
         $id = $this->elementId($element);
+
         if ($id === null) {
             return null;
         }
 
         $coordinate = $this->extractCoordinate($element);
+
         if ($coordinate === null) {
             return null;
         }
 
         $tags = $element['tags'] ?? [];
+
         if (!is_array($tags)) {
             $tags = [];
         }
@@ -86,6 +89,7 @@ final class OverpassElementFilter implements OverpassElementFilterInterface
         }
 
         $center = $element['center'] ?? null;
+
         if (is_array($center) && is_numeric($center['lat'] ?? null) && is_numeric($center['lon'] ?? null)) {
             return ['lat' => (float) $center['lat'], 'lon' => (float) $center['lon']];
         }

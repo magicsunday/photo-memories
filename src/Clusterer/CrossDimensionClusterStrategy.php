@@ -89,6 +89,7 @@ final readonly class CrossDimensionClusterStrategy implements ClusterStrategyInt
 
         foreach ($withTime as $m) {
             $takenAt = $m->getTakenAt();
+
             if (!$takenAt instanceof DateTimeImmutable) {
                 continue;
             }
@@ -118,6 +119,7 @@ final readonly class CrossDimensionClusterStrategy implements ClusterStrategyInt
                 : ['lat' => 0.0, 'lon' => 0.0];
 
             $ok = true;
+
             foreach ($gps as $m) {
                 $lat = $m->getGpsLat();
                 $lon = $m->getGpsLon();
@@ -132,6 +134,7 @@ final readonly class CrossDimensionClusterStrategy implements ClusterStrategyInt
 
                 if ($dist > $this->radiusMeters) {
                     $ok = false;
+
                     break;
                 }
             }
@@ -145,11 +148,13 @@ final readonly class CrossDimensionClusterStrategy implements ClusterStrategyInt
                 'time_range' => $time,
             ];
             $tagMetadata = $this->collectDominantTags($run);
+
             foreach ($tagMetadata as $key => $value) {
                 $params[$key] = $value;
             }
 
             $qualityParams = $this->qualityAggregator->buildParams($run);
+
             foreach ($qualityParams as $qualityKey => $qualityValue) {
                 if ($qualityValue !== null) {
                     $params[$qualityKey] = $qualityValue;

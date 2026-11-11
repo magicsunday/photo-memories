@@ -74,16 +74,19 @@ final class LivelinessClusterScoreHeuristic extends AbstractClusterScoreHeuristi
 
             foreach ($mediaItems as $media) {
                 $isVideo = $media->isVideo();
+
                 if ($isVideo) {
                     ++$videoCount;
                 }
 
                 $isLivePhoto = $media->getLivePairMedia() !== null || $media->getLivePairChecksum() !== null;
+
                 if ($isLivePhoto) {
                     ++$liveCount;
                 }
 
                 $motionBlur = $this->floatOrNull($media->getMotionBlurScore());
+
                 if ($motionBlur !== null) {
                     $motionBlurValues[] = $this->clamp01($motionBlur);
                 }

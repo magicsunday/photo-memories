@@ -57,6 +57,7 @@ final readonly class PeopleBalanceStage implements SelectionStageInterface
         foreach ($candidates as $candidate) {
             /** @var list<int> $persons */
             $persons = $candidate['person_ids'];
+
             if ($persons === []) {
                 $selected[] = $candidate;
 
@@ -64,6 +65,7 @@ final readonly class PeopleBalanceStage implements SelectionStageInterface
             }
 
             $persons = array_values(array_unique($persons));
+
             if ($this->contains($persons, $this->importantPersonIds)) {
                 $selected[] = $candidate;
                 $this->register($personCount, $persons);
@@ -109,6 +111,7 @@ final readonly class PeopleBalanceStage implements SelectionStageInterface
         foreach ($candidates as $candidate) {
             /** @var list<int> $persons */
             $persons = $candidate['person_ids'];
+
             if ($this->contains($persons, $this->importantPersonIds)) {
                 return true;
             }
@@ -154,6 +157,7 @@ final readonly class PeopleBalanceStage implements SelectionStageInterface
     private function isGroupFrame(array $candidate): bool
     {
         $metrics = $candidate['face_metrics'] ?? null;
+
         if (!is_array($metrics)) {
             return false;
         }

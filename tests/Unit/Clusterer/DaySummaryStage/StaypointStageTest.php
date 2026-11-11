@@ -89,6 +89,7 @@ final class StaypointStageTest extends TestCase
         self::assertSame(count($summary['staypoints']), $summary['staypointCount']);
 
         $expectedDwell = 0;
+
         foreach ($summary['staypoints'] as $staypoint) {
             $expectedDwell += (int) $staypoint['dwell'];
         }

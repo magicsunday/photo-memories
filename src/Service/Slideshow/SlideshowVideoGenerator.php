@@ -205,6 +205,7 @@ final readonly class SlideshowVideoGenerator implements SlideshowVideoGeneratorI
     public function generate(SlideshowJob $job): void
     {
         $slides = $job->slides();
+
         if ($slides === []) {
             throw new RuntimeException('Cannot render slideshow without images.');
         }
@@ -216,6 +217,7 @@ final readonly class SlideshowVideoGenerator implements SlideshowVideoGeneratorI
         }
 
         $directory = dirname($job->outputPath());
+
         if (!is_dir($directory) && !mkdir($directory, 0775, true) && !is_dir($directory)) {
             throw new RuntimeException(sprintf('Could not create video directory "%s".', $directory));
         }
@@ -230,6 +232,7 @@ final readonly class SlideshowVideoGenerator implements SlideshowVideoGeneratorI
             $process->mustRun();
         } catch (ProcessFailedException $exception) {
             $message = trim($exception->getProcess()->getErrorOutput());
+
             if ($message === '') {
                 $message = trim($exception->getProcess()->getOutput());
             }
@@ -304,6 +307,7 @@ final readonly class SlideshowVideoGenerator implements SlideshowVideoGeneratorI
         $filter = $this->appendIntroOverlayFilter($filter, $title, $subtitle);
 
         $fadeChain = $this->buildVideoFadeChain($clipDuration);
+
         if ($fadeChain !== '') {
             $filter = sprintf('%s,%s', $filter, $fadeChain);
         }
@@ -352,6 +356,7 @@ final readonly class SlideshowVideoGenerator implements SlideshowVideoGeneratorI
 
         $transitionWhitelist  = $this->getTransitionWhitelist();
         $transitionCandidates = $this->transitions;
+
         if ($transitionCandidates === self::DEFAULT_TRANSITIONS) {
             $transitionCandidates = $transitionWhitelist;
         }
@@ -441,14 +446,18 @@ final readonly class SlideshowVideoGenerator implements SlideshowVideoGeneratorI
 
         for ($index = 1; $index < $slideCount; ++$index) {
             $preferred = $this->normaliseTransitionName($slides[$index - 1]['transition'] ?? null);
+
             if ($preferred === null) {
                 $transition    = 'fade';
                 $fallbackCount = count($fallbackTransitions);
+
                 while ($fallbackIndex < $fallbackCount) {
                     $candidate = $fallbackTransitions[$fallbackIndex];
                     ++$fallbackIndex;
+
                     if ($candidate !== $previousChoice || $fallbackCount === 1) {
                         $transition = $candidate;
+
                         break;
                     }
                 }
@@ -480,6 +489,7 @@ final readonly class SlideshowVideoGenerator implements SlideshowVideoGeneratorI
         $filterComplex = implode(';', $filters);
 
         $fadeChain = $this->buildVideoFadeChain($totalDuration);
+
         if ($fadeChain !== '') {
             $filterComplex = sprintf('%s;[vout]%s[vout]', $filterComplex, $fadeChain);
         }
@@ -739,6 +749,7 @@ final readonly class SlideshowVideoGenerator implements SlideshowVideoGeneratorI
         $clusterId = $slide['clusterId'] ?? null;
 
         $seedParts = [];
+
         if (is_int($mediaId)) {
             $seedParts[] = sprintf('media:%d', $mediaId);
         } else {
@@ -818,6 +829,7 @@ final readonly class SlideshowVideoGenerator implements SlideshowVideoGeneratorI
         array $requestedDurations,
     ): array {
         $count = count($slides);
+
         if ($count <= 1) {
             return [];
         }
@@ -825,11 +837,13 @@ final readonly class SlideshowVideoGenerator implements SlideshowVideoGeneratorI
         $resolvedDefault = $this->resolveTransitionDuration($configuredTransitionDuration);
 
         $overrides = [];
+
         foreach ($requestedDurations as $index => $duration) {
             $overrides[$index] = $this->clampTransitionDuration($duration);
         }
 
         $durations = [];
+
         for ($index = 0; $index < $count - 1; ++$index) {
             $currentDuration = $this->resolveSlideDuration($slides[$index]['duration']);
             $nextDuration    = $this->resolveSlideDuration($slides[$index + 1]['duration']);
@@ -838,6 +852,7 @@ final readonly class SlideshowVideoGenerator implements SlideshowVideoGeneratorI
 
             if ($maxOverlap < self::MIN_TRANSITION_DURATION) {
                 $durations[$index] = $maxOverlap;
+
                 continue;
             }
 
@@ -871,6 +886,7 @@ final readonly class SlideshowVideoGenerator implements SlideshowVideoGeneratorI
         $step = $this->beatGridStep;
 
         $totalDuration = $visibleDuration + $transitionDuration;
+
         if ($totalDuration <= 0.0) {
             return [
                 max(self::MINIMUM_SLIDE_DURATION, $visibleDuration),
@@ -879,6 +895,7 @@ final readonly class SlideshowVideoGenerator implements SlideshowVideoGeneratorI
         }
 
         $alignedTotal = max($step, round($totalDuration / $step) * $step);
+
         if ($alignedTotal <= 0.0) {
             return [
                 max(self::MINIMUM_SLIDE_DURATION, $visibleDuration),
@@ -887,6 +904,7 @@ final readonly class SlideshowVideoGenerator implements SlideshowVideoGeneratorI
         }
 
         $delta = $alignedTotal - $totalDuration;
+
         if (abs($delta) < 0.0005) {
             return [
                 max(self::MINIMUM_SLIDE_DURATION, $visibleDuration),
@@ -903,6 +921,7 @@ final readonly class SlideshowVideoGenerator implements SlideshowVideoGeneratorI
             $remaining = $delta;
 
             $visibleReductionCapacity = $adjustedVisible - self::MINIMUM_SLIDE_DURATION;
+
             if ($visibleReductionCapacity > 0.0) {
                 $visibleReduction = max($remaining, -$visibleReductionCapacity);
                 $adjustedVisible += $visibleReduction;
@@ -912,6 +931,7 @@ final readonly class SlideshowVideoGenerator implements SlideshowVideoGeneratorI
             if ($remaining < 0.0 && $adjustedTransition > 0.0) {
                 $transitionFloor             = max(0.0, min($adjustedTransition, self::MIN_TRANSITION_DURATION));
                 $transitionReductionCapacity = $adjustedTransition - $transitionFloor;
+
                 if ($transitionReductionCapacity > 0.0) {
                     $transitionReduction = max($remaining, -$transitionReductionCapacity);
                     $adjustedTransition += $transitionReduction;
@@ -950,6 +970,7 @@ final readonly class SlideshowVideoGenerator implements SlideshowVideoGeneratorI
 
         foreach ($transitions as $transition) {
             $normalised = $this->normaliseTransitionName($transition);
+
             if ($normalised === null) {
                 continue;
             }
@@ -977,6 +998,7 @@ final readonly class SlideshowVideoGenerator implements SlideshowVideoGeneratorI
         }
 
         $trimmed = trim($transition);
+
         if ($trimmed === '') {
             return null;
         }
@@ -1012,6 +1034,7 @@ final readonly class SlideshowVideoGenerator implements SlideshowVideoGeneratorI
 
         $weights     = $this->resolveTransitionWeights($transitions);
         $totalWeight = array_sum($weights);
+
         if ($totalWeight <= 0) {
             $totalWeight = count($transitions);
         }
@@ -1043,6 +1066,7 @@ final readonly class SlideshowVideoGenerator implements SlideshowVideoGeneratorI
 
         foreach ($slides as $slide) {
             $mediaId = $slide['mediaId'] ?? null;
+
             if (is_int($mediaId)) {
                 $payloadParts[] = sprintf('media:%d', $mediaId);
             } else {
@@ -1066,6 +1090,7 @@ final readonly class SlideshowVideoGenerator implements SlideshowVideoGeneratorI
     private function hashSeed(string $payload): string
     {
         $base = $payload;
+
         if ($this->deterministicSeed !== '') {
             $base = $this->deterministicSeed . '|' . $payload;
         }
@@ -1086,6 +1111,7 @@ final readonly class SlideshowVideoGenerator implements SlideshowVideoGeneratorI
         $draw = $randomizer->getInt(1, $totalWeight);
 
         $cumulative = 0;
+
         foreach ($transitions as $transition) {
             $weight = $weights[$transition] ?? 1;
             $cumulative += $weight;
@@ -1201,6 +1227,7 @@ final readonly class SlideshowVideoGenerator implements SlideshowVideoGeneratorI
             $output   = $process->getOutput();
             $error    = $process->getErrorOutput();
             $combined = trim($output . "\n" . $error);
+
             if ($combined === '') {
                 return [];
             }
@@ -1230,6 +1257,7 @@ final readonly class SlideshowVideoGenerator implements SlideshowVideoGeneratorI
                 } elseif (preg_match('/\b(?:possible|available)\s+(?:values|transitions)\b/i', $trimmed) === 1) {
                     if (preg_match('/:\s*(.*)$/', $trimmed, $matches) === 1) {
                         $content = trim($matches[1]);
+
                         if ($content !== '') {
                             $names = array_merge(
                                 $names,
@@ -1257,6 +1285,7 @@ final readonly class SlideshowVideoGenerator implements SlideshowVideoGeneratorI
 
             if (preg_match('/:\s*(.*)$/', $trimmed, $matches) === 1) {
                 $content = trim($matches[1]);
+
                 if ($content !== '') {
                     $names = array_merge(
                         $names,
@@ -1268,6 +1297,7 @@ final readonly class SlideshowVideoGenerator implements SlideshowVideoGeneratorI
 
         $unique = [];
         $result = [];
+
         foreach ($names as $name) {
             if ($name === '') {
                 continue;
@@ -1290,12 +1320,14 @@ final readonly class SlideshowVideoGenerator implements SlideshowVideoGeneratorI
     private function extractTransitionNamesFromLine(string $line, bool $allowMultipleTokens): array
     {
         $clean = trim($line);
+
         if ($clean === '') {
             return [];
         }
 
         $clean = ltrim($clean, '-•*');
         $clean = trim($clean);
+
         if ($clean === '') {
             return [];
         }
@@ -1304,8 +1336,10 @@ final readonly class SlideshowVideoGenerator implements SlideshowVideoGeneratorI
             $split = preg_split('/[,|]/', $clean);
             $parts = $split !== false ? $split : [];
             $names = [];
+
             foreach ($parts as $part) {
                 $name = $this->sanitizeTransitionToken($part);
+
                 if ($name !== null) {
                     $names[] = $name;
                 }
@@ -1316,14 +1350,17 @@ final readonly class SlideshowVideoGenerator implements SlideshowVideoGeneratorI
 
         $split  = preg_split('/\s+/', $clean);
         $tokens = $split !== false ? $split : [];
+
         if ($tokens === []) {
             return [];
         }
 
         if ($allowMultipleTokens) {
             $names = [];
+
             foreach ($tokens as $token) {
                 $name = $this->sanitizeTransitionToken($token);
+
                 if ($name !== null) {
                     $names[] = $name;
                 }
@@ -1333,6 +1370,7 @@ final readonly class SlideshowVideoGenerator implements SlideshowVideoGeneratorI
         }
 
         $name = $this->sanitizeTransitionToken($tokens[0]);
+
         if ($name === null) {
             return [];
         }
@@ -1344,6 +1382,7 @@ final readonly class SlideshowVideoGenerator implements SlideshowVideoGeneratorI
     {
         $normalised = strtolower(trim($token));
         $normalised = trim($normalised, '.,;:()[]{}"\'');
+
         if ($normalised === '') {
             return null;
         }
@@ -1415,6 +1454,7 @@ final readonly class SlideshowVideoGenerator implements SlideshowVideoGeneratorI
 
         if ($hasAudio) {
             $filterIndex = array_search('-filter_complex', $command, true);
+
             if ($filterIndex !== false) {
                 $filterComplexIndex = $filterIndex + 1;
                 $audioInputLabel    = sprintf('[%d:a:0]', $videoInputs);
@@ -1488,6 +1528,7 @@ final readonly class SlideshowVideoGenerator implements SlideshowVideoGeneratorI
     private function appendIntroOverlayFilter(string $filter, ?string $title, ?string $subtitle): string
     {
         $overlay = $this->buildIntroTextOverlayFilterChain($title, $subtitle);
+
         if ($overlay === '') {
             return $filter;
         }
@@ -1580,6 +1621,7 @@ final readonly class SlideshowVideoGenerator implements SlideshowVideoGeneratorI
         }
 
         $fontFamily = trim($this->fontFamily);
+
         if ($fontFamily !== '') {
             return sprintf("font='%s'", $this->escapeDrawTextValue($fontFamily));
         }
@@ -1623,8 +1665,10 @@ final readonly class SlideshowVideoGenerator implements SlideshowVideoGeneratorI
 
         for ($index = 0; $index < $length; ++$index) {
             $character = $expression[$index];
+
             if ($character === ',') {
                 $previous = $index > 0 ? $expression[$index - 1] : null;
+
                 if ($previous !== '\\') {
                     $escaped .= '\\';
                 }

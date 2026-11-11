@@ -133,6 +133,7 @@ final readonly class ConsoleProgressHandle implements ProgressHandleInterface
     public function setProgress(int $current): void
     {
         $maxSteps = $this->bar->getMaxSteps();
+
         if ($current > $maxSteps) {
             $this->bar->setMaxSteps($current);
         }

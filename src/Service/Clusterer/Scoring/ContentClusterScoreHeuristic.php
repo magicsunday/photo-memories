@@ -85,6 +85,7 @@ final class ContentClusterScoreHeuristic extends AbstractClusterScoreHeuristic
 
         foreach ($mediaItems as $media) {
             $keywords = $media->getKeywords();
+
             if (!is_array($keywords)) {
                 continue;
             }
@@ -94,6 +95,7 @@ final class ContentClusterScoreHeuristic extends AbstractClusterScoreHeuristic
             }
 
             ++$itemsWithKeywords;
+
             foreach ($keywords as $keyword) {
                 if ($keyword === '') {
                     continue;

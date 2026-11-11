@@ -30,6 +30,7 @@ final class FacePresenceDetectorTest extends TestCase
     public function detectsFacesOnStillImageWhenMetadataMissing(): void
     {
         $imagePath = tempnam(sys_get_temp_dir(), 'face_');
+
         if ($imagePath === false) {
             self::fail('Unable to create temporary image fixture.');
         }
@@ -67,6 +68,7 @@ final class FacePresenceDetectorTest extends TestCase
     public function marksAbsenceWhenBackendReturnsZero(): void
     {
         $imagePath = tempnam(sys_get_temp_dir(), 'face_');
+
         if ($imagePath === false) {
             self::fail('Unable to create temporary image fixture.');
         }
@@ -103,6 +105,7 @@ final class FacePresenceDetectorTest extends TestCase
     public function skipsWhenMediaAlreadyContainsFaceMetadata(): void
     {
         $imagePath = tempnam(sys_get_temp_dir(), 'face_');
+
         if ($imagePath === false) {
             self::fail('Unable to create temporary image fixture.');
         }
@@ -141,6 +144,7 @@ final class FacePresenceDetectorTest extends TestCase
     public function skipsWhenMediaIsHiddenOrLowQuality(): void
     {
         $imagePath = tempnam(sys_get_temp_dir(), 'face_');
+
         if ($imagePath === false) {
             self::fail('Unable to create temporary image fixture.');
         }

@@ -78,6 +78,7 @@ final readonly class PanoramaOverYearsClusterStrategy implements ClusterStrategy
             $items,
             function (Media $m): bool {
                 $flag = $m->isPanorama();
+
                 if ($flag === true) {
                     return true;
                 }

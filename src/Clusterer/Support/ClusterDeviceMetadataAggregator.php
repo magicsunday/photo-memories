@@ -56,6 +56,7 @@ final readonly class ClusterDeviceMetadataAggregator
         ]);
 
         $labelParts = [];
+
         if ($make !== null) {
             $labelParts[] = $make;
         }
@@ -63,6 +64,7 @@ final readonly class ClusterDeviceMetadataAggregator
         if ($model !== null) {
             if ($make !== null && stripos($model, $make) === 0) {
                 $suffix = trim(substr($model, strlen($make)));
+
                 if ($suffix !== '') {
                     $labelParts[] = $suffix;
                 }
@@ -72,11 +74,13 @@ final readonly class ClusterDeviceMetadataAggregator
         }
 
         $label = trim(implode(' ', $labelParts));
+
         if ($label === '') {
             $label = 'Unbekanntes Gerät';
         }
 
         $detailParts = [];
+
         if ($owner !== null) {
             $detailParts[] = sprintf('Besitzer: %s', $owner);
         }
@@ -169,11 +173,13 @@ final readonly class ClusterDeviceMetadataAggregator
             }
 
             $lensModel = $this->normalizeDeviceValue($media->getLensModel());
+
             if ($lensModel !== null) {
                 $lensCounts[$lensModel] = ($lensCounts[$lensModel] ?? 0) + 1;
             }
 
             $contentKind = $media->getContentKind();
+
             if ($contentKind instanceof ContentKind) {
                 $kindCounts[$contentKind->value] = ($kindCounts[$contentKind->value] ?? 0) + 1;
             }
@@ -184,12 +190,15 @@ final readonly class ClusterDeviceMetadataAggregator
         $primaryKey   = null;
         $primaryLabel = null;
         $primaryCount = 0;
+
         foreach ($descriptorCounts as $key => $entry) {
             $count = $entry['count'];
+
             if ($count > $primaryCount) {
                 $primaryKey   = $key;
                 $primaryLabel = $entry['label'];
                 $primaryCount = $count;
+
                 continue;
             }
 
@@ -201,6 +210,7 @@ final readonly class ClusterDeviceMetadataAggregator
         }
 
         $primaryShare = null;
+
         if ($primaryKey !== null) {
             $primaryShare = (float) $primaryCount / (float) $totalItems;
         }
@@ -240,10 +250,12 @@ final readonly class ClusterDeviceMetadataAggregator
 
         $dominantValue = null;
         $dominantCount = 0;
+
         foreach ($counts as $value => $count) {
             if ($count > $dominantCount) {
                 $dominantValue = $value;
                 $dominantCount = $count;
+
                 continue;
             }
 

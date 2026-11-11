@@ -92,8 +92,10 @@ final readonly class YearInReviewClusterStrategy implements ClusterStrategyInter
             function (array $list): bool {
                 /** @var array<int,bool> $months */
                 $months = [];
+
                 foreach ($list as $m) {
                     $takenAt = $m->getTakenAt();
+
                     if ($takenAt === null) {
                         continue;
                     }
@@ -124,6 +126,7 @@ final readonly class YearInReviewClusterStrategy implements ClusterStrategyInter
             ];
 
             $tags = $this->collectDominantTags($list);
+
             if ($tags !== []) {
                 $params = [...$params, ...$tags];
             }
@@ -131,6 +134,7 @@ final readonly class YearInReviewClusterStrategy implements ClusterStrategyInter
             $params = $this->appendLocationMetadata($list, $params);
 
             $qualityParams = $this->qualityAggregator->buildParams($list);
+
             foreach ($qualityParams as $qualityKey => $qualityValue) {
                 if ($qualityValue !== null) {
                     $params[$qualityKey] = $qualityValue;

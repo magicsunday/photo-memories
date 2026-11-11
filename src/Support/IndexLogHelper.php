@@ -37,6 +37,7 @@ final class IndexLogHelper
         }
 
         $existing = $media->getIndexLog();
+
         if ($existing === null || $existing === '') {
             $media->setIndexLog($line);
 

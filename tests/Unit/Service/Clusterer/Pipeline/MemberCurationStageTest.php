@@ -182,14 +182,19 @@ final class MemberCurationStageTest extends TestCase
             {
             }
 
+            /**
+             * @return Media[]
+             */
             public function findByIds(array $ids, bool $onlyVideos = false): array
             {
                 $map = [];
+
                 foreach ($this->media as $item) {
                     $map[$item->getId()] = $item;
                 }
 
                 $result = [];
+
                 foreach ($ids as $id) {
                     if (isset($map[$id])) {
                         $result[] = $map[$id];
@@ -298,14 +303,19 @@ final class MemberCurationStageTest extends TestCase
             {
             }
 
+            /**
+             * @return Media[]
+             */
             public function findByIds(array $ids, bool $onlyVideos = false): array
             {
                 $map = [];
+
                 foreach ($this->media as $item) {
                     $map[$item->getId()] = $item;
                 }
 
                 $result = [];
+
                 foreach ($ids as $id) {
                     if (isset($map[$id])) {
                         $result[] = $map[$id];
@@ -408,6 +418,7 @@ final class MemberCurationStageTest extends TestCase
         $quotas       = $resultPolicy->getDayQuotas();
 
         self::assertSame(4, array_sum($quotas));
+
         foreach (array_keys($daySegments) as $day) {
             self::assertSame(1, $quotas[$day]);
         }

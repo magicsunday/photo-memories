@@ -71,23 +71,27 @@ final readonly class DefaultClusterJobRunner implements ClusterJobRunnerInterfac
             ->addOrderBy('m.id', 'ASC');
 
         $since = $options->getSince();
+
         if ($since instanceof DateTimeImmutable) {
             $countQb->andWhere('m.takenAt >= :since')->setParameter('since', $since);
             $listQb->andWhere('m.takenAt >= :since')->setParameter('since', $since);
         }
 
         $limit = $options->getLimit();
+
         if ($limit !== null && $limit > 0) {
             $listQb->setMaxResults($limit);
         }
 
         $until = $options->getUntil();
+
         if ($until instanceof DateTimeImmutable) {
             $countQb->andWhere('m.takenAt <= :until')->setParameter('until', $until);
             $listQb->andWhere('m.takenAt <= :until')->setParameter('until', $until);
         }
 
         $total = (int) $countQb->getQuery()->getSingleScalarResult();
+
         if ($total === 0) {
             return new ClusterJobResult(
                 0,
@@ -106,6 +110,7 @@ final readonly class DefaultClusterJobRunner implements ClusterJobRunnerInterfac
         $items      = [];
         $loadHandle = $progressReporter->create('Medien laden', '📥 Einlesen', $total);
         $loadStart  = microtime(true);
+
         foreach ($listQb->getQuery()->toIterable() as $row) {
             $items[]   = $row;
             $processed = count($items);
@@ -116,6 +121,7 @@ final readonly class DefaultClusterJobRunner implements ClusterJobRunnerInterfac
         $loadHandle->finish();
 
         $loadedCount = count($items);
+
         if ($loadedCount === 0) {
             return new ClusterJobResult(
                 $total,
@@ -131,6 +137,7 @@ final readonly class DefaultClusterJobRunner implements ClusterJobRunnerInterfac
         }
 
         $outdatedMedia = [];
+
         foreach ($items as $media) {
             if ($media->getFeatureVersion() !== MetadataFeatureVersion::CURRENT) {
                 $outdatedMedia[] = $media;
@@ -217,6 +224,7 @@ final readonly class DefaultClusterJobRunner implements ClusterJobRunnerInterfac
         $postProcessingProgress->finalize();
 
         $draftCount = count($drafts);
+
         if ($draftCount === 0) {
             if ($options->shouldReplace() && !$options->isDryRun()) {
                 $connection = $this->entityManager->getConnection();
@@ -261,10 +269,13 @@ final readonly class DefaultClusterJobRunner implements ClusterJobRunnerInterfac
         $consolidateHandle->finish();
 
         $allowedGroups = $options->getAllowedGroups();
+
         if ($allowedGroups !== null && $allowedGroups !== []) {
             $filtered = [];
+
             foreach ($consolidatedDrafts as $draft) {
                 $group = $draft->getParams()['group'] ?? null;
+
                 if (!is_string($group)) {
                     continue;
                 }
@@ -451,6 +462,7 @@ final readonly class DefaultClusterJobRunner implements ClusterJobRunnerInterfac
         $topDrafts = array_slice($sortedDrafts, 0, $limit);
 
         $summaries = [];
+
         foreach ($topDrafts as $draft) {
             $summaries[] = $this->createClusterSummary($draft);
         }
@@ -464,6 +476,7 @@ final readonly class DefaultClusterJobRunner implements ClusterJobRunnerInterfac
     private function aggregateRawMemberCount(array $drafts): int
     {
         $total = 0;
+
         foreach ($drafts as $draft) {
             $total += count($draft->getMembers());
         }
@@ -476,12 +489,14 @@ final readonly class DefaultClusterJobRunner implements ClusterJobRunnerInterfac
         $params = $draft->getParams();
 
         $score = null;
+
         if (is_numeric($params['score'] ?? null)) {
             $score = (float) $params['score'];
         }
 
         $timeRange       = null;
         $timeRangeParams = $params['time_range'] ?? null;
+
         if (
             is_array($timeRangeParams)
             && isset($timeRangeParams['from'], $timeRangeParams['to'])
@@ -499,10 +514,13 @@ final readonly class DefaultClusterJobRunner implements ClusterJobRunnerInterfac
         $policyKey    = null;
 
         $memberQuality = $params['member_quality'] ?? null;
+
         if (is_array($memberQuality)) {
             $ordered = $memberQuality['ordered'] ?? null;
+
             if (is_array($ordered)) {
                 $curatedCount = 0;
+
                 foreach ($ordered as $value) {
                     if (is_int($value)) {
                         ++$curatedCount;
@@ -517,18 +535,22 @@ final readonly class DefaultClusterJobRunner implements ClusterJobRunnerInterfac
             }
 
             $summary = $memberQuality['summary'] ?? null;
+
             if (is_array($summary)) {
                 $persisted = $summary['members_persisted'] ?? null;
+
                 if (is_numeric($persisted)) {
                     $rawCount = (int) $persisted;
                 }
 
                 $overlayCount = $summary['curated_overlay_count'] ?? null;
+
                 if (is_numeric($overlayCount)) {
                     $curatedCount = (int) $overlayCount;
                 }
 
                 $selectionCounts = $summary['selection_counts'] ?? null;
+
                 if (is_array($selectionCounts)) {
                     if (is_numeric($selectionCounts['raw'] ?? null)) {
                         $rawCount = (int) $selectionCounts['raw'];
@@ -540,10 +562,12 @@ final readonly class DefaultClusterJobRunner implements ClusterJobRunnerInterfac
                 }
 
                 $policyCandidate = $summary['selection_policy'] ?? ($summary['selection_profile'] ?? null);
+
                 if (is_string($policyCandidate) && $policyCandidate !== '') {
                     $policyKey = $policyCandidate;
                 } elseif (isset($summary['selection_telemetry']) && is_array($summary['selection_telemetry'])) {
                     $telemetryPolicy = $summary['selection_telemetry']['policy']['profile'] ?? null;
+
                     if (is_string($telemetryPolicy) && $telemetryPolicy !== '') {
                         $policyKey = $telemetryPolicy;
                     }
@@ -553,8 +577,10 @@ final readonly class DefaultClusterJobRunner implements ClusterJobRunnerInterfac
 
         if ($policyKey === null) {
             $memberSelection = $params['member_selection'] ?? null;
+
             if (is_array($memberSelection)) {
                 $candidate = $memberSelection['profile'] ?? null;
+
                 if (is_string($candidate) && $candidate !== '') {
                     $policyKey = $candidate;
                 }
@@ -605,6 +631,7 @@ final readonly class DefaultClusterJobRunner implements ClusterJobRunnerInterfac
         $io->section('🏖️ Urlaub Debug');
 
         $warnings = $this->vacationDebugContext->getWarnings();
+
         foreach ($warnings as $warning) {
             $io->warning($warning);
         }
@@ -613,6 +640,7 @@ final readonly class DefaultClusterJobRunner implements ClusterJobRunnerInterfac
             $io->text('Keine Urlaubssegmente erkannt.');
         } else {
             $segmentRows = [];
+
             foreach ($segments as $segment) {
                 $segmentRows[] = [
                     $segment['start_date'],
@@ -637,10 +665,12 @@ final readonly class DefaultClusterJobRunner implements ClusterJobRunnerInterfac
         }
 
         $clusterRows = [];
+
         foreach ($this->createTopClusterSummaries($drafts, self::TOP_CLUSTER_SUMMARY_LIMIT) as $summary) {
             $score     = $summary->getScore();
             $range     = '–';
             $timeRange = $summary->getTimeRange();
+
             if ($timeRange instanceof ClusterSummaryTimeRange) {
                 $range = $this->formatTimeRange(
                     $timeRange->getFrom()->getTimestamp(),
@@ -720,6 +750,7 @@ final class ProgressReporterClusterBuildListener implements ClusterBuildProgress
                 $this->handle->setMax(max(1, $total));
                 $this->handle->setProgress(0);
                 $this->handle->setRate('–');
+
                 break;
             case ClusterBuildProgressCallbackInterface::STAGE_SCORING:
                 $this->handle->setPhase('Score berechnen');
@@ -727,6 +758,7 @@ final class ProgressReporterClusterBuildListener implements ClusterBuildProgress
                 $this->handle->setMax(max(1, $total));
                 $this->handle->setProgress(0);
                 $this->handle->setRate('–');
+
                 break;
             case ClusterBuildProgressCallbackInterface::STAGE_TITLES:
                 $this->handle->setPhase('Titel generieren');
@@ -734,6 +766,7 @@ final class ProgressReporterClusterBuildListener implements ClusterBuildProgress
                 $this->handle->setMax(max(1, $total));
                 $this->handle->setProgress(0);
                 $this->handle->setRate('–');
+
                 break;
         }
     }

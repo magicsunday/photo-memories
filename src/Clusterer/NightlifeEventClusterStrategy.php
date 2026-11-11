@@ -108,11 +108,13 @@ final readonly class NightlifeEventClusterStrategy implements ClusterStrategyInt
 
         foreach ($night as $m) {
             $takenAt = $m->getTakenAt();
+
             if (!$takenAt instanceof DateTimeImmutable) {
                 continue;
             }
 
             $ts = $takenAt->getTimestamp();
+
             if ($lastTs !== null && ($ts - $lastTs) > $this->timeGapSeconds) {
                 $runs[] = $buf;
                 $buf    = [];
@@ -136,6 +138,7 @@ final readonly class NightlifeEventClusterStrategy implements ClusterStrategyInt
                 : ['lat' => 0.0, 'lon' => 0.0];
 
             $ok = true;
+
             foreach ($gps as $m) {
                 $lat = $m->getGpsLat();
                 $lon = $m->getGpsLon();
@@ -150,6 +153,7 @@ final readonly class NightlifeEventClusterStrategy implements ClusterStrategyInt
 
                 if ($dist > $this->radiusMeters) {
                     $ok = false;
+
                     break;
                 }
             }
@@ -199,11 +203,13 @@ final readonly class NightlifeEventClusterStrategy implements ClusterStrategyInt
             }
 
             $tagMetadata = $this->collectDominantTags($run);
+
             if ($tagMetadata !== []) {
                 $params = [...$params, ...$tagMetadata];
             }
 
             $qualityParams = $this->qualityAggregator->buildParams($run);
+
             foreach ($qualityParams as $qualityKey => $qualityValue) {
                 if ($qualityValue !== null) {
                     $params[$qualityKey] = $qualityValue;
@@ -232,6 +238,7 @@ final readonly class NightlifeEventClusterStrategy implements ClusterStrategyInt
             $run,
             static function (Media $media): bool {
                 $daypart = $media->getFeatureBag()->calendarDaypart();
+
                 if ($daypart === null) {
                     return false;
                 }
@@ -253,6 +260,7 @@ final readonly class NightlifeEventClusterStrategy implements ClusterStrategyInt
 
         foreach ($run as $media) {
             $tags = $media->getSceneTags();
+
             if (!is_array($tags)) {
                 continue;
             }
@@ -285,6 +293,7 @@ final readonly class NightlifeEventClusterStrategy implements ClusterStrategyInt
     private function resolveNightlifePoi(array $run): ?array
     {
         $poi = $this->locationHelper->majorityPoiContext($run);
+
         if ($poi === null) {
             return null;
         }
@@ -293,6 +302,7 @@ final readonly class NightlifeEventClusterStrategy implements ClusterStrategyInt
 
         $label           = $poi['label'];
         $normalizedLabel = strtolower($label);
+
         foreach ($nightKeywords as $keyword) {
             if (str_contains($normalizedLabel, $keyword)) {
                 return $poi;
@@ -301,6 +311,7 @@ final readonly class NightlifeEventClusterStrategy implements ClusterStrategyInt
 
         $categoryKey   = $poi['categoryKey'] ?? null;
         $categoryValue = $poi['categoryValue'] ?? null;
+
         if (is_string($categoryKey) || is_string($categoryValue)) {
             $values = [
                 strtolower((string) $categoryKey),
@@ -321,8 +332,10 @@ final readonly class NightlifeEventClusterStrategy implements ClusterStrategyInt
         }
 
         $tags = $poi['tags'];
+
         foreach ($tags as $tagValue) {
             $normalizedValue = strtolower($tagValue);
+
             foreach ($nightKeywords as $keyword) {
                 if (str_contains($normalizedValue, $keyword)) {
                     return $poi;

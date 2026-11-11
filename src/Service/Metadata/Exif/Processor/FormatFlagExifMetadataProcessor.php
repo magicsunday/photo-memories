@@ -31,6 +31,7 @@ final readonly class FormatFlagExifMetadataProcessor implements ExifMetadataProc
     public function process(array $exif, Media $media): void
     {
         $fileType = $this->accessor->strOrNull($exif['FILE']['FileType'] ?? null);
+
         if ($fileType === null) {
             return;
         }

@@ -491,6 +491,7 @@ final readonly class SequenceHybridClusterer implements HybridClustererInterface
 
             if ($makeProgress !== null) {
                 $progressHandle = $makeProgress($strategy, $index, $total);
+
                 if ($progressHandle instanceof ProgressHandleInterface) {
                     $progressHandle->setDetail('Persisted');
                     $progressHandle->setProgress(1);
@@ -536,11 +537,16 @@ final class InMemoryMemberMediaLookup implements MemberMediaLookupInterface
         }
     }
 
+    /**
+     * @return Media[]
+     */
     public function findByIds(array $ids, bool $onlyVideos = false): array
     {
         $result = [];
+
         foreach ($ids as $id) {
             $media = $this->mediaById[$id] ?? null;
+
             if (!$media instanceof Media) {
                 continue;
             }

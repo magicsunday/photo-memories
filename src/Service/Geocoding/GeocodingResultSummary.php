@@ -58,6 +58,7 @@ final readonly class GeocodingResultSummary
     public function render(SymfonyStyle $io): void
     {
         $io->writeln(
-            sprintf('✅ %d Medien verarbeitet, %d Orte verknüpft, %d Netzabfragen.', $this->processed, $this->linked, $this->networkCalls));
+            sprintf('✅ %d Medien verarbeitet, %d Orte verknüpft, %d Netzabfragen.', $this->processed, $this->linked, $this->networkCalls)
+        );
     }
 }

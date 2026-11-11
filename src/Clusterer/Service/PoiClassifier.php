@@ -50,6 +50,7 @@ final class PoiClassifier implements PoiClassifierInterface
     public function isPoiSample(Location $location): bool
     {
         $pois = $location->getPois();
+
         if (!is_array($pois)) {
             return false;
         }
@@ -66,6 +67,7 @@ final class PoiClassifier implements PoiClassifierInterface
                 }
 
                 $tags = $poi['tags'] ?? null;
+
                 if (!is_array($tags)) {
                     return false;
                 }
@@ -98,6 +100,7 @@ final class PoiClassifier implements PoiClassifierInterface
         }
 
         $pois = $location->getPois();
+
         if (!is_array($pois)) {
             return false;
         }
@@ -107,6 +110,7 @@ final class PoiClassifier implements PoiClassifierInterface
             function (mixed $poi): bool {
                 $categoryKey   = $poi['categoryKey'] ?? null;
                 $categoryValue = $poi['categoryValue'] ?? null;
+
                 if ($this->matchesKeyword($categoryKey, self::TOURISM_KEYWORDS)) {
                     return true;
                 }
@@ -116,6 +120,7 @@ final class PoiClassifier implements PoiClassifierInterface
                 }
 
                 $tags = $poi['tags'] ?? null;
+
                 if (!is_array($tags)) {
                     return false;
                 }
@@ -142,6 +147,7 @@ final class PoiClassifier implements PoiClassifierInterface
         }
 
         $pois = $location->getPois();
+
         if (!is_array($pois)) {
             return false;
         }
@@ -151,6 +157,7 @@ final class PoiClassifier implements PoiClassifierInterface
             function (mixed $poi): bool {
                 $categoryKey   = $poi['categoryKey'] ?? null;
                 $categoryValue = $poi['categoryValue'] ?? null;
+
                 if ($this->matchesKeyword($categoryKey, self::TRANSPORT_KEYWORDS)) {
                     return true;
                 }
@@ -160,6 +167,7 @@ final class PoiClassifier implements PoiClassifierInterface
                 }
 
                 $tags = $poi['tags'] ?? null;
+
                 if (!is_array($tags)) {
                     return false;
                 }

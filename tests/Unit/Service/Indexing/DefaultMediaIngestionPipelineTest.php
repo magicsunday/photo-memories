@@ -79,6 +79,7 @@ final class DefaultMediaIngestionPipelineTest extends TestCase
             }
 
             $metaPath = dirname($file) . '/media_index.meta';
+
             if (is_file($metaPath)) {
                 unlink($metaPath);
             }
@@ -401,6 +402,7 @@ final class DefaultMediaIngestionPipelineTest extends TestCase
     private function expectedExtractorOrder(): array
     {
         $order = [];
+
         foreach ($this->expectedExtractorGroups() as $group => $names) {
             foreach ($names as $name) {
                 $order[] = $group . '.' . $name . '.supports';
@@ -459,8 +461,9 @@ final class DefaultMediaIngestionPipelineTest extends TestCase
     }
 
     /**
-     * @param list<string>|null $imageExtensions
-     * @param list<string>|null $videoExtensions
+     * @param list<string>|null    $imageExtensions
+     * @param list<string>|null    $videoExtensions
+     * @param array<string, mixed> $extractors
      */
     private function createPipeline(
         EntityManagerInterface $entityManager,
@@ -473,6 +476,7 @@ final class DefaultMediaIngestionPipelineTest extends TestCase
         ?MediaDuplicateRepository $duplicateRepository = null,
     ): DefaultMediaIngestionPipeline {
         $fastHashGenerator ??= $this->createMock(FastHashGeneratorInterface::class);
+
         if (!$mediaRepository instanceof MediaRepository) {
             $mediaRepository = $this->createMock(MediaRepository::class);
             $mediaRepository->expects(self::never())->method('findNearestByPhash');

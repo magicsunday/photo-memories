@@ -86,6 +86,7 @@ final readonly class StaypointStage implements DaySummaryStageInterface
         }
 
         $dominant = [];
+
         foreach ($staypoints as $staypoint) {
             $key = StaypointIndex::createKeyFromStaypoint($date, $staypoint);
 
@@ -102,11 +103,13 @@ final readonly class StaypointStage implements DaySummaryStageInterface
 
         usort($dominant, static function (array $a, array $b): int {
             $dwellComparison = $b['dwellSeconds'] <=> $a['dwellSeconds'];
+
             if ($dwellComparison !== 0) {
                 return $dwellComparison;
             }
 
             $memberComparison = $b['memberCount'] <=> $a['memberCount'];
+
             if ($memberComparison !== 0) {
                 return $memberComparison;
             }
@@ -141,6 +144,7 @@ final readonly class StaypointStage implements DaySummaryStageInterface
         }
 
         $span = $end->getTimestamp() - $start->getTimestamp();
+
         if ($span <= 0) {
             return 0.0;
         }
@@ -154,6 +158,7 @@ final readonly class StaypointStage implements DaySummaryStageInterface
         }
 
         $transitSeconds = $span - $staypointSeconds;
+
         if ($transitSeconds <= 0) {
             return 0.0;
         }

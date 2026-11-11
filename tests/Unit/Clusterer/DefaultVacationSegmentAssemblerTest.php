@@ -110,8 +110,10 @@ final class DefaultVacationSegmentAssemblerTest extends TestCase
 
         $tripStart = new DateTimeImmutable('2024-03-29 09:00:00', new DateTimeZone('Europe/Berlin'));
         $offsets   = [0, 0, 60, 60, 60];
+
         foreach ($offsets as $dayIndex => $offset) {
             $dayStart = $tripStart->add(new DateInterval('P' . $dayIndex . 'D'));
+
             for ($photo = 0; $photo < 4; ++$photo) {
                 $timestamp = $dayStart->add(new DateInterval('PT' . ($photo * 6) . 'H'));
                 $items[]   = $this->makeMediaFixture(
@@ -219,6 +221,7 @@ final class DefaultVacationSegmentAssemblerTest extends TestCase
         $id    = 2000;
 
         $firstDay = new DateTimeImmutable('2024-02-01 09:00:00', new DateTimeZone('Europe/Berlin'));
+
         foreach ([0, 3, 7, 11] as $hourOffset) {
             $timestamp = $firstDay->add(new DateInterval('PT' . $hourOffset . 'H'));
             $items[]   = $this->makeMedia(
@@ -238,6 +241,7 @@ final class DefaultVacationSegmentAssemblerTest extends TestCase
         }
 
         $thirdDay = new DateTimeImmutable('2024-02-03 10:30:00', new DateTimeZone('Europe/Berlin'));
+
         foreach ([0, 4, 8, 12] as $hourOffset) {
             $timestamp = $thirdDay->add(new DateInterval('PT' . $hourOffset . 'H'));
             $items[]   = $this->makeMedia(
@@ -406,6 +410,7 @@ final class DefaultVacationSegmentAssemblerTest extends TestCase
         ];
 
         $days = [];
+
         foreach ($travelByDay as $day => $travelKm) {
             $moment = new DateTimeImmutable($day . 'T08:00:00+00:00');
             $member = $this->createConfiguredStub(Media::class, [

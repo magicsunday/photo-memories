@@ -77,6 +77,7 @@ final readonly class BurstClusterStrategy implements ClusterStrategyInterface, P
         $timestamped = $this->filterTimestampedItems($items);
 
         $n = count($timestamped);
+
         if ($n < $this->minItemsPerBurst) {
             return [];
         }
@@ -93,9 +94,11 @@ final readonly class BurstClusterStrategy implements ClusterStrategyInterface, P
 
         foreach ($timestamped as $media) {
             $burstUuid = $media->getBurstUuid();
+
             if ($burstUuid !== null) {
                 $metadataBuckets[$burstUuid] ??= [];
                 $metadataBuckets[$burstUuid][] = $media;
+
                 continue;
             }
 
@@ -172,6 +175,7 @@ final readonly class BurstClusterStrategy implements ClusterStrategyInterface, P
         }
 
         $tags = $this->collectDominantTags($orderedMembers);
+
         if ($tags !== []) {
             $params = [...$params, ...$tags];
         }
@@ -197,6 +201,7 @@ final readonly class BurstClusterStrategy implements ClusterStrategyInterface, P
     private function buildHeuristicSessions(array $items): array
     {
         $count = count($items);
+
         if ($count === 0) {
             return [];
         }
@@ -229,6 +234,7 @@ final readonly class BurstClusterStrategy implements ClusterStrategyInterface, P
 
             if ($timeOk && $distOk) {
                 $current[] = $media;
+
                 continue;
             }
 
@@ -272,6 +278,7 @@ final readonly class BurstClusterStrategy implements ClusterStrategyInterface, P
 
                 if ($takenA instanceof DateTimeImmutable && $takenB instanceof DateTimeImmutable) {
                     $timeCompare = $takenA->getTimestamp() <=> $takenB->getTimestamp();
+
                     if ($timeCompare !== 0) {
                         return $timeCompare;
                     }

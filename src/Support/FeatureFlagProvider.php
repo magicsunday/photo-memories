@@ -43,6 +43,7 @@ final class FeatureFlagProvider implements FeatureFlagProviderInterface
     public function isEnabled(string $flag): bool
     {
         $normalized = trim($flag);
+
         if ($normalized === '') {
             throw new InvalidArgumentException('Feature flag name must not be empty.');
         }
@@ -52,6 +53,7 @@ final class FeatureFlagProvider implements FeatureFlagProviderInterface
         }
 
         $parameterName = sprintf(self::PARAMETER_TEMPLATE, $normalized);
+
         if (!$this->parameterBag->has($parameterName)) {
             return $this->cache[$normalized] = false;
         }

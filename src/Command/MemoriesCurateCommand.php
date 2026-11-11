@@ -109,8 +109,10 @@ final class MemoriesCurateCommand extends Command
         )));
 
         $aliases = [];
+
         foreach ($this->clusterGroupAliasMap as $alias => $group) {
             $aliasKey = strtolower(trim($alias));
+
             if ($aliasKey === '') {
                 continue;
             }
@@ -179,6 +181,7 @@ final class MemoriesCurateCommand extends Command
 
         $reindexOption   = $input->getOption('reindex');
         $reindexStrategy = $this->normaliseReindexStrategy($reindexOption);
+
         if ($reindexStrategy === null) {
             $io->error('Ungültige Reindex-Strategie. Erlaubt sind auto, force oder skip.');
 
@@ -198,6 +201,7 @@ final class MemoriesCurateCommand extends Command
         }
 
         $result = $this->runClusteringStage($io, $output, $dryRun, $since, $until, $allowedGroups);
+
         if (!$result instanceof ClusterJobResult) {
             return Command::FAILURE;
         }
@@ -220,6 +224,7 @@ final class MemoriesCurateCommand extends Command
         }
 
         $clusters = $result->getConsolidatedDrafts();
+
         if ($clusters === []) {
             $io->note('Explain-Modus: Keine konsolidierten Cluster vorhanden – Model Cards entfallen.');
 
@@ -256,6 +261,7 @@ final class MemoriesCurateCommand extends Command
         }
 
         $values = [];
+
         if (is_string($rawTypes)) {
             $values[] = $rawTypes;
         } else {
@@ -263,9 +269,11 @@ final class MemoriesCurateCommand extends Command
         }
 
         $normalised = [];
+
         foreach ($values as $value) {
             foreach (explode(',', $value) as $fragment) {
                 $trimmed = trim($fragment);
+
                 if ($trimmed === '') {
                     continue;
                 }
@@ -282,6 +290,7 @@ final class MemoriesCurateCommand extends Command
         }
 
         $resolved = [];
+
         foreach ($normalised as $entry) {
             $candidate     = $entry['normalised'];
             $resolvedGroup = $this->groupAliases[$candidate] ?? null;
@@ -320,6 +329,7 @@ final class MemoriesCurateCommand extends Command
         }
 
         $date = DateTimeImmutable::createFromFormat('Y-m-d|', $value);
+
         if (!$date instanceof DateTimeImmutable) {
             throw new InvalidArgumentException(sprintf('Ungültiges Datum für --%s. Erwartet wird YYYY-MM-DD.', $label));
         }
@@ -360,6 +370,7 @@ final class MemoriesCurateCommand extends Command
         $this->qaReportCollector->reset();
         $io->writeln(sprintf('Metadaten-Feature-Version: <info>%d</info>', MetadataFeatureVersion::CURRENT));
         $io->writeln($force ? '<comment>Neuindexierung wird erzwungen.</comment>' : '<comment>Nur veraltete Einträge werden aktualisiert.</comment>');
+
         if ($dryRun) {
             $io->note('Dry-Run: Änderungen werden nicht gespeichert.');
         }
@@ -373,6 +384,7 @@ final class MemoriesCurateCommand extends Command
         }
 
         $total = count($files);
+
         if ($total === 0) {
             $io->warning('Keine passenden Mediendateien gefunden.');
 

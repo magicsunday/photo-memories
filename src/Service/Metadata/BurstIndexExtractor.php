@@ -36,6 +36,7 @@ final class BurstIndexExtractor implements SingleMetadataExtractorInterface
     public function extract(string $filepath, Media $media): Media
     {
         $index = $this->resolveBurstIndex($media);
+
         if ($index !== null) {
             $media->setBurstIndex($index);
         }
@@ -46,16 +47,19 @@ final class BurstIndexExtractor implements SingleMetadataExtractorInterface
     private function resolveBurstIndex(Media $media): ?int
     {
         $burstId = $media->getBurstUuid();
+
         if ($burstId === null) {
             return null;
         }
 
         $subSec = $media->getSubSecOriginal();
+
         if ($subSec !== null) {
             return $subSec;
         }
 
         $filename = pathinfo($media->getPath(), PATHINFO_FILENAME);
+
         if ($filename === '') {
             return null;
         }

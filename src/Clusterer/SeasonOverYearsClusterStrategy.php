@@ -246,8 +246,10 @@ final readonly class SeasonOverYearsClusterStrategy implements ClusterStrategyIn
         foreach ($eligibleSeasons as $season => $list) {
             /** @var array<int,bool> $years */
             $years = [];
+
             foreach ($list as $m) {
                 $takenAt = $m->getTakenAt();
+
                 if ($takenAt === null) {
                     continue;
                 }
@@ -270,6 +272,7 @@ final readonly class SeasonOverYearsClusterStrategy implements ClusterStrategyIn
             ];
 
             $tags = $this->collectDominantTags($list);
+
             if ($tags !== []) {
                 $params = [...$params, ...$tags];
             }
@@ -277,6 +280,7 @@ final readonly class SeasonOverYearsClusterStrategy implements ClusterStrategyIn
             $params = $this->appendLocationMetadata($list, $params);
 
             $qualityParams = $this->qualityAggregator->buildParams($list);
+
             foreach ($qualityParams as $qualityKey => $qualityValue) {
                 if ($qualityValue !== null) {
                     $params[$qualityKey] = $qualityValue;

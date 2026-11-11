@@ -49,11 +49,13 @@ final class AppleHeuristicsExtractor implements SingleMetadataExtractorInterface
     public function extract(string $filepath, Media $media): Media
     {
         $burst = $this->findBurstUuid($filepath);
+
         if ($burst !== null) {
             $media->setBurstUuid($burst);
         }
 
         $pair = $this->calcLivePairChecksum($filepath);
+
         if ($pair !== null) {
             $media->setLivePairChecksum($pair);
         }
@@ -64,12 +66,14 @@ final class AppleHeuristicsExtractor implements SingleMetadataExtractorInterface
     private function findBurstUuid(string $path): ?string
     {
         $candidates = [$path . '.xmp', $path];
+
         foreach ($candidates as $f) {
             if (!is_file($f)) {
                 continue;
             }
 
             $blob = @file_get_contents($f, false, null, 0, 512 * 1024);
+
             if (!is_string($blob)) {
                 continue;
             }
@@ -89,11 +93,13 @@ final class AppleHeuristicsExtractor implements SingleMetadataExtractorInterface
     private function calcLivePairChecksum(string $path): ?string
     {
         $dir = dirname($path);
+
         if (!is_dir($dir)) {
             return null;
         }
 
         $base = pathinfo($path, PATHINFO_FILENAME);
+
         if ($base === '') {
             return null;
         }
@@ -106,6 +112,7 @@ final class AppleHeuristicsExtractor implements SingleMetadataExtractorInterface
 
         if (is_file($path)) {
             $originExt = pathinfo($path, PATHINFO_EXTENSION);
+
             if ($originExt !== '' && in_array(strtolower($originExt), $allowedExtensions, true)) {
                 $basename             = basename($path);
                 $basenames[$basename] = $basename;
@@ -113,6 +120,7 @@ final class AppleHeuristicsExtractor implements SingleMetadataExtractorInterface
         }
 
         $entries = @scandir($dir);
+
         if ($entries === false) {
             return null;
         }
@@ -127,12 +135,14 @@ final class AppleHeuristicsExtractor implements SingleMetadataExtractorInterface
             }
 
             $candidate = $dir . '/' . $entry;
+
             if (!is_file($candidate)) {
                 continue;
             }
 
             $candidateBase = pathinfo($entry, PATHINFO_FILENAME);
             $candidateExt  = pathinfo($entry, PATHINFO_EXTENSION);
+
             if ($candidateBase === '') {
                 continue;
             }

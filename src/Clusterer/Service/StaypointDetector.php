@@ -108,6 +108,7 @@ final readonly class StaypointDetector implements StaypointDetectorInterface
             $parameters['radiusKm'],
             $parameters['minDwellMinutes'],
         );
+
         if ($sequential !== []) {
             return $sequential;
         }
@@ -128,6 +129,7 @@ final readonly class StaypointDetector implements StaypointDetectorInterface
     private function detectSequentialStaypoints(array $gpsMembers, float $radiusKm, int $minDwellMinutes): array
     {
         $count = count($gpsMembers);
+
         if ($count < 2) {
             return [];
         }
@@ -144,10 +146,12 @@ final readonly class StaypointDetector implements StaypointDetectorInterface
 
             if (!$startTime instanceof DateTimeImmutable || $startLat === null || $startLon === null) {
                 ++$currentIndex;
+
                 continue;
             }
 
             $windowEnd = $currentIndex + 1;
+
             while ($windowEnd < $count) {
                 $candidate     = $gpsMembers[$windowEnd];
                 $candidateTime = $candidate->getTakenAt();
@@ -156,6 +160,7 @@ final readonly class StaypointDetector implements StaypointDetectorInterface
 
                 if (!$candidateTime instanceof DateTimeImmutable || $candLat === null || $candLon === null) {
                     ++$windowEnd;
+
                     continue;
                 }
 
@@ -174,8 +179,10 @@ final readonly class StaypointDetector implements StaypointDetectorInterface
             }
 
             $endIndex = $windowEnd - 1;
+
             if ($endIndex <= $currentIndex) {
                 ++$currentIndex;
+
                 continue;
             }
 
@@ -185,12 +192,15 @@ final readonly class StaypointDetector implements StaypointDetectorInterface
 
             if (!$endTime instanceof DateTimeImmutable) {
                 ++$currentIndex;
+
                 continue;
             }
 
             $dwell = $endTime->getTimestamp() - $startTime->getTimestamp();
+
             if ($dwell < $minDwellSeconds) {
                 ++$currentIndex;
+
                 continue;
             }
 
@@ -267,6 +277,7 @@ final readonly class StaypointDetector implements StaypointDetectorInterface
     private function estimateTravelKm(array $gpsMembers): float
     {
         $count = count($gpsMembers);
+
         if ($count < 2) {
             return 0.0;
         }
@@ -276,9 +287,11 @@ final readonly class StaypointDetector implements StaypointDetectorInterface
 
         $travel   = 0.0;
         $previous = null;
+
         foreach ($sorted as $media) {
             $lat = $media->getGpsLat();
             $lon = $media->getGpsLon();
+
             if ($lat === null) {
                 continue;
             }
@@ -290,6 +303,7 @@ final readonly class StaypointDetector implements StaypointDetectorInterface
             if ($previous instanceof Media) {
                 $prevLat = $previous->getGpsLat();
                 $prevLon = $previous->getGpsLon();
+
                 if ($prevLat !== null && $prevLon !== null) {
                     $travel += MediaMath::haversineDistanceInMeters($prevLat, $prevLon, $lat, $lon) / 1000.0;
                 }
@@ -307,6 +321,7 @@ final readonly class StaypointDetector implements StaypointDetectorInterface
     private function estimateSpotDensity(array $gpsMembers, ?int $spotCount, float $travelKm): float
     {
         $count = count($gpsMembers);
+
         if ($count === 0) {
             return 0.0;
         }
@@ -320,6 +335,7 @@ final readonly class StaypointDetector implements StaypointDetectorInterface
 
         if ($travelKm < 0.5) {
             $span = $this->estimateDurationSeconds($gpsMembers);
+
             if ($span > 0) {
                 $hours       = max(0.25, $span / 3600.0);
                 $densityBase = max($densityBase, $count / $hours);
@@ -339,6 +355,7 @@ final readonly class StaypointDetector implements StaypointDetectorInterface
 
         foreach ($gpsMembers as $media) {
             $timestamp = $media->getTakenAt()?->getTimestamp();
+
             if ($timestamp === null) {
                 continue;
             }
@@ -423,6 +440,7 @@ final readonly class StaypointDetector implements StaypointDetectorInterface
 
             $start = $first->getTakenAt();
             $end   = $last->getTakenAt();
+
             if (!$start instanceof DateTimeImmutable) {
                 continue;
             }
@@ -432,6 +450,7 @@ final readonly class StaypointDetector implements StaypointDetectorInterface
             }
 
             $dwell = $end->getTimestamp() - $start->getTimestamp();
+
             if ($dwell < $minDwellSeconds) {
                 continue;
             }

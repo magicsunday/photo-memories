@@ -93,6 +93,7 @@ final class IndexCommand extends Command
         $output->writeln(sprintf('Metadaten-Feature-Version: <info>%d</info>', MetadataFeatureVersion::CURRENT));
         $output->writeln($withThumbs ? '<comment>Thumbnails werden erzeugt.</comment>' : '<comment>Thumbnails werden nicht erzeugt (Option --thumbnails verwenden).</comment>');
         $output->writeln($withVideos ? '<comment>Videos werden mit indiziert.</comment>' : '<comment>Videos werden übersprungen (Option --videos verwenden).</comment>');
+
         if ($strictMime) {
             $output->writeln('<comment>Strikter MIME-Check ist aktiv.</comment>');
         }
@@ -107,6 +108,7 @@ final class IndexCommand extends Command
         }
 
         $progress = null;
+
         if ($noProgress === false) {
             $progress = new ProgressBar($output, $total);
             $progress->setFormat('%current%/%max% [%bar%] %percent:3s%% | Dauer: %elapsed:6s% | ETA: %estimated:-6s% | Datei: %filename%');

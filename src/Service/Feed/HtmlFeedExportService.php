@@ -80,6 +80,7 @@ final readonly class HtmlFeedExportService implements FeedExportServiceInterface
         $this->ensureDirectoryExists($imageDirectory);
 
         $entities = $this->clusters->findLatest($request->getLimitClusters());
+
         if ($entities === []) {
             $io->warning('Keine Cluster in der Datenbank gefunden.');
 
@@ -101,11 +102,13 @@ final readonly class HtmlFeedExportService implements FeedExportServiceInterface
 
         $rawDrafts    = $this->mapper->mapMany($entities);
         $mergedDrafts = $this->consolidator->consolidate($rawDrafts);
+
         if ($mergedDrafts === []) {
             $io->warning('Keine Cluster nach der Konsolidierung.');
         }
 
         $items = $mergedDrafts === [] ? [] : $this->feedBuilder->build($mergedDrafts);
+
         if ($items === []) {
             $io->warning('Der Feed ist leer (Filter/Score/Limit zu streng?).');
         }
@@ -151,6 +154,7 @@ final readonly class HtmlFeedExportService implements FeedExportServiceInterface
         );
 
         $indexFile = $outputDirectory . '/index.html';
+
         if (@file_put_contents($indexFile, $html) === false) {
             throw new RuntimeException('Konnte HTML-Datei nicht schreiben: ' . $indexFile);
         }
@@ -252,6 +256,7 @@ final readonly class HtmlFeedExportService implements FeedExportServiceInterface
         int $position,
     ): ?array {
         $memberIds = $draft->getMembers();
+
         if ($memberIds === []) {
             return null;
         }
@@ -277,11 +282,13 @@ final readonly class HtmlFeedExportService implements FeedExportServiceInterface
         $chips[] = $this->createChip('Mitglieder: ' . $draft->getMembersCount());
 
         $storyline = $draft->getStoryline();
+
         if ($storyline !== '' && $storyline !== 'default') {
             $chips[] = $this->createChip('Storyline: ' . $this->prettifyStoryline($storyline));
         }
 
         $title = sprintf('Cluster %d', $position + 1);
+
         if ($storyline !== '' && $storyline !== 'default') {
             $title .= ' – ' . $this->prettifyStoryline($storyline);
         }
@@ -308,6 +315,7 @@ final readonly class HtmlFeedExportService implements FeedExportServiceInterface
         int &$skippedThumbCount,
     ): ?array {
         $memberIds = $item->getMemberIds();
+
         if ($memberIds === []) {
             return null;
         }
@@ -367,6 +375,7 @@ final readonly class HtmlFeedExportService implements FeedExportServiceInterface
         $members = $this->mediaRepository->findByIds($memberIds, $preferVideoStory);
 
         $order = [];
+
         foreach ($memberIds as $index => $id) {
             $order[$id] = $index;
         }
@@ -410,6 +419,7 @@ final readonly class HtmlFeedExportService implements FeedExportServiceInterface
             }
 
             $source = $this->thumbnailResolver->resolveBest($media, $request->getThumbnailWidth());
+
             if ($source === null) {
                 ++$skippedThumbCount;
 
@@ -511,26 +521,31 @@ final readonly class HtmlFeedExportService implements FeedExportServiceInterface
         $details = [];
 
         $range = $this->formatTimeRange($draft->getStartAt(), $draft->getEndAt());
+
         if ($range !== null) {
             $details[] = 'Zeitraum: ' . $range;
         }
 
         $photoCount = $this->formatCount($draft->getPhotoCount(), 'Foto', 'Fotos');
+
         if ($photoCount !== null) {
             $details[] = 'Fotos: ' . $photoCount;
         }
 
         $videoCount = $this->formatCount($draft->getVideoCount(), 'Video', 'Videos');
+
         if ($videoCount !== null) {
             $details[] = 'Videos: ' . $videoCount;
         }
 
         $algorithmVersion = $draft->getAlgorithmVersion();
+
         if (is_string($algorithmVersion) && $algorithmVersion !== '') {
             $details[] = 'Algo-Version: ' . $algorithmVersion;
         }
 
         $configHash = $draft->getConfigHash();
+
         if (is_string($configHash) && $configHash !== '') {
             $details[] = 'Config: ' . $configHash;
         }
@@ -550,6 +565,7 @@ final readonly class HtmlFeedExportService implements FeedExportServiceInterface
         $details[] = sprintf('Mitglieder: %d', count($memberIds));
 
         $storyline = $params['storyline'] ?? null;
+
         if (is_string($storyline) && $storyline !== '' && $storyline !== 'default') {
             $details[] = 'Storyline: ' . $this->prettifyStoryline($storyline);
         }
@@ -575,30 +591,36 @@ final readonly class HtmlFeedExportService implements FeedExportServiceInterface
     private function isCuratedForFeed(array $params, array $memberIds): bool
     {
         $memberQuality = $params['member_quality'] ?? null;
+
         if (!is_array($memberQuality)) {
             return false;
         }
 
         $feedOverlay = $memberQuality['feed_overlay'] ?? null;
+
         if (is_array($feedOverlay)) {
             $used = $feedOverlay['used'] ?? null;
+
             if (is_bool($used)) {
                 return $used;
             }
         }
 
         $ordered = $this->normaliseMemberIdList($memberQuality['ordered'] ?? null);
+
         if ($ordered === []) {
             return false;
         }
 
         $minimum = $this->resolveOverlayMinimum($memberQuality);
+
         if ($minimum > 0 && count($ordered) < $minimum) {
             return false;
         }
 
         $lookup   = [];
         $sequence = [];
+
         foreach ($ordered as $index => $id) {
             $lookup[$id] = $index;
         }
@@ -632,6 +654,7 @@ final readonly class HtmlFeedExportService implements FeedExportServiceInterface
 
         foreach ($values as $value) {
             $id = null;
+
             if (is_int($value)) {
                 $id = $value;
             } elseif (is_string($value) && is_numeric($value)) {
@@ -665,20 +688,25 @@ final readonly class HtmlFeedExportService implements FeedExportServiceInterface
         $minimum = 0;
 
         $summary = $memberQuality['summary'] ?? null;
+
         if (is_array($summary)) {
             $profile = $summary['selection_profile'] ?? null;
+
             if (is_array($profile)) {
                 $value = $profile['minimum_total'] ?? null;
                 $min   = $this->normalisePositiveInt($value);
+
                 if ($min !== null) {
                     $minimum = max($minimum, $min);
                 }
             }
 
             $counts = $summary['selection_counts'] ?? null;
+
             if (is_array($counts)) {
                 $value = $counts['curated'] ?? null;
                 $min   = $this->normalisePositiveInt($value);
+
                 if ($min !== null) {
                     $minimum = max($minimum, $min);
                 }
@@ -696,6 +724,7 @@ final readonly class HtmlFeedExportService implements FeedExportServiceInterface
 
         if (is_string($value) && is_numeric($value)) {
             $candidate = (int) $value;
+
             if ($candidate > 0) {
                 return $candidate;
             }
@@ -707,6 +736,7 @@ final readonly class HtmlFeedExportService implements FeedExportServiceInterface
     private function copyOrLinkThumbnail(string $source, string $targetPath, bool $useSymlink): int
     {
         $linked = false;
+
         if ($useSymlink) {
             $linked = @symlink($source, $targetPath);
         }
@@ -725,8 +755,10 @@ final readonly class HtmlFeedExportService implements FeedExportServiceInterface
     private function buildAltText(Media $media): string
     {
         $tags = $media->getSceneTags();
+
         if (is_array($tags)) {
             $parts = [];
+
             foreach (array_slice($tags, 0, 3) as $tag) {
                 $label = $tag['label'];
                 $score = $tag['score'];
@@ -758,6 +790,7 @@ final readonly class HtmlFeedExportService implements FeedExportServiceInterface
         }
 
         $result = [];
+
         foreach ($value as $tag) {
             if (!is_array($tag)) {
                 continue;
@@ -775,6 +808,7 @@ final readonly class HtmlFeedExportService implements FeedExportServiceInterface
             }
 
             $valueScore = (float) $score;
+
             if ($valueScore < 0.0) {
                 $valueScore = 0.0;
             }

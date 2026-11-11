@@ -310,11 +310,13 @@ final class ExifMetadataExtractorTest extends TestCase
             $arguments = $attribute->getArguments();
 
             $name = $arguments[0] ?? ($arguments['name'] ?? null);
+
             if ($name !== 'memories.metadata.exif.processor') {
                 continue;
             }
 
             $attributes = $arguments[1] ?? ($arguments['attributes'] ?? []);
+
             if (array_key_exists('priority', $attributes)) {
                 return (int) $attributes['priority'];
             }

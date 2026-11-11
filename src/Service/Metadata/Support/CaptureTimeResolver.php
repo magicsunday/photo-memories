@@ -47,25 +47,30 @@ final readonly class CaptureTimeResolver
     public function resolve(Media $media): ?DateTimeImmutable
     {
         $capturedLocal = $media->getCapturedLocal();
+
         if ($capturedLocal instanceof DateTimeImmutable) {
             $confidence = $media->getTzConfidence();
+
             if ($confidence !== null && $confidence >= 0.8) {
                 return $capturedLocal;
             }
         }
 
         $takenAt = $media->getTakenAt();
+
         if (!$takenAt instanceof DateTimeImmutable) {
             return null;
         }
 
         $determined = $this->determineTimezone($media, $takenAt);
+
         if ($determined !== null) {
             $timezone = $determined['timezone'];
             $source   = $determined['source'];
 
             $local = $takenAt->setTimezone($timezone);
             $media->setCapturedLocal($local);
+
             if ($media->getTzId() === null) {
                 $media->setTzId($timezone->getName());
             }
@@ -82,9 +87,11 @@ final readonly class CaptureTimeResolver
         }
 
         $offset = $media->getTimezoneOffsetMin();
+
         if ($offset !== null) {
             $local = $this->applyOffset($takenAt, $offset);
             $media->setCapturedLocal($local);
+
             if ($media->getTzId() === null) {
                 $media->setTzId($local->getTimezone()->getName());
             }
@@ -106,6 +113,7 @@ final readonly class CaptureTimeResolver
     private function determineTimezone(Media $media, DateTimeImmutable $takenAt): ?array
     {
         $tzId = $media->getTzId();
+
         if (is_string($tzId) && $tzId !== '') {
             try {
                 return ['timezone' => new DateTimeZone($tzId), 'source' => 'tzId'];
@@ -115,6 +123,7 @@ final readonly class CaptureTimeResolver
         }
 
         $location = $media->getLocation();
+
         if (!$location instanceof Location) {
             return null;
         }

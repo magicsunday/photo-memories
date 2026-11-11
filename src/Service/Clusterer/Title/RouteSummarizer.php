@@ -50,11 +50,13 @@ final readonly class RouteSummarizer
     {
         $params    = $cluster->getParams();
         $waypoints = $params['travel_waypoints'] ?? null;
+
         if (!is_array($waypoints) || $waypoints === []) {
             return null;
         }
 
         $uniqueStops = $this->collectUniqueStops($waypoints);
+
         if (count($uniqueStops) < $this->minStops) {
             return null;
         }
@@ -73,6 +75,7 @@ final readonly class RouteSummarizer
             $byCount,
             static function (array $left, array $right): int {
                 $countComparison = $right['count'] <=> $left['count'];
+
                 if ($countComparison !== 0) {
                     return $countComparison;
                 }
@@ -156,12 +159,14 @@ final readonly class RouteSummarizer
             }
 
             $label = $this->resolveLabel($entry);
+
             if ($label === '') {
                 continue;
             }
 
             $lat = $this->numericOrNull($entry['lat'] ?? null);
             $lon = $this->numericOrNull($entry['lon'] ?? null);
+
             if ($lat === null) {
                 continue;
             }
@@ -171,6 +176,7 @@ final readonly class RouteSummarizer
             }
 
             $count = $this->intOrZero($entry['count'] ?? null);
+
             if ($count <= 0) {
                 continue;
             }
@@ -178,6 +184,7 @@ final readonly class RouteSummarizer
             $firstSeen = $this->intOrMax($entry['first_seen_at'] ?? null);
 
             $key = mb_strtolower($label, 'UTF-8');
+
             if (!array_key_exists($key, $stops)) {
                 $stops[$key] = [
                     'label'         => $label,
@@ -192,6 +199,7 @@ final readonly class RouteSummarizer
 
             $existing             = $stops[$key];
             $stops[$key]['count'] = $existing['count'] + $count;
+
             if ($firstSeen < $existing['first_seen_at']) {
                 $stops[$key]['first_seen_at'] = $firstSeen;
             }
@@ -208,6 +216,7 @@ final readonly class RouteSummarizer
     private function addStop(array &$selected, array &$selectedKeys, array $candidate): void
     {
         $key = mb_strtolower($candidate['label'], 'UTF-8');
+
         if (in_array($key, $selectedKeys, true)) {
             return;
         }
@@ -249,6 +258,7 @@ final readonly class RouteSummarizer
         $approx = $this->approximateDistance($distanceKm);
 
         $formatter = new NumberFormatter($locale, NumberFormatter::DECIMAL);
+
         if ($approx >= 5.0) {
             $formatter->setAttribute(NumberFormatter::FRACTION_DIGITS, 0);
         } else {
@@ -256,6 +266,7 @@ final readonly class RouteSummarizer
         }
 
         $formatted = $formatter->format($approx);
+
         if (!is_string($formatted)) {
             $formatted = (string) $approx;
         }
@@ -289,11 +300,13 @@ final readonly class RouteSummarizer
 
         foreach ($candidates as $key) {
             $value = $entry[$key] ?? null;
+
             if (!is_string($value)) {
                 continue;
             }
 
             $trimmed = trim($value);
+
             if ($trimmed !== '') {
                 return $trimmed;
             }
@@ -362,6 +375,7 @@ final readonly class RouteSummarizer
 
         foreach ($parts as $part) {
             $trimmed = trim($part);
+
             if ($trimmed !== '') {
                 $filtered[] = $trimmed;
             }

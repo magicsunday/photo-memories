@@ -92,6 +92,7 @@ final class PoiClusterScoreHeuristicTest extends TestCase
         );
 
         $mediaMap = [];
+
         foreach ($members as $index => $id) {
             $mediaMap[$id] = $this->makeMedia(
                 id: $id,

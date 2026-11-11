@@ -35,6 +35,7 @@ final class FileStatMetadataExtractor implements SingleMetadataExtractorInterfac
     public function extract(string $filepath, Media $media): Media
     {
         $timestamp = @filemtime($filepath);
+
         if (!is_int($timestamp)) {
             return $media;
         }

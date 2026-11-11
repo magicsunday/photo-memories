@@ -154,6 +154,7 @@ final class DefaultDaySummaryBuilderTest extends TestCase
 
         $items   = [];
         $homeDay = new DateTimeImmutable('2024-06-01 09:00:00', new DateTimeZone('UTC'));
+
         for ($i = 0; $i < 3; ++$i) {
             $timestamp = $homeDay->add(new DateInterval('PT' . ($i * 2) . 'H'));
             $items[]   = $this->makeMediaFixture(
@@ -170,6 +171,7 @@ final class DefaultDaySummaryBuilderTest extends TestCase
         }
 
         $awayDay = new DateTimeImmutable('2024-06-02 12:00:00', new DateTimeZone('UTC'));
+
         for ($i = 0; $i < 3; ++$i) {
             $timestamp = $awayDay->add(new DateInterval('PT' . ($i * 3) . 'H'));
             $items[]   = $this->makeMediaFixture(

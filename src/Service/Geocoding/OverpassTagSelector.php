@@ -57,6 +57,7 @@ final readonly class OverpassTagSelector implements OverpassTagSelectorInterface
 
         foreach (self::AUXILIARY_TAG_KEYS as $key) {
             $value = $this->stringOrNull($tags[$key] ?? null);
+
             if ($value !== null) {
                 $selected[$key] = $value;
             }
@@ -85,6 +86,7 @@ final readonly class OverpassTagSelector implements OverpassTagSelectorInterface
 
         /** @var array<string,string> $localized */
         $localized = [];
+
         foreach ($tags as $key => $value) {
             if (!str_starts_with($key, 'name:')) {
                 continue;
@@ -93,12 +95,14 @@ final readonly class OverpassTagSelector implements OverpassTagSelectorInterface
             $locale = substr($key, 5);
 
             $locale = strtolower($locale);
+
             if ($locale === '') {
                 continue;
             }
 
             $normalizedLocale = str_replace(' ', '_', $locale);
             $name             = $this->stringOrNull($value);
+
             if ($name === null) {
                 continue;
             }
@@ -112,9 +116,11 @@ final readonly class OverpassTagSelector implements OverpassTagSelectorInterface
 
         $alternates = [];
         $altName    = $this->stringOrNull($tags['alt_name'] ?? null);
+
         if ($altName !== null) {
             $parts = array_map(trim(...), explode(';', $altName));
             $parts = array_filter($parts, static fn (string $part): bool => $part !== '');
+
             if ($parts !== []) {
                 /** @var non-empty-list<non-empty-string> $unique */
                 $unique     = array_values(array_unique($parts));
@@ -137,8 +143,10 @@ final readonly class OverpassTagSelector implements OverpassTagSelectorInterface
     private function filterAllowedTags(array $tags): array
     {
         $allowed = [];
+
         foreach ($this->configuration->getAllowedTagMap() as $key => $values) {
             $value = $this->stringOrNull($tags[$key] ?? null);
+
             if ($value === null) {
                 continue;
             }

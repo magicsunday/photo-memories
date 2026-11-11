@@ -744,6 +744,7 @@ final class RunDetectorTest extends TestCase
 
         $days   = [];
         $anchor = new DateTimeImmutable('2024-08-01 12:00:00', new DateTimeZone('Europe/Berlin'));
+
         for ($i = 0; $i < 10; ++$i) {
             $current = $anchor->modify(sprintf('+%d days', $i));
             $date    = $current->format('Y-m-d');
@@ -827,6 +828,7 @@ final class RunDetectorTest extends TestCase
 
         $days   = [];
         $anchor = new DateTimeImmutable('2024-09-01 12:00:00', new DateTimeZone('Europe/Berlin'));
+
         for ($i = 0; $i < 5; ++$i) {
             $current = $anchor->modify(sprintf('+%d days', $i));
             $date    = $current->format('Y-m-d');

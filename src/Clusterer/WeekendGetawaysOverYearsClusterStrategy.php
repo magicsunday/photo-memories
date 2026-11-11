@@ -81,6 +81,7 @@ final readonly class WeekendGetawaysOverYearsClusterStrategy implements ClusterS
         $this->locHelper         = $locHelper ?? LocationHelper::createDefault();
         $this->minAwayDistanceKm = $minAwayDistanceKm;
         $this->maxAwayDistanceKm = $maxAwayDistanceKm;
+
         if ($this->minNights < 1) {
             throw new InvalidArgumentException('minNights must be >= 1.');
         }
@@ -146,7 +147,7 @@ final readonly class WeekendGetawaysOverYearsClusterStrategy implements ClusterS
             $local = $t->setTimezone($tz);
             $y     = (int) $local->format('Y');
             $d     = $local->format('Y-m-d');
-            $byYearDay[$y] ??= [];
+            $byYearDay[$y]     ??= [];
             $byYearDay[$y][$d] ??= [];
             $byYearDay[$y][$d][] = $m;
         }
@@ -196,6 +197,7 @@ final readonly class WeekendGetawaysOverYearsClusterStrategy implements ClusterS
                 }
 
                 $runDays[] = $d;
+
                 foreach ($eligibleDaysMap[$d] as $m) {
                     $runItems[] = $m;
                 }
@@ -211,11 +213,13 @@ final readonly class WeekendGetawaysOverYearsClusterStrategy implements ClusterS
                 $runs,
                 function (array $run) use ($allDays, $dayLocality): bool {
                     $nDays = count($run['days']);
+
                     if ($nDays < 2) {
                         return false;
                     }
 
                     $nights = $nDays - 1;
+
                     if ($nights < $this->minNights) {
                         return false;
                     }
@@ -255,12 +259,14 @@ final readonly class WeekendGetawaysOverYearsClusterStrategy implements ClusterS
             usort($candidates, static function (array $a, array $b): int {
                 $na = count($a['items']);
                 $nb = count($b['items']);
+
                 if ($na !== $nb) {
                     return $na < $nb ? 1 : -1;
                 }
 
                 $sa = count($a['days']);
                 $sb = count($b['days']);
+
                 if ($sa !== $sb) {
                     return $sa < $sb ? 1 : -1;
                 }
@@ -269,6 +275,7 @@ final readonly class WeekendGetawaysOverYearsClusterStrategy implements ClusterS
             });
 
             $best = $candidates[0];
+
             foreach ($best['items'] as $m) {
                 $membersAllYears[] = $m;
             }
@@ -341,14 +348,17 @@ final readonly class WeekendGetawaysOverYearsClusterStrategy implements ClusterS
     private function runHasWeekendAnchor(array $run): bool
     {
         $days = $run['days'];
+
         if ($days === []) {
             return false;
         }
 
         $hasWeekend = false;
+
         foreach ($days as $day) {
             if ($this->isWeekendIsoDate($day)) {
                 $hasWeekend = true;
+
                 break;
             }
         }
@@ -360,6 +370,7 @@ final readonly class WeekendGetawaysOverYearsClusterStrategy implements ClusterS
         foreach ($run['items'] as $media) {
             $summary     = $this->extractDaySummary($media);
             $dayCategory = $summary['category'] ?? null;
+
             if (is_string($dayCategory) && strtolower($dayCategory) === 'weekend') {
                 return true;
             }
@@ -373,6 +384,7 @@ final readonly class WeekendGetawaysOverYearsClusterStrategy implements ClusterS
         $tz = new DateTimeZone('UTC');
 
         $date = DateTimeImmutable::createFromFormat('Y-m-d H:i:s', $day . ' 12:00:00', $tz);
+
         if (!$date instanceof DateTimeImmutable) {
             return false;
         }
@@ -391,6 +403,7 @@ final readonly class WeekendGetawaysOverYearsClusterStrategy implements ClusterS
 
         foreach ($run['items'] as $media) {
             $distance = $this->resolveDistanceFromHome($media);
+
             if ($distance === null) {
                 continue;
             }
@@ -427,6 +440,7 @@ final readonly class WeekendGetawaysOverYearsClusterStrategy implements ClusterS
 
         foreach ($run['items'] as $media) {
             $metadata = $this->extractVacationMetadata($media);
+
             if ($metadata['has_core_tag']) {
                 $hasCore = true;
             }
@@ -511,16 +525,19 @@ final readonly class WeekendGetawaysOverYearsClusterStrategy implements ClusterS
         }
 
         $distance = $summary['distance_from_home_km'] ?? ($summary['distance_km'] ?? null);
+
         if (is_float($distance) || is_int($distance) || (is_string($distance) && is_numeric($distance))) {
             $result['distance_from_home_km'] = (float) $distance;
         }
 
         $maxSpeed = $summary['max_speed_kmh'] ?? null;
+
         if (is_float($maxSpeed) || is_int($maxSpeed) || (is_string($maxSpeed) && is_numeric($maxSpeed))) {
             $result['max_speed_kmh'] = (float) $maxSpeed;
         }
 
         $category = $summary['category'] ?? ($summary['segment'] ?? null);
+
         if (is_string($category) && $category !== '') {
             $result['category'] = $category;
         }
@@ -531,6 +548,7 @@ final readonly class WeekendGetawaysOverYearsClusterStrategy implements ClusterS
     private function resolveDistanceFromHome(Media $media): ?float
     {
         $summary = $this->extractDaySummary($media);
+
         if ($summary['distance_from_home_km'] !== null) {
             return $summary['distance_from_home_km'];
         }
@@ -552,6 +570,7 @@ final readonly class WeekendGetawaysOverYearsClusterStrategy implements ClusterS
 
         if (is_array($vacation)) {
             $tag = $vacation['core_tag'] ?? ($vacation['category'] ?? null);
+
             if (is_string($tag) && strtolower($tag) === 'core') {
                 $hasCore = true;
             } elseif (is_bool($tag) && $tag) {
@@ -559,6 +578,7 @@ final readonly class WeekendGetawaysOverYearsClusterStrategy implements ClusterS
             }
 
             $scoreValue = $vacation['core_score'] ?? ($vacation['score'] ?? null);
+
             if (is_float($scoreValue) || is_int($scoreValue) || (is_string($scoreValue) && is_numeric($scoreValue))) {
                 $score = (float) $scoreValue;
             }
@@ -576,6 +596,7 @@ final readonly class WeekendGetawaysOverYearsClusterStrategy implements ClusterS
     private function median(array $values): ?float
     {
         $count = count($values);
+
         if ($count === 0) {
             return null;
         }
@@ -603,6 +624,7 @@ final readonly class WeekendGetawaysOverYearsClusterStrategy implements ClusterS
             $days,
             static function (string $day) use ($tz): bool {
                 $date = DateTimeImmutable::createFromFormat('Y-m-d H:i:s', $day . ' 12:00:00', $tz);
+
                 if (!$date instanceof DateTimeImmutable) {
                     return false;
                 }
@@ -638,11 +660,13 @@ final readonly class WeekendGetawaysOverYearsClusterStrategy implements ClusterS
     private function isRunBracketedByDifferentLocality(array $run, array $sortedDays, array $dayLocality): bool
     {
         $runDays = $run['days'];
+
         if (count($runDays) === 0) {
             return false;
         }
 
         $runLocality = $this->majorityLocalityKey($run['items']);
+
         if ($runLocality === null) {
             return true;
         }
@@ -674,6 +698,7 @@ final readonly class WeekendGetawaysOverYearsClusterStrategy implements ClusterS
     private function previousDayKey(array $sortedDays, string $reference): ?string
     {
         $index = array_search($reference, $sortedDays, true);
+
         if ($index === false || $index === 0) {
             return null;
         }
@@ -687,12 +712,14 @@ final readonly class WeekendGetawaysOverYearsClusterStrategy implements ClusterS
     private function nextDayKey(array $sortedDays, string $reference): ?string
     {
         $index = array_search($reference, $sortedDays, true);
+
         if ($index === false) {
             return null;
         }
 
         $nextIndex = $index + 1;
         $total     = count($sortedDays);
+
         if ($nextIndex >= $total) {
             return null;
         }
@@ -710,6 +737,7 @@ final readonly class WeekendGetawaysOverYearsClusterStrategy implements ClusterS
 
         foreach ($items as $media) {
             $key = $this->locHelper->localityKeyForMedia($media);
+
             if ($key === null) {
                 continue;
             }

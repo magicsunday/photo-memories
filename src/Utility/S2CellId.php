@@ -65,6 +65,7 @@ final class S2CellId
         $id = (($face << self::POS_BITS) | ($hilbert << 1) | 1);
 
         $shift = 2 * (self::MAX_LEVEL - $level);
+
         if ($shift > 0) {
             $id = ($id >> $shift) << $shift;
         }
@@ -118,6 +119,7 @@ final class S2CellId
         $scale = 1 << $level;
 
         $value = (int) floor($s * $scale);
+
         if ($value < 0) {
             return 0;
         }

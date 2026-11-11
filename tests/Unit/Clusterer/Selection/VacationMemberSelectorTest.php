@@ -910,8 +910,10 @@ final class VacationMemberSelectorTest extends TestCase
 
         if (($summary['staypoints'] ?? []) === []) {
             $staypoints = [];
+
             foreach ($summary['members'] as $member) {
                 $takenAt = $member->getTakenAt();
+
                 if ($takenAt instanceof DateTimeImmutable) {
                     $timestamp    = $takenAt->getTimestamp();
                     $staypoints[] = [
@@ -948,8 +950,10 @@ final class VacationMemberSelectorTest extends TestCase
     private function countMembersByDay(array $members): array
     {
         $counts = [];
+
         foreach ($members as $media) {
             $takenAt = $media->getTakenAt();
+
             if (!$takenAt instanceof DateTimeImmutable) {
                 continue;
             }
@@ -977,8 +981,10 @@ final class VacationMemberSelectorTest extends TestCase
     private function countPersons(array $members): array
     {
         $counts = [];
+
         foreach ($members as $media) {
             $persons = $media->getPersons();
+
             if ($persons === null) {
                 continue;
             }
@@ -991,6 +997,9 @@ final class VacationMemberSelectorTest extends TestCase
         return $counts;
     }
 
+    /**
+     * @return array<string, float|int|null>
+     */
     private function createHome(): array
     {
         return [

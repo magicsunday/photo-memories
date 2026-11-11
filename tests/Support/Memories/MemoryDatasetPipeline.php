@@ -48,11 +48,13 @@ final class MemoryDatasetPipeline
             $clusterSummary = $this->requireString($cluster, 'summary', sprintf('Cluster "%s" requires a summary.', $clusterId));
 
             $itemsRaw = $cluster['items'] ?? null;
+
             if (!is_array($itemsRaw) || $itemsRaw === []) {
                 throw new InvalidArgumentException(sprintf('Cluster "%s" must declare at least one item.', $clusterId));
             }
 
             $items = [];
+
             foreach ($itemsRaw as $itemIndex => $item) {
                 if (!is_array($item)) {
                     throw new InvalidArgumentException(sprintf('Cluster "%s" item %d must be an array.', $clusterId, $itemIndex));
@@ -68,6 +70,7 @@ final class MemoryDatasetPipeline
                 }
 
                 $qualityRaw = $item['quality'] ?? 0;
+
                 if (!is_numeric($qualityRaw)) {
                     throw new InvalidArgumentException(sprintf('Cluster "%s" item %s has invalid quality value.', $clusterId, $filename));
                 }
@@ -75,6 +78,7 @@ final class MemoryDatasetPipeline
                 $quality = (float) $qualityRaw;
 
                 $roles = $item['roles'] ?? [];
+
                 if (!is_array($roles)) {
                     throw new InvalidArgumentException(sprintf('Cluster "%s" item %s roles must be an array.', $clusterId, $filename));
                 }
@@ -86,6 +90,7 @@ final class MemoryDatasetPipeline
                 $storyLabel = $this->requireString($item, 'story_label', sprintf('Cluster "%s" item %s requires a story_label.', $clusterId, $filename));
 
                 $locationRaw = $item['location'] ?? [];
+
                 if (!is_array($locationRaw)) {
                     throw new InvalidArgumentException(sprintf('Cluster "%s" item %s location must be an array.', $clusterId, $filename));
                 }
@@ -121,8 +126,10 @@ final class MemoryDatasetPipeline
             $highlights  = [];
 
             $keyCandidate = null;
+
             foreach ($items as $item) {
                 $day = $item['taken_at']->format('Y-m-d');
+
                 if (!in_array($day, $daysPresent, true)) {
                     $daysPresent[] = $day;
                 }
@@ -140,6 +147,7 @@ final class MemoryDatasetPipeline
                 }
 
                 $isKey = in_array('key', $item['roles'], true);
+
                 if ($keyCandidate === null || ($isKey && !$keyCandidate['is_key']) || ($item['quality'] > $keyCandidate['quality'] && ($isKey || !$keyCandidate['is_key']))) {
                     $keyCandidate = [
                         'filename' => $item['filename'],
@@ -162,6 +170,7 @@ final class MemoryDatasetPipeline
             $highlights = array_values(array_unique($highlights));
 
             $expectedDaysRaw = $cluster['expected_days'] ?? [];
+
             if (!is_array($expectedDaysRaw)) {
                 throw new InvalidArgumentException(sprintf('Cluster "%s" expected_days must be an array.', $clusterId));
             }
@@ -226,6 +235,7 @@ final class MemoryDatasetPipeline
     private function requireString(array $source, string $key, string $errorMessage): string
     {
         $value = $source[$key] ?? null;
+
         if (!is_string($value) || trim($value) === '') {
             throw new InvalidArgumentException($errorMessage);
         }
@@ -241,6 +251,7 @@ final class MemoryDatasetPipeline
     private function normaliseStringList(array $values, string $errorMessage): array
     {
         $normalised = [];
+
         foreach ($values as $value) {
             if (!is_string($value) || trim($value) === '') {
                 throw new InvalidArgumentException($errorMessage);

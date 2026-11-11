@@ -44,6 +44,7 @@ final class FirstVisitPlaceClusterStrategyTest extends TestCase
 
         for ($dayOffset = 0; $dayOffset < 2; ++$dayOffset) {
             $day = $start->add(new DateInterval('P' . $dayOffset . 'D'));
+
             for ($i = 0; $i < 4; ++$i) {
                 $items[] = $this->createMedia(
                     1200 + ($dayOffset * 10) + $i,
@@ -57,6 +58,7 @@ final class FirstVisitPlaceClusterStrategyTest extends TestCase
 
         // Later revisit in same cell should be ignored
         $later = new DateTimeImmutable('2024-03-05 10:00:00', new DateTimeZone('UTC'));
+
         for ($i = 0; $i < 4; ++$i) {
             $items[] = $this->createMedia(
                 1300 + $i,
@@ -107,8 +109,10 @@ final class FirstVisitPlaceClusterStrategyTest extends TestCase
         $loc   = $this->createLocation('loc-bolzano', 'Bolzano', 46.5, 11.35);
         $start = new DateTimeImmutable('2024-04-01 09:00:00', new DateTimeZone('UTC'));
         $items = [];
+
         for ($dayOffset = 0; $dayOffset < 2; ++$dayOffset) {
             $day = $start->add(new DateInterval('P' . $dayOffset . 'D'));
+
             for ($i = 0; $i < 3; ++$i) { // below per-day threshold
                 $items[] = $this->createMedia(
                     1400 + ($dayOffset * 10) + $i,

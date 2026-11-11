@@ -62,12 +62,14 @@ final class SlideshowVideoGeneratorTest extends TestCase
 
         $metadataEntries = [];
         $commandLength   = count($command);
+
         for ($index = 0; $index < $commandLength; ++$index) {
             if ($command[$index] !== '-metadata') {
                 continue;
             }
 
             $valueIndex = $index + 1;
+
             if ($valueIndex < $commandLength) {
                 $metadataEntries[] = $command[$valueIndex];
             }
@@ -291,6 +293,7 @@ final class SlideshowVideoGeneratorTest extends TestCase
         $transitionDurations = array_map(floatval(...), $transitionMatches[1]);
 
         self::assertNotEmpty($transitionDurations);
+
         foreach ($transitionDurations as $index => $transitionDuration) {
             $total = $visibleDurations[$index] + $transitionDuration;
             self::assertEqualsWithDelta(0.0, fmod($total, 0.5), 0.001);
@@ -915,14 +918,17 @@ final class SlideshowVideoGeneratorTest extends TestCase
 
         $audioLabelIndex = null;
         $commandLength   = count($command);
+
         for ($index = 0; $index < $commandLength; ++$index) {
             if ($command[$index] !== '-map') {
                 continue;
             }
 
             $candidateIndex = $index + 1;
+
             if ($candidateIndex < $commandLength && $command[$candidateIndex] === '[aout]') {
                 $audioLabelIndex = $candidateIndex;
+
                 break;
             }
         }
@@ -1052,12 +1058,14 @@ final class SlideshowVideoGeneratorTest extends TestCase
         $resolveSlideDurationMethod = $reflector->getMethod('resolveSlideDuration');
 
         $loopDurations = [];
+
         for ($index = 0; $index < $filterIndex; ++$index) {
             if ($command[$index] !== '-t') {
                 continue;
             }
 
             $valueIndex = $index + 1;
+
             if ($valueIndex < $filterIndex) {
                 $loopDurations[] = (float) $command[$valueIndex];
             }
@@ -1067,11 +1075,13 @@ final class SlideshowVideoGeneratorTest extends TestCase
         self::assertCount($expectedLoopCount, $loopDurations);
 
         $expectedVisibleDurations = [];
+
         foreach ($slides as $index => $slide) {
             if ($index === 0) {
                 /** @var float $coverDuration */
                 $coverDuration              = $resolveCoverDurationMethod->invoke($generator, $slide);
                 $expectedVisibleDurations[] = $coverDuration;
+
                 continue;
             }
 
@@ -1088,6 +1098,7 @@ final class SlideshowVideoGeneratorTest extends TestCase
         $trimMatchCount = preg_match_all('/trim=duration=([0-9.]+)/', $filterComplex, $trimMatches);
         self::assertSame($expectedLoopCount, $trimMatchCount);
         $trimDurations = array_map(floatval(...), $trimMatches[1]);
+
         foreach ($expectedVisibleDurations as $index => $expectedDuration) {
             self::assertArrayHasKey($index, $trimDurations);
             self::assertEqualsWithDelta($expectedDuration, $trimDurations[$index], 0.001);
@@ -1096,6 +1107,7 @@ final class SlideshowVideoGeneratorTest extends TestCase
         $matchCount = preg_match_all('/xfade=[^:]+:duration=([0-9.]+):offset=([0-9.]+)/', $filterComplex, $matches);
         self::assertSame(count($resolvedTransitions), $matchCount);
         $transitionDurations = array_map(floatval(...), $matches[1]);
+
         foreach ($transitionDurations as $index => $duration) {
             self::assertEqualsWithDelta($resolvedTransitions[$index], $duration, 0.001);
         }
@@ -1771,6 +1783,7 @@ BASH;
         self::assertSame(3, count($parsed['durations']));
 
         self::assertCount(3, $resolvedTransitions);
+
         foreach ($resolvedTransitions as $index => $duration) {
             self::assertEqualsWithDelta($duration, $parsed['durations'][$index], 0.0001);
         }

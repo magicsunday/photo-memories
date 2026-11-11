@@ -71,53 +71,65 @@ final readonly class ClusterMemberSelectionProfileProvider
         $context = [];
 
         $awayDays = $this->intValue($draftParams, 'away_days');
+
         if ($awayDays !== null) {
             $context['away_days'] = $awayDays;
         }
 
         $nights = $this->intValue($draftParams, 'nights');
+
         if ($nights !== null) {
             $context['nights'] = $nights;
         }
 
         $weekend = $this->boolValue($draftParams, 'weekend_getaway');
+
         if ($weekend !== null) {
             $context['weekend_getaway'] = $weekend;
         }
 
         $manualContext = $selectionConfig['context'] ?? null;
+
         if (is_array($manualContext)) {
             $manualAwayDays = $this->intValue($manualContext, 'away_days');
+
             if ($manualAwayDays !== null) {
                 $context['away_days'] = $manualAwayDays;
             }
 
             $manualNights = $this->intValue($manualContext, 'nights');
+
             if ($manualNights !== null) {
                 $context['nights'] = $manualNights;
             }
 
             $manualWeekend = $this->boolValue($manualContext, 'weekend_getaway');
+
             if ($manualWeekend !== null) {
                 $context['weekend_getaway'] = $manualWeekend;
             }
         }
 
         $decision = $selectionConfig['decision'] ?? null;
+
         if (is_array($decision)) {
             $decisionContext = $decision['context'] ?? null;
+
             if (is_array($decisionContext)) {
                 $decisionAwayDays = $this->intValue($decisionContext, 'away_days');
+
                 if ($decisionAwayDays !== null) {
                     $context['away_days'] = $decisionAwayDays;
                 }
 
                 $decisionNights = $this->intValue($decisionContext, 'nights');
+
                 if ($decisionNights !== null) {
                     $context['nights'] = $decisionNights;
                 }
 
                 $decisionWeekend = $this->boolValue($decisionContext, 'weekend_getaway');
+
                 if ($decisionWeekend !== null) {
                     $context['weekend_getaway'] = $decisionWeekend;
                 }
@@ -156,6 +168,7 @@ final readonly class ClusterMemberSelectionProfileProvider
             $radius  = $this->floatValue($value, 'radius_km', 0.0);
             $country = $this->stringValue($value, 'country');
             $offset  = $value['timezone_offset'] ?? null;
+
             if (is_int($offset)) {
                 $timezoneOffset = $offset;
             } elseif (is_numeric($offset)) {
@@ -178,6 +191,7 @@ final readonly class ClusterMemberSelectionProfileProvider
     private function intValue(array $values, string $key): ?int
     {
         $value = $values[$key] ?? null;
+
         if ($value === null) {
             return null;
         }
@@ -199,6 +213,7 @@ final readonly class ClusterMemberSelectionProfileProvider
     private function boolValue(array $values, string $key): ?bool
     {
         $value = $values[$key] ?? null;
+
         if ($value === null) {
             return null;
         }
@@ -213,6 +228,7 @@ final readonly class ClusterMemberSelectionProfileProvider
 
         if (is_numeric($value) || is_string($value)) {
             $filtered = filter_var($value, FILTER_VALIDATE_BOOLEAN, FILTER_NULL_ON_FAILURE);
+
             if ($filtered !== null) {
                 return $filtered;
             }
@@ -227,6 +243,7 @@ final readonly class ClusterMemberSelectionProfileProvider
     private function floatValue(array $values, string $key, float $default): float
     {
         $value = $values[$key] ?? null;
+
         if ($value === null) {
             return $default;
         }
@@ -244,6 +261,7 @@ final readonly class ClusterMemberSelectionProfileProvider
     private function stringValue(array $values, string $key): ?string
     {
         $value = $values[$key] ?? null;
+
         if (is_string($value) && $value !== '') {
             return $value;
         }

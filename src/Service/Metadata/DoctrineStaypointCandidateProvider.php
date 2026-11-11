@@ -29,6 +29,7 @@ final readonly class DoctrineStaypointCandidateProvider implements StaypointCand
     public function findCandidates(Media $seed, int $maxSamples = 500): array
     {
         $cell = $seed->getGeoCell8();
+
         if ($cell === null || $cell === '') {
             return [];
         }

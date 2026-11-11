@@ -52,6 +52,7 @@ final readonly class PlaceId
 
         if ($confidence !== null) {
             $clamped = max(0.0, min(1.0, $confidence));
+
             if ($clamped !== $confidence) {
                 throw new InvalidArgumentException('PlaceId confidence must be between 0 and 1.');
             }
@@ -95,11 +96,13 @@ final readonly class PlaceId
         $identifier = (string) ($payload['id'] ?? ($payload['identifier'] ?? ''));
 
         $confidence = null;
+
         if (isset($payload['confidence'])) {
             $confidence = (float) $payload['confidence'];
         }
 
         $meta = [];
+
         if (isset($payload['meta']) && is_array($payload['meta'])) {
             /** @var array<string, mixed> $meta */
             $meta = $payload['meta'];

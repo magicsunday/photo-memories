@@ -36,6 +36,7 @@ final class CompositeMetadataExtractorTest extends TestCase
     public function skipsMimeGuessWhenFileDoesNotExist(): void
     {
         $tmp = tempnam(sys_get_temp_dir(), 'missing_media_');
+
         if ($tmp === false) {
             self::fail('Unable to allocate temporary filename.');
         }
@@ -67,11 +68,13 @@ final class CompositeMetadataExtractorTest extends TestCase
     public function guessMimeSetsMimeAndLogsSuccess(): void
     {
         $tmp = tempnam(sys_get_temp_dir(), 'media_mime_success_');
+
         if ($tmp === false) {
             self::fail('Unable to allocate temporary filename.');
         }
 
         $bytesWritten = file_put_contents($tmp, 'plain-text');
+
         if ($bytesWritten === false) {
             self::fail('Unable to populate temporary file.');
         }
@@ -103,11 +106,13 @@ final class CompositeMetadataExtractorTest extends TestCase
     public function guessMimeLogsFailureWhenFileIsUnreadable(): void
     {
         $tmp = tempnam(sys_get_temp_dir(), 'media_mime_failure_');
+
         if ($tmp === false) {
             self::fail('Unable to allocate temporary filename.');
         }
 
         $bytesWritten = file_put_contents($tmp, 'locked');
+
         if ($bytesWritten === false) {
             self::fail('Unable to populate temporary file.');
         }
@@ -144,6 +149,7 @@ final class CompositeMetadataExtractorTest extends TestCase
         $entries = $this->decodeIndexLog($media->getIndexLog());
         self::assertNotSame([], $entries);
         $last = $entries[array_key_last($entries)];
+
         if (str_contains((string) $last['message'], 'MIME-Bestimmung erfolgreich')) {
             self::markTestSkipped('Testumgebung erlaubt trotz chmod(0) noch Lesezugriff; Fehlerfall kann nicht simuliert werden.');
         }

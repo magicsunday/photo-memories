@@ -52,6 +52,7 @@ abstract class AbstractTimeRangeClusterScoreHeuristic extends AbstractClusterSco
         }
 
         $computed = $this->computeTimeRangeFromMembers($cluster, $mediaMap);
+
         if ($computed !== null) {
             $cluster->setParam('time_range', $computed);
         }
@@ -74,6 +75,7 @@ abstract class AbstractTimeRangeClusterScoreHeuristic extends AbstractClusterSco
 
         $from = $range['from'];
         $to   = $range['to'];
+
         if ($from <= 0 || $to <= 0 || $to < $from) {
             return false;
         }
@@ -94,6 +96,7 @@ abstract class AbstractTimeRangeClusterScoreHeuristic extends AbstractClusterSco
     private function computeTimeRangeFromMembers(ClusterDraft $cluster, array $mediaMap): ?array
     {
         $items = $this->collectMediaItems($cluster, $mediaMap);
+
         if ($items === []) {
             return null;
         }
@@ -113,6 +116,7 @@ abstract class AbstractTimeRangeClusterScoreHeuristic extends AbstractClusterSco
     {
         $params = $cluster->getParams();
         $range  = $params['time_range'] ?? null;
+
         if (!is_array($range)) {
             return null;
         }

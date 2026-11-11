@@ -143,6 +143,7 @@ final readonly class MonthlyHighlightsClusterStrategy implements ClusterStrategy
             function (array $list) use ($tz): bool {
                 /** @var array<string,bool> $days */
                 $days = [];
+
                 foreach ($list as $m) {
                     $takenAt = $m->getTakenAt();
                     assert($takenAt instanceof DateTimeImmutable);
@@ -171,16 +172,19 @@ final readonly class MonthlyHighlightsClusterStrategy implements ClusterStrategy
             $monthBounds = $this->computeMonthBounds($ym, $tz);
 
             $events = $this->deriveMonthlyEvents($list, $tz);
+
             if ($events === []) {
                 continue;
             }
 
             $candidates = $this->scoreMonthlyEvents($events, $monthBounds);
+
             if ($candidates === []) {
                 continue;
             }
 
             $selected = $this->selectEventCandidates($candidates);
+
             if ($selected === []) {
                 continue;
             }
@@ -200,6 +204,7 @@ final readonly class MonthlyHighlightsClusterStrategy implements ClusterStrategy
                 ];
 
                 $tagMetadata = $this->collectDominantTags($members);
+
                 if ($tagMetadata !== []) {
                     $params = [...$params, ...$tagMetadata];
                 }
@@ -215,6 +220,7 @@ final readonly class MonthlyHighlightsClusterStrategy implements ClusterStrategy
                 $params = [...$params, ...$candidate['people']];
 
                 $deviceSummary = $this->deviceAggregator->summarize($members);
+
                 foreach ($deviceSummary as $deviceKey => $deviceValue) {
                     if ($deviceValue !== null) {
                         $params[$deviceKey] = $deviceValue;
@@ -281,6 +287,7 @@ final readonly class MonthlyHighlightsClusterStrategy implements ClusterStrategy
 
         foreach ($items as $media) {
             $takenAt = $media->getTakenAt();
+
             if (!$takenAt instanceof DateTimeImmutable) {
                 continue;
             }
@@ -380,6 +387,7 @@ final readonly class MonthlyHighlightsClusterStrategy implements ClusterStrategy
             $candidates,
             static function (array $left, array $right): int {
                 $scoreCmp = $right['score_total'] <=> $left['score_total'];
+
                 if ($scoreCmp !== 0) {
                     return $scoreCmp;
                 }
@@ -397,10 +405,13 @@ final readonly class MonthlyHighlightsClusterStrategy implements ClusterStrategy
             $start = $candidate['time_range']['from'];
 
             $eligible = true;
+
             foreach ($selected as $existing) {
                 $distance = abs($start - $existing['time_range']['from']);
+
                 if ($distance < $this->minSpacingSeconds) {
                     $eligible = false;
+
                     break;
                 }
             }

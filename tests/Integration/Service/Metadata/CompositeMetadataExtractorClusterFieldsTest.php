@@ -55,11 +55,13 @@ final class CompositeMetadataExtractorClusterFieldsTest extends TestCase
     public function enrichesClusterCriticalFieldsWithoutRealBackends(): void
     {
         $tmpBase = tempnam(sys_get_temp_dir(), 'media_');
+
         if ($tmpBase === false) {
             self::fail('Unable to create temporary media file.');
         }
 
         $imagePath = $tmpBase . '.jpg';
+
         if (@rename($tmpBase, $imagePath) === false) {
             @unlink($tmpBase);
             self::fail('Unable to prepare temporary media file.');

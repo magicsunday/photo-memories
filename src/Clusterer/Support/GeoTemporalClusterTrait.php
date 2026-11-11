@@ -38,6 +38,7 @@ trait GeoTemporalClusterTrait
 
         foreach ($items as $media) {
             $takenAt = $media->getTakenAt();
+
             if (!$takenAt instanceof DateTimeImmutable) {
                 continue;
             }
@@ -121,6 +122,7 @@ trait GeoTemporalClusterTrait
         int $windowSeconds,
     ): array {
         $timestamped = $this->filterTimestampedItems($dayItems);
+
         if ($timestamped === []) {
             return [];
         }
@@ -159,6 +161,7 @@ trait GeoTemporalClusterTrait
 
         /** @var list<Media> $leftoverGps */
         $leftoverGps = [];
+
         foreach ($timestamped as $media) {
             if (isset($clusteredIds[$media->getId()])) {
                 continue;
@@ -195,6 +198,7 @@ trait GeoTemporalClusterTrait
 
         /** @var list<Media> $nonGps */
         $nonGps = [];
+
         foreach ($timestamped as $media) {
             if ($media->getGpsLat() !== null && $media->getGpsLon() !== null) {
                 continue;
@@ -216,6 +220,7 @@ trait GeoTemporalClusterTrait
                 $first     = $bucket[0]->getTakenAt();
                 $lastIndex = array_key_last($bucket);
                 $last      = $bucket[$lastIndex]->getTakenAt();
+
                 if (!$first instanceof DateTimeImmutable) {
                     continue;
                 }
@@ -230,11 +235,13 @@ trait GeoTemporalClusterTrait
 
                 foreach ($nonGps as $index => $candidate) {
                     $takenAt = $candidate->getTakenAt();
+
                     if (!$takenAt instanceof DateTimeImmutable) {
                         continue;
                     }
 
                     $ts = $takenAt->getTimestamp();
+
                     if ($ts < $startTs) {
                         continue;
                     }
@@ -299,6 +306,7 @@ trait GeoTemporalClusterTrait
 
         foreach ($items as $media) {
             $takenAt = $media->getTakenAt();
+
             if (!$takenAt instanceof DateTimeImmutable) {
                 continue;
             }
@@ -316,6 +324,7 @@ trait GeoTemporalClusterTrait
                 $startTs   = $ts;
                 $anchorLat = $lat;
                 $anchorLon = $lon;
+
                 continue;
             }
 
@@ -324,6 +333,7 @@ trait GeoTemporalClusterTrait
                 $startTs   = $ts;
                 $anchorLat = $lat;
                 $anchorLon = $lon;
+
                 continue;
             }
 
@@ -345,6 +355,7 @@ trait GeoTemporalClusterTrait
 
             if ($withinWindow && $withinRadius) {
                 $bucket[] = $media;
+
                 continue;
             }
 
@@ -357,6 +368,7 @@ trait GeoTemporalClusterTrait
                 $startTs   = null;
                 $anchorLat = null;
                 $anchorLon = null;
+
                 continue;
             }
 

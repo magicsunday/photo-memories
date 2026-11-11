@@ -145,6 +145,7 @@ final class SlideshowJobTest extends TestCase
         );
 
         $slides = [];
+
         foreach ($transitions as $index => $transition) {
             $slides[] = [
                 'image'      => $imagePaths[$index],

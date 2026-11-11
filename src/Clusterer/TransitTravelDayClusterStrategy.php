@@ -181,6 +181,7 @@ final readonly class TransitTravelDayClusterStrategy implements ClusterStrategyI
                     $pLon = $p->getGpsLon();
                     $qLat = $q->getGpsLat();
                     $qLon = $q->getGpsLon();
+
                     if ($pLat === null) {
                         continue;
                     }
@@ -226,6 +227,7 @@ final readonly class TransitTravelDayClusterStrategy implements ClusterStrategyI
                     if ($segmentSpeedMps !== null) {
                         $speedSum += $segmentSpeedMps;
                         ++$speedSamples;
+
                         if ($maxSpeedMps === null || $segmentSpeedMps > $maxSpeedMps) {
                             $maxSpeedMps = $segmentSpeedMps;
                         }
@@ -386,6 +388,7 @@ final readonly class TransitTravelDayClusterStrategy implements ClusterStrategyI
             }
 
             $sanitized = [];
+
             foreach ($values as $key => $value) {
                 if (!is_string($key)) {
                     continue;

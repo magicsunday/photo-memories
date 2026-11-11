@@ -25,6 +25,7 @@ final class DimensionsExifMetadataProcessor implements ExifMetadataProcessorInte
     {
         $width  = $media->getWidth();
         $height = $media->getHeight();
+
         if ($width !== null && $height !== null && $width > 0 && $height > 0) {
             return;
         }

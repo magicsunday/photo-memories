@@ -132,21 +132,25 @@ final readonly class ClusterQualityAggregator
             $rawMetrics = $score->rawMetrics;
 
             $sharpnessRaw = $rawMetrics?->laplacianVariance;
+
             if ($sharpnessRaw !== null) {
                 $sharpnessSamples[] = $sharpnessRaw;
             }
 
             $contrastRaw = $rawMetrics?->contrastStandardDeviation;
+
             if ($contrastRaw !== null) {
                 $contrastSamples[] = $contrastRaw;
             }
 
             $noiseRaw = $rawMetrics?->noiseEstimate;
+
             if ($noiseRaw !== null) {
                 $noiseSamples[] = $noiseRaw;
             }
 
             $blockinessRaw = $rawMetrics?->blockinessEstimate;
+
             if ($blockinessRaw !== null) {
                 $blockinessSamples[] = $blockinessRaw;
             }
@@ -257,6 +261,7 @@ final readonly class ClusterQualityAggregator
             ], null);
 
             $clipping = $measurement['clipping_raw'] ?? null;
+
             if ($clipping !== null) {
                 $clipping = $this->clamp01($clipping);
             }
@@ -336,6 +341,7 @@ final readonly class ClusterQualityAggregator
     private function buildQualityComponents(array $values): array
     {
         $components = [];
+
         foreach ($this->qualityWeights as $key => $weight) {
             if ($weight <= 0.0) {
                 continue;
@@ -378,7 +384,7 @@ final readonly class ClusterQualityAggregator
                 continue;
             }
 
-            $sum += $this->clamp01($value) * $weight;
+            $sum       += $this->clamp01($value) * $weight;
             $weightSum += $weight;
         }
 
@@ -403,6 +409,7 @@ final readonly class ClusterQualityAggregator
         }
 
         $range = $percentiles['p90'] - $percentiles['p10'];
+
         if ($range <= 0.0) {
             return $fallback === null ? null : $this->clamp01($fallback);
         }
@@ -420,6 +427,7 @@ final readonly class ClusterQualityAggregator
     private function percentile(array $sorted, float $fraction): ?float
     {
         $count = count($sorted);
+
         if ($count === 0) {
             return null;
         }
@@ -473,6 +481,7 @@ final readonly class ClusterQualityAggregator
 
         foreach ($members as $member) {
             $value = $member[$key] ?? null;
+
             if ($value === null) {
                 continue;
             }
@@ -601,6 +610,7 @@ final readonly class ClusterQualityAggregator
         ], null);
 
         $clipping = $this->averageMemberMetric($members, 'clipping');
+
         if ($clipping !== null) {
             $clipping = $this->clamp01($clipping);
         }

@@ -41,6 +41,7 @@ final readonly class DuplicateHandlingStage implements MediaIngestionStageInterf
         }
 
         $fastChecksum = $this->fastHashGenerator->hash($context->getFilePath());
+
         if ($fastChecksum === null) {
             $context->getOutput()->writeln(
                 sprintf('<error>Could not compute fast checksum for file: %s</error>', $context->getFilePath())
@@ -50,6 +51,7 @@ final readonly class DuplicateHandlingStage implements MediaIngestionStageInterf
         }
 
         $checksum = @hash_file('sha256', $context->getFilePath());
+
         if ($checksum === false) {
             $context->getOutput()->writeln(
                 sprintf('<error>Could not compute checksum for file: %s</error>', $context->getFilePath())
@@ -94,6 +96,7 @@ final readonly class DuplicateHandlingStage implements MediaIngestionStageInterf
         }
 
         $fileSize = filesize($context->getFilePath());
+
         if ($fileSize === false) {
             $fileSize = 0;
         }
@@ -109,6 +112,7 @@ final readonly class DuplicateHandlingStage implements MediaIngestionStageInterf
         }
 
         $detectedMime = $context->getDetectedMime();
+
         if ($detectedMime !== null) {
             $media->setMime($detectedMime);
         }

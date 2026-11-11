@@ -162,6 +162,9 @@ final class TransportDayExtenderTest extends TestCase
         return array_replace_recursive($summary, $overrides);
     }
 
+    /**
+     * @param array<string, float> $overrides
+     */
     private function makeAnchorSummary(float $lat, float $lon, array $overrides = []): array
     {
         $summary = [

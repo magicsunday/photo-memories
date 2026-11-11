@@ -88,10 +88,13 @@ final readonly class DefaultLocationLabelResolver implements LocationLabelResolv
         }
 
         $poi = $this->poiContextAnalyzer->resolvePrimaryPoi($location);
+
         if ($poi !== null) {
             $label = $this->poiLabelResolver->preferredLabel($poi);
+
             if (is_string($label)) {
                 $normalizedLabel = trim($label);
+
                 if ($normalizedLabel !== '') {
                     return $this->normalizeLabelCasing($normalizedLabel);
                 }
@@ -111,14 +114,17 @@ final readonly class DefaultLocationLabelResolver implements LocationLabelResolv
             }
 
             $normalizedComponent = trim($component);
+
             if ($normalizedComponent !== '') {
                 return $this->normalizeLabelCasing($normalizedComponent);
             }
         }
 
         $label = $this->poiContextAnalyzer->bestLabelForLocation($location);
+
         if (is_string($label)) {
             $normalizedLabel = trim($label);
+
             if ($normalizedLabel !== '') {
                 return $this->normalizeLabelCasing($normalizedLabel);
             }
@@ -140,16 +146,20 @@ final readonly class DefaultLocationLabelResolver implements LocationLabelResolv
     public function majorityLabel(array $members): ?string
     {
         $poiContext = $this->poiContextAnalyzer->majorityPoiContext($members);
+
         if ($poiContext !== null) {
             $labelValue      = $poiContext['label'];
             $normalizedLabel = is_string($labelValue) ? trim($labelValue) : '';
+
             if ($normalizedLabel !== '') {
                 $categoryValue = $poiContext['categoryValue'];
+
                 if (!is_string($categoryValue)) {
                     return $this->normalizeLabelCasing($normalizedLabel);
                 }
 
                 $normalizedCategory = trim($categoryValue);
+
                 if ($normalizedCategory === '') {
                     return $this->normalizeLabelCasing($normalizedLabel);
                 }
@@ -162,8 +172,10 @@ final readonly class DefaultLocationLabelResolver implements LocationLabelResolv
 
         /** @var array<string,int> $count */
         $count = [];
+
         foreach ($members as $media) {
             $label = $this->labelForMedia($media);
+
             if ($label === null) {
                 continue;
             }
@@ -192,6 +204,7 @@ final readonly class DefaultLocationLabelResolver implements LocationLabelResolv
 
         foreach ($members as $media) {
             $location = $media->getLocation();
+
             if (!$location instanceof Location) {
                 continue;
             }
@@ -205,6 +218,7 @@ final readonly class DefaultLocationLabelResolver implements LocationLabelResolv
 
         foreach ($counts as $component => $tallies) {
             $majority = $this->pickMajorityValue($tallies);
+
             if ($majority !== null) {
                 $result[$component] = $majority;
             }
@@ -231,6 +245,7 @@ final readonly class DefaultLocationLabelResolver implements LocationLabelResolv
 
         foreach ($bucket as $value => $payload) {
             $count = $payload['count'];
+
             if ($count > $winnerCount) {
                 $winnerCount = $count;
                 $winnerKey   = $value;
@@ -267,6 +282,7 @@ final readonly class DefaultLocationLabelResolver implements LocationLabelResolv
         }
 
         $trimmed = trim($value);
+
         if ($trimmed === '') {
             return;
         }
@@ -312,11 +328,13 @@ final readonly class DefaultLocationLabelResolver implements LocationLabelResolv
     private function normalizeLabelCasing(string $label): string
     {
         $trimmed = trim($label);
+
         if ($trimmed === '') {
             return $trimmed;
         }
 
         $lowerCase = mb_strtolower($trimmed, 'UTF-8');
+
         if ($trimmed === $lowerCase) {
             return mb_convert_case($trimmed, MB_CASE_TITLE, 'UTF-8');
         }

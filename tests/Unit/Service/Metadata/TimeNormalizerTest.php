@@ -122,6 +122,7 @@ final class TimeNormalizerTest extends TestCase
         self::assertIsString($tmp);
 
         $filename = sprintf('%s/no-pattern-file.jpg', sys_get_temp_dir());
+
         if (file_exists($filename)) {
             unlink($filename);
         }
@@ -189,6 +190,7 @@ final class TimeNormalizerTest extends TestCase
         );
 
         $filename = sprintf('%s/20230721_141516.jpg', sys_get_temp_dir());
+
         if (file_exists($filename)) {
             unlink($filename);
         }
@@ -223,6 +225,7 @@ final class TimeNormalizerTest extends TestCase
         );
 
         $filename = sprintf('%s/IMG_20240101_101112.jpg', sys_get_temp_dir());
+
         if (file_exists($filename)) {
             unlink($filename);
         }
@@ -256,6 +259,9 @@ final class TimeNormalizerTest extends TestCase
         }
     }
 
+    /**
+     * @param string[] $priority
+     */
     private function createNormalizer(
         ?DateTimeZone $resolvedTimezone = null,
         string $defaultTimezone = 'UTC',

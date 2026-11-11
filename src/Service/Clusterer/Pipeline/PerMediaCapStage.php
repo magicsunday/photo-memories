@@ -52,6 +52,7 @@ final class PerMediaCapStage implements ClusterConsolidationStageInterface
         $this->defaultPerMediaCap = $perMediaCap;
 
         $base = count($keepOrder);
+
         foreach ($keepOrder as $index => $algorithm) {
             $this->priorityMap[$algorithm] = $base - $index;
         }
@@ -129,6 +130,7 @@ final class PerMediaCapStage implements ClusterConsolidationStageInterface
         foreach ($drafts as $index => $draft) {
             if ($this->isSubStory($draft)) {
                 $subStories[] = ['index' => $index, 'draft' => $draft];
+
                 continue;
             }
 
@@ -171,6 +173,7 @@ final class PerMediaCapStage implements ClusterConsolidationStageInterface
 
         foreach ($items as $item) {
             ++$processed;
+
             if ($progress !== null && ($processed % 200) === 0) {
                 $progress($processed, $total);
             }
@@ -179,23 +182,30 @@ final class PerMediaCapStage implements ClusterConsolidationStageInterface
             $assignments[$group] ??= [];
             $allowed        = true;
             $blockedMembers = [];
+
             foreach ($item['members'] as $member) {
                 $count = isset($assignments[$group][$member]) ? count($assignments[$group][$member]) : 0;
+
                 if ($count >= $perMediaCap) {
                     $allowed          = false;
                     $blockedMembers[] = $member;
+
                     break;
                 }
             }
 
             if (!$allowed) {
                 $coverId = $item['cover'];
+
                 if ($coverId !== null && in_array($coverId, $blockedMembers, true)) {
                     $freed = false;
+
                     if (isset($assignments[$group][$coverId])) {
                         $existingAssignments = $assignments[$group][$coverId];
+
                         foreach ($existingAssignments as $assignmentIndex) {
                             $assignedItem = $accepted[$assignmentIndex] ?? null;
+
                             if ($assignedItem === null) {
                                 continue;
                             }
@@ -210,6 +220,7 @@ final class PerMediaCapStage implements ClusterConsolidationStageInterface
 
                             $this->removeAssignment($assignments, $accepted, $assignmentIndex, $reassignments);
                             $freed = true;
+
                             break;
                         }
                     }
@@ -217,11 +228,14 @@ final class PerMediaCapStage implements ClusterConsolidationStageInterface
                     if ($freed) {
                         $allowed        = true;
                         $blockedMembers = [];
+
                         foreach ($item['members'] as $member) {
                             $count = isset($assignments[$group][$member]) ? count($assignments[$group][$member]) : 0;
+
                             if ($count >= $perMediaCap) {
                                 $allowed          = false;
                                 $blockedMembers[] = $member;
+
                                 break;
                             }
                         }
@@ -230,12 +244,14 @@ final class PerMediaCapStage implements ClusterConsolidationStageInterface
 
                 if (!$allowed) {
                     ++$blockedCandidates;
+
                     continue;
                 }
             }
 
             $acceptedIndex = count($accepted);
             $accepted[]    = $item + ['removed' => false];
+
             foreach ($item['members'] as $member) {
                 $assignments[$group][$member] ??= [];
                 $assignments[$group][$member][] = $acceptedIndex;

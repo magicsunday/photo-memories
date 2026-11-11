@@ -50,8 +50,10 @@ final class TransitionSequenceGenerator
         }
 
         $pool = [];
+
         foreach ($transitions as $transition) {
             $trimmed = trim($transition);
+
             if ($trimmed === '') {
                 continue;
             }
@@ -71,14 +73,18 @@ final class TransitionSequenceGenerator
 
         $sequence           = [];
         $previousTransition = null;
+
         while (count($sequence) < $slideCount) {
             $shuffled = $randomizer->shuffleArray($pool);
+
             if ($hasMultipleUniqueTransitions && $previousTransition !== null && $shuffled[0] === $previousTransition) {
                 $swapIndex     = null;
                 $shuffledCount = count($shuffled);
+
                 for ($index = 1; $index < $shuffledCount; ++$index) {
                     if ($shuffled[$index] !== $previousTransition) {
                         $swapIndex = $index;
+
                         break;
                     }
                 }
@@ -93,6 +99,7 @@ final class TransitionSequenceGenerator
             foreach ($shuffled as $transition) {
                 $sequence[]         = $transition;
                 $previousTransition = $transition;
+
                 if (count($sequence) === $slideCount) {
                     break 2;
                 }
@@ -149,6 +156,7 @@ final class TransitionSequenceGenerator
 
         if ($seedOverride !== null) {
             $seedOverride = trim($seedOverride);
+
             if ($seedOverride !== '') {
                 $payload = $seedOverride . '||' . $payload;
             }

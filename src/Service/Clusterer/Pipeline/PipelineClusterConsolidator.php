@@ -37,6 +37,7 @@ final readonly class PipelineClusterConsolidator implements ClusterConsolidatorI
     {
         foreach ($this->stages as $stage) {
             $stageProgress = null;
+
             if ($progress !== null) {
                 $label         = $stage->getLabel();
                 $stageProgress = static function (int $done, int $max) use ($progress, $label): void {

@@ -67,6 +67,7 @@ final readonly class CompositeMetadataExtractor implements MetadataExtractorInte
                 }
 
                 $context = ['extractor' => $description];
+
                 if ($reason !== null) {
                     $context['reason'] = $reason;
                 }

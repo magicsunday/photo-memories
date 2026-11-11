@@ -53,6 +53,7 @@ final class LocationClusterScoreHeuristic extends AbstractClusterScoreHeuristic 
 
         $cluster->setParam('location_score', $metrics['score']);
         $cluster->setParam('location_geo_coverage', $metrics['geo_coverage']);
+
         if ($metrics['favourite_match'] > 0.0) {
             $cluster->setParam('location_favourite_match', true);
         }
@@ -90,9 +91,11 @@ final class LocationClusterScoreHeuristic extends AbstractClusterScoreHeuristic 
         }
 
         $coords = [];
+
         foreach ($mediaItems as $media) {
             $lat = $media->getGpsLat();
             $lon = $media->getGpsLon();
+
             if ($lat === null) {
                 continue;
             }
@@ -109,9 +112,11 @@ final class LocationClusterScoreHeuristic extends AbstractClusterScoreHeuristic 
         $spread   = 0.0;
 
         $n = count($coords);
+
         if ($n > 1) {
             $centroidLat = 0.0;
             $centroidLon = 0.0;
+
             foreach ($coords as $coord) {
                 $centroidLat += $coord[0];
                 $centroidLon += $coord[1];
@@ -121,6 +126,7 @@ final class LocationClusterScoreHeuristic extends AbstractClusterScoreHeuristic 
             $centroidLon /= $n;
 
             $maxDistance = 0.0;
+
             foreach ($coords as $coord) {
                 $distance = MediaMath::haversineDistanceInMeters(
                     $centroidLat,
@@ -145,6 +151,7 @@ final class LocationClusterScoreHeuristic extends AbstractClusterScoreHeuristic 
         ]);
 
         $isFavourite = $this->isFavouritePlace($params);
+
         if ($isFavourite && $this->favouritePlaceMultiplier !== 1.0) {
             $score = $this->clamp01($score * $this->favouritePlaceMultiplier);
         }
@@ -166,6 +173,7 @@ final class LocationClusterScoreHeuristic extends AbstractClusterScoreHeuristic 
         }
 
         $place = $this->normalisePlace($params['place'] ?? null);
+
         if ($place === null) {
             return false;
         }
@@ -186,6 +194,7 @@ final class LocationClusterScoreHeuristic extends AbstractClusterScoreHeuristic 
 
         foreach ($values as $value) {
             $normal = $this->normalisePlace($value);
+
             if ($normal === null) {
                 continue;
             }
@@ -205,6 +214,7 @@ final class LocationClusterScoreHeuristic extends AbstractClusterScoreHeuristic 
         }
 
         $trimmed = trim($value);
+
         if ($trimmed === '') {
             return null;
         }

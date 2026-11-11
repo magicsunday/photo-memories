@@ -54,6 +54,7 @@ final readonly class MediaQualityAggregator
         $media->setMotionBlurScore($motionBlurRaw);
 
         $effectiveMotionBlur = $motionBlurRaw;
+
         if ($effectiveMotionBlur === null && $sharpnessScore !== null) {
             $effectiveMotionBlur = $sharpnessScore;
         }
@@ -76,6 +77,7 @@ final readonly class MediaQualityAggregator
 
         $isLowQuality   = false;
         $noiseThreshold = $this->noiseThresholdFor($media);
+
         if ($qualityScore !== null && $qualityScore < $this->lowScoreThreshold) {
             $isLowQuality = true;
         }
@@ -132,7 +134,7 @@ final readonly class MediaQualityAggregator
                 continue;
             }
 
-            $sum += $value * $weight;
+            $sum       += $value * $weight;
             $weightSum += $weight;
         }
 
@@ -175,6 +177,7 @@ final readonly class MediaQualityAggregator
     private function balancedScore(float $value, float $target, float $tolerance): float
     {
         $delta = abs($value - $target);
+
         if ($delta >= $tolerance) {
             return 0.0;
         }
@@ -199,6 +202,7 @@ final readonly class MediaQualityAggregator
     {
         $width  = $media->getWidth();
         $height = $media->getHeight();
+
         if ($width === null || $height === null || $width <= 0 || $height <= 0) {
             return null;
         }
@@ -209,11 +213,13 @@ final readonly class MediaQualityAggregator
     private function noiseThresholdFor(Media $media): float
     {
         $takenAt = $media->getTakenAt();
+
         if (!$takenAt instanceof DateTimeInterface) {
             return $this->lowNoiseQualityThreshold;
         }
 
         $deltaYears = $this->noiseReferenceYear - (int) $takenAt->format('Y');
+
         if ($deltaYears <= 0) {
             return $this->lowNoiseQualityThreshold;
         }
@@ -264,6 +270,7 @@ final readonly class MediaQualityAggregator
         }
 
         $takenAt = $media->getTakenAt();
+
         if ($takenAt instanceof DateTimeInterface) {
             $context['takenAt'] = $takenAt->format(DateTimeInterface::ATOM);
         }

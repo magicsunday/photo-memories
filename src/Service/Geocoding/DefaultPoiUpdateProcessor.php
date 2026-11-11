@@ -71,6 +71,7 @@ final readonly class DefaultPoiUpdateProcessor implements PoiUpdateProcessorInte
             $beforePois = $location->getPois();
 
             $this->locationResolver->ensurePois($location, $refreshPois);
+
             if ($this->locationResolver->consumeLastUsedNetwork()) {
                 ++$networkCalls;
             }
@@ -124,6 +125,7 @@ final readonly class DefaultPoiUpdateProcessor implements PoiUpdateProcessorInte
     private function formatProgressLabel(string $label): string
     {
         $normalized = preg_replace('/\s+/u', ' ', trim($label));
+
         if (!is_string($normalized) || $normalized === '') {
             $normalized = $label;
         }
@@ -140,13 +142,16 @@ final readonly class DefaultPoiUpdateProcessor implements PoiUpdateProcessorInte
     private function resolveProgressLabel(Location $location): string
     {
         $displayName = trim($location->getDisplayName());
+
         if ($displayName !== '') {
             return $displayName;
         }
 
         $city = $location->getCity();
+
         if (is_string($city)) {
             $city = trim($city);
+
             if ($city !== '') {
                 return $city;
             }

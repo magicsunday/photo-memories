@@ -131,6 +131,7 @@ final readonly class OnThisDayOverYearsClusterStrategy implements ClusterStrateg
         ];
 
         $tags = $this->collectDominantTags($picked);
+
         if ($tags !== []) {
             $params = [...$params, ...$tags];
         }
@@ -138,6 +139,7 @@ final readonly class OnThisDayOverYearsClusterStrategy implements ClusterStrateg
         $params = $this->appendLocationMetadata($picked, $params);
 
         $qualityParams = $this->qualityAggregator->buildParams($picked);
+
         foreach ($qualityParams as $qualityKey => $qualityValue) {
             if ($qualityValue !== null) {
                 $params[$qualityKey] = $qualityValue;

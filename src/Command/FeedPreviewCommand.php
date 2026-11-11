@@ -217,6 +217,7 @@ final class FeedPreviewCommand extends Command
 
         // Optional Konsolidierung (mit internem Cap etc.)
         $restorePerMediaCap = false;
+
         if ($perMediaCap !== null) {
             $this->perMediaCapStage->setPerMediaCapOverride($perMediaCap);
             $restorePerMediaCap = true;
@@ -374,7 +375,7 @@ final class FeedPreviewCommand extends Command
             $to = $to->setTimezone($timezone);
         }
 
-        if ($from !== null && $to !== null) {
+        if ($from instanceof DateTimeImmutable && $to instanceof DateTimeImmutable) {
             $fromFormatted = $from->format('Y-m-d');
             $toFormatted   = $to->format('Y-m-d');
 
@@ -386,7 +387,8 @@ final class FeedPreviewCommand extends Command
         }
 
         $single = $from ?? $to;
-        if ($single === null) {
+
+        if (!$single instanceof DateTimeImmutable) {
             return '–';
         }
 

@@ -40,6 +40,7 @@ final class LocationCellIndex
             ->from(Location::class, 'l');
 
         $q = $qb->getQuery();
+
         if ($max !== null && $max > 0) {
             $q->setMaxResults($max);
         }
@@ -48,9 +49,11 @@ final class LocationCellIndex
         $it = $q->toIterable([], AbstractQuery::HYDRATE_ARRAY);
 
         $n = 0;
+
         foreach ($it as $row) {
             $cell = $row['cell'];
             $id   = $row['id'];
+
             if ($cell === '') {
                 continue;
             }
@@ -76,6 +79,7 @@ final class LocationCellIndex
     public function findByCell(string $cell): ?Location
     {
         $id = $this->cellToId[$cell] ?? null;
+
         if ($id === null || $id <= 0) {
             // fallback: first location for this cell (uses DB index on cell)
             /** @var Location|null $loc */
@@ -98,6 +102,7 @@ final class LocationCellIndex
 
         /** @var Location|null $loc */
         $loc = $this->em->find(Location::class, $id);
+
         if ($loc instanceof Location) {
             return $loc;
         }

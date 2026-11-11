@@ -59,6 +59,7 @@ final readonly class SolarEnricher implements SingleMetadataExtractorInterface
     public function extract(string $filepath, Media $media): Media
     {
         $local = $this->captureTimeResolver->resolve($media);
+
         if (!$local instanceof DateTimeImmutable) {
             return $media;
         }
@@ -69,6 +70,7 @@ final readonly class SolarEnricher implements SingleMetadataExtractorInterface
 
         $cacheKey  = $this->buildCacheKey($local, $lat, $lon);
         $sunEvents = $this->cache->get($cacheKey);
+
         if (!$sunEvents instanceof SolarEventResult) {
             $sunEvents = $this->sunTimesUtc($local, $lat, $lon);
             $this->cache->set($cacheKey, $sunEvents);
@@ -85,6 +87,7 @@ final readonly class SolarEnricher implements SingleMetadataExtractorInterface
         }
 
         $offsetSec = $local->getOffset();
+
         if ($offsetSec === 0 && $media->getTimezoneOffsetMin() !== null) {
             $offsetSec = $media->getTimezoneOffsetMin() * 60;
         }
@@ -140,6 +143,7 @@ final readonly class SolarEnricher implements SingleMetadataExtractorInterface
 
         $latR = deg2rad($lat);
         $cosH = (sin(deg2rad(-0.83)) - sin($latR) * sin($delta)) / (cos($latR) * cos($delta));
+
         if ($cosH < -1.0) {
             return new SolarEventResult(null, null, true, false);
         }

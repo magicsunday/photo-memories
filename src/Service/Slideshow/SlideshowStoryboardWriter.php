@@ -37,6 +37,7 @@ final readonly class SlideshowStoryboardWriter
     public function write(SlideshowJob $job): string
     {
         $baseDirectory = rtrim($this->storyboardDirectory, DIRECTORY_SEPARATOR);
+
         if ($baseDirectory === '') {
             throw new ProcessRuntimeException('Storyboard directory must not be empty.');
         }
@@ -46,6 +47,7 @@ final readonly class SlideshowStoryboardWriter
         }
 
         $targetDirectory = $baseDirectory . DIRECTORY_SEPARATOR . $job->id();
+
         if (!is_dir($targetDirectory) && !mkdir($targetDirectory, 0775, true) && !is_dir($targetDirectory)) {
             throw new ProcessRuntimeException(sprintf('Storyboard directory "%s" could not be created.', $targetDirectory));
         }
@@ -55,16 +57,19 @@ final readonly class SlideshowStoryboardWriter
         ];
 
         $transitionDuration = $job->transitionDuration();
+
         if ($transitionDuration !== null) {
             $storyboard['transitionDuration'] = $transitionDuration;
         }
 
         $transitionDurations = $job->transitionDurations();
+
         if ($transitionDurations !== []) {
             $storyboard['transitionDurations'] = $transitionDurations;
         }
 
         $audioTrack = $job->audioTrack();
+
         if ($audioTrack !== null) {
             $storyboard['music'] = $audioTrack;
         }

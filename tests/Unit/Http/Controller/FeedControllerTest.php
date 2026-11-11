@@ -457,6 +457,7 @@ final class FeedControllerTest extends TestCase
             ->willReturnCallback(
                 static function (array $ids, bool $onlyVideos = false) use ($mediaMap): array {
                     $result = [];
+
                     foreach ($ids as $id) {
                         if (isset($mediaMap[$id])) {
                             $result[] = $mediaMap[$id];
@@ -557,6 +558,7 @@ final class FeedControllerTest extends TestCase
             ->willReturnCallback(
                 static function (array $ids, bool $onlyVideos = false) use ($mediaMap): array {
                     $result = [];
+
                     foreach ($ids as $id) {
                         if (isset($mediaMap[$id])) {
                             $result[] = $mediaMap[$id];
@@ -1358,6 +1360,7 @@ final class FeedControllerTest extends TestCase
         $mediaRepo->method('findByIds')
             ->willReturnCallback(static function (array $ids) use ($mediaById): array {
                 $result = [];
+
                 foreach ($ids as $id) {
                     if (isset($mediaById[$id])) {
                         $result[] = $mediaById[$id];

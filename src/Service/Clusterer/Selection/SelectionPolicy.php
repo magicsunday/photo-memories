@@ -271,6 +271,7 @@ final readonly class SelectionPolicy
         }
 
         $weights = [];
+
         foreach ($this->sceneBucketWeights as $bucket => $weight) {
             $weights[$bucket] = $weight;
         }

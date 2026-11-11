@@ -95,6 +95,7 @@ final class PersistenceBatchStageTest extends TestCase
         $entityManager->expects(self::exactly(2))->method('flush')->willReturnCallback(
             function () use (&$persisted, &$nextId, &$counter): void {
                 ++$counter;
+
                 foreach ($persisted as $entity) {
                     if ($entity instanceof Media && $entity->getId() === null) {
                         $this->assignId($entity, $nextId++);

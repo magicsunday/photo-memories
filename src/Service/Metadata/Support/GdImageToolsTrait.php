@@ -42,6 +42,7 @@ trait GdImageToolsTrait
             $paths = array_values($thumbs);
             sort($paths, SORT_STRING);
             $p = $paths[0];
+
             if (is_file($p)) {
                 return $p;
             }
@@ -59,12 +60,14 @@ trait GdImageToolsTrait
     {
         // Try Imagick first (supports HEIC/AVIF if delegates installed)
         $imgk = ImagickImageAdapter::fromFile($path);
+
         if ($imgk instanceof ImageAdapterInterface) {
             return $imgk;
         }
 
         // Fallback to GD
         $gd = GdImageAdapter::fromFile($path);
+
         if ($gd instanceof ImageAdapterInterface) {
             return $gd;
         }
@@ -89,12 +92,14 @@ trait GdImageToolsTrait
 
         // pad to nibble boundary
         $padBits = (4 - ($len % 4)) % 4;
+
         if ($padBits > 0) {
             $bits = str_repeat('0', $padBits) . $bits;
             $len += $padBits;
         }
 
         $hex = '';
+
         for ($i = 0; $i < $len; $i += 4) {
             $chunk = substr($bits, $i, 4);
             $hex .= dechex((int) bindec($chunk));
@@ -121,8 +126,10 @@ trait GdImageToolsTrait
             $rgb = $src->exportRgbBytes($w, $h); // length = w*h*3
             $out = [];
             $idx = 0;
+
             for ($y = 0; $y < $h; ++$y) {
                 $row = [];
+
                 for ($x = 0; $x < $w; ++$x) {
                     $r     = (float) $rgb[$idx++]; // 0..255
                     $g     = (float) $rgb[$idx++];
@@ -139,8 +146,10 @@ trait GdImageToolsTrait
         // Generischer Fallback: wie bisher (GD o. ä.)
         $resized = $src->resize($w, $h);
         $out     = [];
+
         for ($y = 0; $y < $h; ++$y) {
             $row = [];
+
             for ($x = 0; $x < $w; ++$x) {
                 $row[] = $resized->getLuma($x, $y);
             }

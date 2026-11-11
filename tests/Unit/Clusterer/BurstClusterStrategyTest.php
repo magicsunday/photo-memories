@@ -110,6 +110,7 @@ final class BurstClusterStrategyTest extends TestCase
         self::assertArrayHasKey('context_people_count', $params);
 
         $deviceDiversity = $context->deviceDiversity();
+
         if ($deviceDiversity !== null) {
             self::assertSame($deviceDiversity, $params['context_device_diversity']);
         } else {

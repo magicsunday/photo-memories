@@ -75,10 +75,12 @@ final class HolidayClusterScoreHeuristic extends AbstractTimeRangeClusterScoreHe
         for ($d = $start; $d <= $end; $d = $d->modify('+1 day')) {
             if ($this->holidayResolver->isHoliday($d)) {
                 $onHoliday = true;
+
                 break;
             }
 
             $dow = (int) $d->format('N');
+
             if ($dow >= 6) {
                 $onWeekend = true;
             }

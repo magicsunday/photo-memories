@@ -38,6 +38,7 @@ final class NestingResolverStage implements ClusterConsolidationStageInterface
     public function __construct(array $keepOrder)
     {
         $base = count($keepOrder);
+
         foreach ($keepOrder as $index => $algorithm) {
             $this->priorityMap[$algorithm] = $base - $index;
         }
@@ -56,6 +57,7 @@ final class NestingResolverStage implements ClusterConsolidationStageInterface
     public function process(array $drafts, ?callable $progress = null): array
     {
         $total = count($drafts);
+
         if ($total <= 1) {
             if ($progress !== null) {
                 $progress($total, $total);
@@ -101,8 +103,10 @@ final class NestingResolverStage implements ClusterConsolidationStageInterface
                 $childIndex  = $preferLeft ? $j : $i;
 
                 $currentParent = $parentByChild[$childIndex] ?? null;
+
                 if ($currentParent === null) {
                     $parentByChild[$childIndex] = $parentIndex;
+
                     continue;
                 }
 
@@ -146,6 +150,7 @@ final class NestingResolverStage implements ClusterConsolidationStageInterface
             ];
 
             $classification = $child->getParams()['classification'] ?? null;
+
             if (is_string($classification) && $classification !== '') {
                 $metadata['classification'] = $classification;
             }
@@ -212,6 +217,7 @@ final class NestingResolverStage implements ClusterConsolidationStageInterface
     {
         $subsetCount   = count($subset);
         $supersetCount = count($superset);
+
         if ($subsetCount === 0 || $subsetCount > $supersetCount) {
             return false;
         }
@@ -226,11 +232,13 @@ final class NestingResolverStage implements ClusterConsolidationStageInterface
             if ($subsetValue === $supersetValue) {
                 ++$i;
                 ++$j;
+
                 continue;
             }
 
             if ($subsetValue > $supersetValue) {
                 ++$j;
+
                 continue;
             }
 

@@ -111,6 +111,7 @@ final readonly class VisionSignatureExtractor implements SingleMetadataExtractor
 
         if ($this->isVideoMedia($media)) {
             $posterPath = $this->createPosterFrame($filepath);
+
             if ($posterPath === null) {
                 return $media;
             }
@@ -118,6 +119,7 @@ final readonly class VisionSignatureExtractor implements SingleMetadataExtractor
             $sourcePath = $posterPath;
         } else {
             $resolved = $this->resolveImageSource($media);
+
             if (is_string($resolved)) {
                 $sourcePath = $resolved;
             }
@@ -131,6 +133,7 @@ final readonly class VisionSignatureExtractor implements SingleMetadataExtractor
 
         try {
             $adapter = $this->createImageAdapter($sourcePath);
+
             if (!$adapter instanceof ImageAdapterInterface) {
                 return $media;
             }
@@ -148,6 +151,7 @@ final readonly class VisionSignatureExtractor implements SingleMetadataExtractor
 
             if ($width !== null && $height !== null && $width > 0 && $height > 0 && ($media->isPortrait() === null || $media->isPanorama() === null)) {
                 [$isPortrait, $isPanorama] = $this->deriveAspectFlags($media, $width, $height);
+
                 if ($media->isPortrait() === null) {
                     $media->setIsPortrait($isPortrait);
                 }
@@ -200,6 +204,7 @@ final readonly class VisionSignatureExtractor implements SingleMetadataExtractor
         }
 
         $orientation = $media->getOrientation();
+
         if ($orientation !== null && in_array($orientation, [5, 6, 7, 8], true)) {
             [$width, $height] = [$height, $width];
         }
@@ -228,6 +233,7 @@ final readonly class VisionSignatureExtractor implements SingleMetadataExtractor
 
             for ($y = 0; $y < $h; ++$y) {
                 $row = [];
+
                 for ($x = 0; $x < $w; ++$x) {
                     $row[] = [
                         (float) $rgb[$idx++],
@@ -247,6 +253,7 @@ final readonly class VisionSignatureExtractor implements SingleMetadataExtractor
 
         for ($y = 0; $y < $h; ++$y) {
             $row = [];
+
             for ($x = 0; $x < $w; ++$x) {
                 if ($resized instanceof GdImageAdapter) {
                     $color = imagecolorat($resized->getNative(), $x, $y);
@@ -309,6 +316,7 @@ final readonly class VisionSignatureExtractor implements SingleMetadataExtractor
                 } else {
                     $s   = ($maxChannel - $minChannel) / $maxChannel;
                     $bin = (int) round($s * 100.0);
+
                     if ($bin < 0) {
                         $bin = 0;
                     }
@@ -328,6 +336,7 @@ final readonly class VisionSignatureExtractor implements SingleMetadataExtractor
         }
 
         $clipped = 0;
+
         for ($i = 98; $i <= 100; ++$i) {
             $clipped += $bins[$i];
         }
@@ -344,6 +353,7 @@ final readonly class VisionSignatureExtractor implements SingleMetadataExtractor
     {
         $h = count($m);
         $w = $h > 0 ? count($m[0]) : 0;
+
         if ($w < 1) {
             return [0.0, 0.0, 0.0];
         }
@@ -356,9 +366,10 @@ final readonly class VisionSignatureExtractor implements SingleMetadataExtractor
 
         for ($y = 0; $y < $h; ++$y) {
             $row = $m[$y];
+
             for ($x = 0; $x < $w; ++$x) {
                 $L = $row[$x]; // [0..255]
-                $sum += $L;
+                $sum  += $L;
                 $sum2 += $L * $L;
                 $k        = (int) $L;
                 $hist[$k] = ($hist[$k] ?? 0) + 1;
@@ -370,6 +381,7 @@ final readonly class VisionSignatureExtractor implements SingleMetadataExtractor
         $std  = sqrt($var);
 
         $entropy = 0.0;
+
         foreach ($hist as $count) {
             $p = $count / (float) $n;
             $entropy += -$p * log($p + 1e-12) / log(2.0);
@@ -390,6 +402,7 @@ final readonly class VisionSignatureExtractor implements SingleMetadataExtractor
     {
         $h = count($m);
         $w = $h > 0 ? count($m[0]) : 0;
+
         if ($w < 3 || $h < 3) {
             return 0.0;
         }
@@ -405,7 +418,7 @@ final readonly class VisionSignatureExtractor implements SingleMetadataExtractor
                     - $m[$y][$x + 1]
                     - $m[$y - 1][$x]
                     - $m[$y + 1][$x];
-                $sum += $L;
+                $sum  += $L;
                 $sum2 += $L * $L;
                 ++$n;
             }
@@ -432,12 +445,14 @@ final readonly class VisionSignatureExtractor implements SingleMetadataExtractor
     {
         $h = count($m);
         $w = $h > 0 ? count($m[0]) : 0;
+
         if ($w < 4 || $h < 4) {
             return 0.0;
         }
 
         $acc = 0.0;
         $n   = 0;
+
         // 4-pixel stride for speed – good enough for a proxy
         for ($y = 0; $y < $h - 1; $y += 4) {
             for ($x = 0; $x < $w - 1; $x += 4) {
@@ -479,6 +494,7 @@ final readonly class VisionSignatureExtractor implements SingleMetadataExtractor
 
         for ($y = 0; $y < $height; ++$y) {
             $row = $lumaMatrix[$y];
+
             for ($x = 0; $x < $width; ++$x) {
                 $sum += $row[$x];
                 ++$count;
@@ -495,6 +511,7 @@ final readonly class VisionSignatureExtractor implements SingleMetadataExtractor
         for ($y = 0; $y < $height; ++$y) {
             $row     = $lumaMatrix[$y];
             $normRow = [];
+
             for ($x = 0; $x < $width; ++$x) {
                 $normRow[] = [($row[$x] - $mean) / 255.0, 0.0];
             }
@@ -563,16 +580,19 @@ final readonly class VisionSignatureExtractor implements SingleMetadataExtractor
     private function fft2d(array $matrix): array
     {
         $height = count($matrix);
+
         if ($height === 0) {
             return [];
         }
 
         $width = count($matrix[0]);
+
         if ($width === 0) {
             return [];
         }
 
         $rowsTransformed = [];
+
         for ($y = 0; $y < $height; ++$y) {
             $rowsTransformed[$y] = $this->dft1d($matrix[$y]);
         }
@@ -581,6 +601,7 @@ final readonly class VisionSignatureExtractor implements SingleMetadataExtractor
 
         for ($x = 0; $x < $width; ++$x) {
             $column = [];
+
             for ($y = 0; $y < $height; ++$y) {
                 $column[] = $rowsTransformed[$y][$x];
             }
@@ -603,6 +624,7 @@ final readonly class VisionSignatureExtractor implements SingleMetadataExtractor
     private function dft1d(array $signal): array
     {
         $length = count($signal);
+
         if ($length === 0) {
             return [];
         }

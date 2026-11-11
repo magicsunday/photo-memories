@@ -55,17 +55,20 @@ final class DominanceSelectionStage implements ClusterConsolidationStageInterfac
         }
 
         $base = count($keepOrder);
+
         foreach ($keepOrder as $index => $algorithm) {
             $this->priorityMap[$algorithm] = $base - $index;
         }
 
         foreach ($this->classificationPriority as $algorithm => $classifications) {
             $count = count($classifications);
+
             if ($count === 0) {
                 continue;
             }
 
             $priorityMap = [];
+
             foreach ($classifications as $index => $classification) {
                 if ($classification === '') {
                     continue;
@@ -131,6 +134,7 @@ final class DominanceSelectionStage implements ClusterConsolidationStageInterfac
 
         /** @var array<string,list<int>> $byAlgorithm */
         $byAlgorithm = [];
+
         foreach ($drafts as $index => $draft) {
             $algorithm = $draft->getAlgorithm();
             $byAlgorithm[$algorithm] ??= [];
@@ -156,6 +160,7 @@ final class DominanceSelectionStage implements ClusterConsolidationStageInterfac
 
         foreach ($order as $algorithm) {
             $indices = $byAlgorithm[$algorithm] ?? [];
+
             if ($indices === []) {
                 continue;
             }
@@ -165,24 +170,28 @@ final class DominanceSelectionStage implements ClusterConsolidationStageInterfac
                 $draftB = $drafts[$b];
                 $scoreA = $this->computeScore($draftA, $normalized[$a]);
                 $scoreB = $this->computeScore($draftB, $normalized[$b]);
+
                 if ($scoreA !== $scoreB) {
                     return $scoreA < $scoreB ? 1 : -1;
                 }
 
                 $priorityA = ($this->priorityMap[$draftA->getAlgorithm()] ?? 0);
                 $priorityB = ($this->priorityMap[$draftB->getAlgorithm()] ?? 0);
+
                 if ($priorityA !== $priorityB) {
                     return $priorityA < $priorityB ? 1 : -1;
                 }
 
                 $classificationPriorityA = $this->resolveClassificationPriority($draftA);
                 $classificationPriorityB = $this->resolveClassificationPriority($draftB);
+
                 if ($classificationPriorityA !== $classificationPriorityB) {
                     return $classificationPriorityA < $classificationPriorityB ? 1 : -1;
                 }
 
                 $sizeA = count($normalized[$a]);
                 $sizeB = count($normalized[$b]);
+
                 if ($sizeA !== $sizeB) {
                     return $sizeA < $sizeB ? 1 : -1;
                 }
@@ -192,38 +201,47 @@ final class DominanceSelectionStage implements ClusterConsolidationStageInterfac
 
             foreach ($indices as $candidate) {
                 ++$processed;
+
                 if ($progress !== null && ($processed % 200) === 0) {
                     $progress($processed, $total);
                 }
 
                 $candidateDraft = $drafts[$candidate];
+
                 if ($this->isSubStory($candidateDraft)) {
                     $selected[] = $candidate;
                     ++$subStories;
+
                     continue;
                 }
 
                 $reject = false;
+
                 foreach ($selected as $winner) {
                     $winnerDraft = $drafts[$winner];
+
                     if ($this->isSubStory($winnerDraft)) {
                         continue;
                     }
 
                     $overlap = $this->jaccard($normalized[$candidate], $normalized[$winner]);
+
                     if ($overlap >= $this->overlapDropThreshold) {
                         $reject = true;
+
                         break;
                     }
 
                     if ($overlap >= $this->overlapMergeThreshold) {
                         $reject = true;
+
                         break;
                     }
                 }
 
                 if ($reject) {
                     ++$rejectedCandidates;
+
                     continue;
                 }
 
@@ -258,12 +276,14 @@ final class DominanceSelectionStage implements ClusterConsolidationStageInterfac
     {
         $algorithm = $draft->getAlgorithm();
         $map       = $this->classificationPriorityMap[$algorithm] ?? null;
+
         if ($map === null) {
             return 0;
         }
 
         $params         = $draft->getParams();
         $classification = $params['classification'] ?? null;
+
         if (!is_string($classification) || $classification === '') {
             return 0;
         }

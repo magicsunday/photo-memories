@@ -70,13 +70,16 @@ final class TimeStage extends AbstractExtractorStage
         $context = $this->runExtractors($context, $this->extractors);
 
         $media = $context->getMedia();
+
         if (!$media instanceof Media) {
             return $context;
         }
 
         $inspection = $this->metadataQaInspector->inspect($context->getFilePath(), $media);
+
         if ($inspection->hasIssues()) {
             $entry = $inspection->toIndexLogEntry();
+
             if ($entry instanceof IndexLogEntry) {
                 IndexLogHelper::appendEntry($media, $entry);
             }

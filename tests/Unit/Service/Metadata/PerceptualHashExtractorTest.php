@@ -95,6 +95,7 @@ final class PerceptualHashExtractorTest extends TestCase
     public function hashesVideoViaPosterFrame(): void
     {
         $videoBase = tempnam(sys_get_temp_dir(), 'vid_');
+
         if ($videoBase === false) {
             self::fail('Unable to create temporary video fixture.');
         }
@@ -209,6 +210,7 @@ final class PerceptualHashExtractorTest extends TestCase
     private function createGradientImage(): string
     {
         $base = tempnam(sys_get_temp_dir(), 'hash_');
+
         if ($base === false) {
             self::fail('Unable to create temporary image.');
         }
@@ -217,6 +219,7 @@ final class PerceptualHashExtractorTest extends TestCase
         unlink($base);
 
         $image = imagecreatetruecolor(64, 64);
+
         for ($y = 0; $y < 64; ++$y) {
             for ($x = 0; $x < 64; ++$x) {
                 $gray  = ($x + $y) % 256;
@@ -253,6 +256,7 @@ final class PerceptualHashExtractorTest extends TestCase
     private function createRotatedCopy(string $sourcePath, int $degrees, int $orientation): string
     {
         $image = @imagecreatefromjpeg($sourcePath);
+
         if ($image === false) {
             self::fail('Unable to read source image for rotation.');
         }
@@ -265,6 +269,7 @@ final class PerceptualHashExtractorTest extends TestCase
         }
 
         $base = tempnam(sys_get_temp_dir(), 'rot_');
+
         if ($base === false) {
             imagedestroy($rotated);
             self::fail('Unable to create temporary rotated image.');
@@ -298,6 +303,7 @@ final class PerceptualHashExtractorTest extends TestCase
     private function embedExifOrientation(string $path, int $orientation): void
     {
         $data = file_get_contents($path);
+
         if ($data === false || !str_starts_with($data, "\xFF\xD8")) {
             self::fail('Unable to read JPEG for EXIF injection.');
         }
@@ -317,6 +323,7 @@ final class PerceptualHashExtractorTest extends TestCase
         $app1    = "\xFF\xE1" . chr(($length >> 8) & 0xFF) . chr($length & 0xFF) . $payload;
 
         $rewritten = substr($data, 0, 2) . $app1 . substr($data, 2);
+
         if (file_put_contents($path, $rewritten) === false) {
             self::fail('Unable to write EXIF-tagged rotated image.');
         }
@@ -338,6 +345,7 @@ final class PerceptualHashExtractorTest extends TestCase
     private function skipUnlessPosterStubIsExecutable(string $ffmpeg): void
     {
         $probe = tempnam(sys_get_temp_dir(), 'poster_probe_');
+
         if ($probe === false) {
             self::markTestSkipped('Unable to create a poster-frame probe file.');
         }
@@ -385,6 +393,7 @@ final class PerceptualHashExtractorTest extends TestCase
         $right  = str_pad($right, $length, '0');
 
         $distance = 0;
+
         for ($index = 0; $index < $length; ++$index) {
             $leftNibble  = (int) base_convert($left[$index], 16, 10);
             $rightNibble = (int) base_convert($right[$index], 16, 10);
@@ -404,6 +413,7 @@ final class PerceptualHashExtractorTest extends TestCase
     private function bitCount(int $value): int
     {
         $count = 0;
+
         while ($value > 0) {
             $count += $value & 1;
             $value >>= 1;

@@ -123,6 +123,7 @@ final readonly class TimeNormalizer implements SingleMetadataExtractorInterface
         }
 
         $parsed = $this->filenameDateParser->parse($filepath, $this->defaultTimezone());
+
         if (!$parsed instanceof DateTimeImmutable) {
             return;
         }
@@ -147,6 +148,7 @@ final readonly class TimeNormalizer implements SingleMetadataExtractorInterface
         }
 
         $fileInstant = $this->fileModificationInstant($filepath);
+
         if (!$fileInstant instanceof DateTimeImmutable) {
             return;
         }
@@ -161,6 +163,7 @@ final readonly class TimeNormalizer implements SingleMetadataExtractorInterface
     private function fileModificationInstant(string $filepath): ?DateTimeImmutable
     {
         $timestamp = @filemtime($filepath);
+
         if (!is_int($timestamp)) {
             return null;
         }
@@ -175,15 +178,18 @@ final readonly class TimeNormalizer implements SingleMetadataExtractorInterface
     private function normaliseTimezone(Media $media): void
     {
         $takenAt = $media->getTakenAt();
+
         if (!$takenAt instanceof DateTimeImmutable) {
             return;
         }
 
         $local = $this->captureTimeResolver->resolve($media);
+
         if (!$local instanceof DateTimeImmutable) {
             $timezone = $this->defaultTimezone();
             $local    = $takenAt->setTimezone($timezone);
             $media->setCapturedLocal($local);
+
             if ($media->getTzId() === null) {
                 $media->setTzId($timezone->getName());
             }
@@ -255,6 +261,7 @@ final readonly class TimeNormalizer implements SingleMetadataExtractorInterface
             }
 
             $token = $this->mapPriorityToken($entry);
+
             if ($token !== null) {
                 $normalised[$token] = true;
             }
@@ -285,11 +292,13 @@ final readonly class TimeNormalizer implements SingleMetadataExtractorInterface
         }
 
         $takenAt = $media->getTakenAt();
+
         if (!$takenAt instanceof DateTimeImmutable) {
             return;
         }
 
         $fileInstant = $this->fileModificationInstant($filepath);
+
         if (!$fileInstant instanceof DateTimeImmutable) {
             return;
         }

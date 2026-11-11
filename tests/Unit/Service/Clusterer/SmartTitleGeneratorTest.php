@@ -58,7 +58,8 @@ final class SmartTitleGeneratorTest extends TestCase
     #[Test]
     public function rendersTitleAndSubtitleUsingTemplates(): void
     {
-        $generator = $this->createGenerator(<<<'YAML'
+        $generator = $this->createGenerator(
+            <<<'YAML'
 de:
   time_similarity:
     title: "Trip nach {{ place_city|place }}"
@@ -85,7 +86,8 @@ YAML
     #[Test]
     public function fallsBackToDefaultLocaleWhenRequestedLocaleMissing(): void
     {
-        $generator = $this->createGenerator(<<<'YAML'
+        $generator = $this->createGenerator(
+            <<<'YAML'
 de:
   vacation:
     title: "Reise nach {{ place_city|place_region|place_country|place }}"
@@ -133,7 +135,8 @@ YAML
     #[Test]
     public function fallsBackToPlaceWhenComponentsMissing(): void
     {
-        $generator = $this->createGenerator(<<<'YAML'
+        $generator = $this->createGenerator(
+            <<<'YAML'
 de:
   vacation:
     title: "Reise nach {{ place_city|place_region|place_country|place }}"
@@ -158,7 +161,8 @@ YAML
     #[Test]
     public function prefersRegionWhenCityIsMissing(): void
     {
-        $generator = $this->createGenerator(<<<'YAML'
+        $generator = $this->createGenerator(
+            <<<'YAML'
 de:
   vacation:
     title: "Reise nach {{ place_city|place_region|place_country|place }}"
@@ -184,7 +188,8 @@ YAML
     #[Test]
     public function normalizesLowercasePlaceValues(): void
     {
-        $generator = $this->createGenerator(<<<'YAML'
+        $generator = $this->createGenerator(
+            <<<'YAML'
 de:
   location_similarity:
     title: "Unterwegs in {{ place }}"
@@ -214,7 +219,8 @@ YAML
     #[Test]
     public function rendersVacationRouteWithMetrics(): void
     {
-        $generator = $this->createGenerator(<<<'YAML'
+        $generator = $this->createGenerator(
+            <<<'YAML'
 de:
   vacation:
     title: "{{ vacation_title }}"
@@ -277,7 +283,8 @@ YAML
     #[Test]
     public function rendersVacationTitleWithCohortNames(): void
     {
-        $generator = $this->createGenerator(<<<'YAML'
+        $generator = $this->createGenerator(
+            <<<'YAML'
 de:
   vacation:
     title: "{{ vacation_title }}"
@@ -343,7 +350,8 @@ YAML
     #[Test]
     public function rendersSpecialSubtitlesForHighlightedPlaces(): void
     {
-        $generator = $this->createGenerator(<<<'YAML'
+        $generator = $this->createGenerator(
+            <<<'YAML'
 de:
   significant_place:
     title: "Besonderer Ort: {{ place }}"
@@ -384,11 +392,13 @@ YAML
     private function createGenerator(string $yaml, string $defaultLocale = 'de'): SmartTitleGenerator
     {
         $path = tempnam(sys_get_temp_dir(), 'titles_');
+
         if ($path === false) {
             self::fail('Failed to create temporary template file.');
         }
 
         $result = file_put_contents($path, $yaml);
+
         if ($result === false) {
             self::fail('Failed to write template configuration.');
         }
@@ -406,6 +416,7 @@ YAML
     private function hashPersonName(string $name): int
     {
         $normalized = trim(mb_strtolower($name, 'UTF-8'));
+
         if ($normalized === '') {
             return 1;
         }

@@ -225,6 +225,7 @@ final class DeviceSimilarityStrategyTest extends TestCase
         $membersByDevice = [];
         $ownersByDevice  = [];
         $serialByDevice  = [];
+
         foreach ($clusters as $cluster) {
             $params                        = $cluster->getParams();
             $deviceLabel                   = $params['device'];
@@ -322,6 +323,7 @@ final class DeviceSimilarityStrategyTest extends TestCase
                 $media->setCameraModel($camera);
                 $media->setLensModel($lensModel);
                 $media->setContentKind($contentKind);
+
                 if ($cameraMake !== null) {
                     $media->setCameraMake($cameraMake);
                 }

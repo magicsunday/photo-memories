@@ -123,8 +123,10 @@ final readonly class DefaultHomeLocator implements HomeLocatorInterface
 
             $country      = null;
             $locationInfo = $tz->getLocation();
+
             if (is_array($locationInfo)) {
                 $countryCode = $locationInfo['country_code'];
+
                 if ($countryCode !== '') {
                     $country = strtolower($countryCode);
                 }
@@ -167,6 +169,7 @@ final readonly class DefaultHomeLocator implements HomeLocatorInterface
 
         foreach ($items as $media) {
             $takenAt = $media->getTakenAt();
+
             if (!$takenAt instanceof DateTimeImmutable) {
                 continue;
             }
@@ -176,6 +179,7 @@ final readonly class DefaultHomeLocator implements HomeLocatorInterface
 
             $lat = $media->getGpsLat();
             $lon = $media->getGpsLon();
+
             if ($lat === null) {
                 continue;
             }
@@ -218,9 +222,11 @@ final readonly class DefaultHomeLocator implements HomeLocatorInterface
             }
 
             $location = $media->getLocation();
+
             if ($location instanceof Location) {
                 $countryCode = $location->getCountryCode();
                 $country     = $countryCode ?? $location->getCountry();
+
                 if ($country !== null) {
                     $countryKey = strtolower($country);
                     $clusters[$key]['countryCounts'][$countryKey] ??= 0;
@@ -230,6 +236,7 @@ final readonly class DefaultHomeLocator implements HomeLocatorInterface
             }
 
             $offset = $media->getTimezoneOffsetMin();
+
             if ($offset !== null) {
                 $clusters[$key]['offsets'][$offset] ??= 0;
 
@@ -242,6 +249,7 @@ final readonly class DefaultHomeLocator implements HomeLocatorInterface
         }
 
         $summaries = $this->summariseClusters($clusters);
+
         if ($summaries === []) {
             return null;
         }
@@ -274,18 +282,22 @@ final readonly class DefaultHomeLocator implements HomeLocatorInterface
     private function homeClusterKey(Media $media, float $lat, float $lon): string
     {
         $location = $media->getLocation();
+
         if ($location instanceof Location) {
             $cell = $location->getCell();
+
             if ($cell !== '') {
                 return 'cell:' . $cell;
             }
 
             $countryCode = $location->getCountryCode();
+
             if ($countryCode !== null) {
                 return 'country:' . strtolower($countryCode);
             }
 
             $country = $location->getCountry();
+
             if ($country !== null && $country !== '') {
                 return 'country:' . strtolower($country);
             }
@@ -331,6 +343,7 @@ final readonly class DefaultHomeLocator implements HomeLocatorInterface
             }
 
             $maxDistanceKm = 0.0;
+
             foreach ($members as $media) {
                 $lat = $media->getGpsLat();
                 $lon = $media->getGpsLon();
@@ -487,6 +500,7 @@ final readonly class DefaultHomeLocator implements HomeLocatorInterface
         }
 
         $distances = [];
+
         foreach ($nightSamples as $sample) {
             $distances[] = MediaMath::haversineDistanceInMeters(
                 $sample['lat'],
@@ -500,6 +514,7 @@ final readonly class DefaultHomeLocator implements HomeLocatorInterface
 
         $count = count($distances);
         $index = (int) ceil($count * self::NIGHT_RADIUS_PERCENTILE) - 1;
+
         if ($index < 0) {
             $index = 0;
         } elseif ($index >= $count) {

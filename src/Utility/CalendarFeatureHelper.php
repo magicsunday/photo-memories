@@ -45,26 +45,32 @@ final class CalendarFeatureHelper
 
         $bag         = $media->getFeatureBag();
         $seasonValue = $bag->calendarSeason();
+
         if ($seasonValue !== null) {
             $seasonValue = trim($seasonValue);
+
             if ($seasonValue !== '') {
                 $season = $seasonValue;
             }
         }
 
         $isWeekendValue = $bag->calendarIsWeekend();
+
         if ($isWeekendValue !== null) {
             $isWeekend = $isWeekendValue;
         }
 
         $isHolidayValue = $bag->calendarIsHoliday();
+
         if ($isHolidayValue !== null) {
             $isHoliday = $isHolidayValue;
         }
 
         $holidayIdValue = $bag->calendarHolidayId();
+
         if ($holidayIdValue !== null) {
             $holidayIdValue = trim($holidayIdValue);
+
             if ($holidayIdValue !== '') {
                 $holidayId = $holidayIdValue;
             }
@@ -94,6 +100,7 @@ final class CalendarFeatureHelper
         foreach ($items as $media) {
             $features  = self::extract($media);
             $isWeekend = $features['isWeekend'];
+
             if ($isWeekend === true) {
                 ++$weekendTrue;
             } elseif ($isWeekend === false) {
@@ -101,12 +108,14 @@ final class CalendarFeatureHelper
             }
 
             $holidayId = $features['holidayId'];
+
             if ($holidayId !== null) {
                 $holidayIds[$holidayId] = true;
             }
         }
 
         $isWeekend = null;
+
         if ($weekendTrue > 0 && $weekendFalse === 0) {
             $isWeekend = true;
         } elseif ($weekendFalse > 0 && $weekendTrue === 0) {
@@ -114,6 +123,7 @@ final class CalendarFeatureHelper
         }
 
         $holidayId = null;
+
         if (count($holidayIds) === 1) {
             $holidayId = array_key_first($holidayIds);
         }

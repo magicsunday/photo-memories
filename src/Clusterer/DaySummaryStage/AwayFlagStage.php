@@ -55,6 +55,7 @@ final readonly class AwayFlagStage implements DaySummaryStageInterface
         }
 
         $duration = $this->nightWindowEndHour - $this->nightWindowStartHour;
+
         if ($duration <= 0) {
             $duration += 24;
         }
@@ -71,6 +72,7 @@ final readonly class AwayFlagStage implements DaySummaryStageInterface
         /** @var array<string, mixed> $days */
         $keys           = array_keys($days);
         $nightAwayFlags = [];
+
         foreach ($keys as $index => $key) {
             $nextKey     = $keys[$index + 1] ?? null;
             $summary     = $days[$key];
@@ -85,6 +87,7 @@ final readonly class AwayFlagStage implements DaySummaryStageInterface
 
                 if (($days[$key]['isAwayCandidate'] ?? false) === false) {
                     $window = $this->createNightWindow($summary['date'], $timezone);
+
                     if ($window !== null && !$this->hasStaypointCoveringWindow($summary['staypoints'] ?? [], $window['start'], $window['end'])) {
                         $days[$key]['isAwayCandidate'] = true;
                     }
@@ -109,6 +112,7 @@ final readonly class AwayFlagStage implements DaySummaryStageInterface
 
         $baseFlags     = [];
         $distanceFlags = [];
+
         foreach ($keys as $key) {
             $summary             = $days[$key];
             $baseFlags[$key]     = (bool) $summary['baseAway'];
@@ -123,6 +127,7 @@ final readonly class AwayFlagStage implements DaySummaryStageInterface
         }
 
         $combinedFlags = [];
+
         foreach ($keys as $key) {
             $combinedFlags[$key] = (bool) $days[$key]['baseAway'];
         }
@@ -153,11 +158,13 @@ final readonly class AwayFlagStage implements DaySummaryStageInterface
         }
 
         $dominantStaypoints = $nextSummary['dominantStaypoints'] ?? [];
+
         if ($dominantStaypoints === []) {
             return false;
         }
 
         $dominant = $dominantStaypoints[0];
+
         if (!isset($dominant['lat'], $dominant['lon'])) {
             return false;
         }
@@ -178,11 +185,13 @@ final readonly class AwayFlagStage implements DaySummaryStageInterface
             (float) $dominant['lon'],
             $dominantTimestamp,
         );
+
         if ($nearest['distance_km'] <= $nearest['radius_km'] * $this->nextDayDominantDistanceFactor) {
             return false;
         }
 
         $window = $this->createNightWindow($summary['date'], $timezone);
+
         if ($window === null) {
             return false;
         }
@@ -200,6 +209,7 @@ final readonly class AwayFlagStage implements DaySummaryStageInterface
     private function createNightWindow(string $date, DateTimeZone $timezone): ?array
     {
         $start = DateTimeImmutable::createFromFormat('Y-m-d H:i:s', sprintf('%s %02d:00:00', $date, $this->nightWindowStartHour), $timezone);
+
         if ($start === false) {
             return null;
         }
@@ -229,6 +239,7 @@ final readonly class AwayFlagStage implements DaySummaryStageInterface
         foreach ($staypoints as $staypoint) {
             $stayStart = $staypoint['start'];
             $stayEnd   = $staypoint['end'];
+
             if ($stayStart === 0) {
                 continue;
             }
@@ -268,6 +279,7 @@ final readonly class AwayFlagStage implements DaySummaryStageInterface
         foreach ($staypoints as $staypoint) {
             $stayStart = $staypoint['start'];
             $stayEnd   = $staypoint['end'];
+
             if ($stayEnd < $startTs) {
                 continue;
             }
@@ -280,6 +292,7 @@ final readonly class AwayFlagStage implements DaySummaryStageInterface
             $overlapEnd   = min($stayEnd > 0 ? $stayEnd : $endTs, $endTs);
 
             $timestamp = null;
+
             if ($overlapStart <= $overlapEnd) {
                 $timestamp = $overlapStart;
             } elseif ($stayStart > 0) {
@@ -294,6 +307,7 @@ final readonly class AwayFlagStage implements DaySummaryStageInterface
                 $staypoint['lon'],
                 $timestamp,
             );
+
             if ($nearest['distance_km'] <= $nearest['radius_km']) {
                 return true;
             }
@@ -340,6 +354,7 @@ final readonly class AwayFlagStage implements DaySummaryStageInterface
 
         $first = null;
         $last  = null;
+
         foreach ($keys as $index => $key) {
             if ($flags[$key] === true) {
                 $first ??= $index;

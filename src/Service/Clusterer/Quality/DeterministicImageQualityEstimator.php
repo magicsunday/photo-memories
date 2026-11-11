@@ -48,6 +48,7 @@ final readonly class DeterministicImageQualityEstimator implements ImageQualityE
     public function scoreStill(Media $media): ImageQualityScore
     {
         $matrixData = $this->loadLumaMatrixFromPath($media->getPath());
+
         if ($matrixData === null) {
             return $this->neutralScore();
         }
@@ -66,6 +67,7 @@ final readonly class DeterministicImageQualityEstimator implements ImageQualityE
         $penalty = 0.0;
 
         $duration = $media->getVideoDurationS();
+
         if ($duration !== null) {
             if ($duration < 2.0) {
                 $penalty += $this->normalizeRange(2.0 - $duration, 0.0, 2.0) * 0.5;
@@ -79,6 +81,7 @@ final readonly class DeterministicImageQualityEstimator implements ImageQualityE
         }
 
         $fps = $media->getVideoFps();
+
         if ($fps !== null) {
             if ($fps < 20.0) {
                 $penalty += $this->normalizeRange(20.0 - $fps, 0.0, 20.0) * 0.3;
@@ -119,6 +122,7 @@ final readonly class DeterministicImageQualityEstimator implements ImageQualityE
     private function buildBaseScore(array $matrixData): ImageQualityScore
     {
         [$luma, $width, $height] = $matrixData;
+
         if ($width < 3 || $height < 3) {
             return $this->neutralScore();
         }
@@ -168,11 +172,13 @@ final readonly class DeterministicImageQualityEstimator implements ImageQualityE
         }
 
         $contents = @file_get_contents($path);
+
         if ($contents === false) {
             return null;
         }
 
         $resource = @imagecreatefromstring($contents);
+
         if ($resource === false) {
             return null;
         }
@@ -181,6 +187,7 @@ final readonly class DeterministicImageQualityEstimator implements ImageQualityE
         $height = imagesy($resource);
 
         $largest = max($width, $height);
+
         if ($largest > self::MAX_SAMPLE_DIMENSION && function_exists('imagescale')) {
             $scale  = self::MAX_SAMPLE_DIMENSION / $largest;
             $scaled = imagescale(
@@ -188,6 +195,7 @@ final readonly class DeterministicImageQualityEstimator implements ImageQualityE
                 max(1, (int) ($width * $scale)),
                 max(1, (int) ($height * $scale))
             );
+
             if ($scaled !== false) {
                 imagedestroy($resource);
                 $resource = $scaled;
@@ -198,8 +206,10 @@ final readonly class DeterministicImageQualityEstimator implements ImageQualityE
 
         $matrix    = [];
         $trueColor = imageistruecolor($resource);
+
         for ($y = 0; $y < $height; ++$y) {
             $row = [];
+
             for ($x = 0; $x < $width; ++$x) {
                 if ($trueColor) {
                     $value = imagecolorat($resource, $x, $y);
@@ -208,6 +218,7 @@ final readonly class DeterministicImageQualityEstimator implements ImageQualityE
                     $b     = $value & 0xFF;
                 } else {
                     $index = imagecolorat($resource, $x, $y);
+
                     if ($index === false) {
                         $index = 0;
                     }
@@ -258,7 +269,7 @@ final readonly class DeterministicImageQualityEstimator implements ImageQualityE
                     - $luma[$y][$x - 1]
                     - $luma[$y][$x + 1];
 
-                $sum += $lap;
+                $sum   += $lap;
                 $sumSq += $lap * $lap;
                 ++$count;
             }
@@ -307,7 +318,7 @@ final readonly class DeterministicImageQualityEstimator implements ImageQualityE
 
         for ($y = 0; $y < $height; ++$y) {
             foreach ($luma[$y] as $value) {
-                $sum += $value;
+                $sum   += $value;
                 $sumSq += $value * $value;
             }
         }
@@ -332,6 +343,7 @@ final readonly class DeterministicImageQualityEstimator implements ImageQualityE
         for ($y = 1; $y < $height - 1; ++$y) {
             for ($x = 1; $x < $width - 1; ++$x) {
                 $neighbourSum = 0.0;
+
                 for ($dy = -1; $dy <= 1; ++$dy) {
                     for ($dx = -1; $dx <= 1; ++$dx) {
                         if ($dx === 0 && $dy === 0) {

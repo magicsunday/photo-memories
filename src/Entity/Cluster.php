@@ -359,6 +359,7 @@ class Cluster
     public function getCentroid(): array
     {
         $centroid = $this->meta['centroid'] ?? null;
+
         if (is_array($centroid) && isset($centroid['lat'], $centroid['lon'])) {
             return [
                 'lat' => (float) $centroid['lat'],
@@ -391,6 +392,7 @@ class Cluster
     public function getMembers(): array
     {
         $ids = $this->meta['member_ids'] ?? [];
+
         if (!is_array($ids)) {
             return [];
         }
@@ -760,11 +762,13 @@ class Cluster
         $this->meta['params'] = is_array($params) ? $params : [];
 
         $members = $this->meta['member_ids'] ?? [];
+
         if (is_array($members)) {
             $this->setMembers(array_values(array_map(static fn ($id): int => (int) $id, $members)));
         }
 
         $centroid = $this->meta['centroid'] ?? null;
+
         if (is_array($centroid) && isset($centroid['lat'], $centroid['lon'])) {
             $this->synchroniseCentroid(['lat' => (float) $centroid['lat'], 'lon' => (float) $centroid['lon']]);
         }

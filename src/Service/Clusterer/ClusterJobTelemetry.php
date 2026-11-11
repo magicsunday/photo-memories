@@ -73,6 +73,7 @@ final readonly class ClusterJobTelemetry
     public static function fromStageStats(array $stageStats, array $topClusters = [], array $warnings = []): self
     {
         $normalized = [];
+
         foreach ($stageStats as $stage => $values) {
             if ($stage === '') {
                 continue;
@@ -114,6 +115,7 @@ final readonly class ClusterJobTelemetry
     public function getStageCounts(): array
     {
         $counts = [];
+
         foreach ($this->stageStats as $stage => $values) {
             $counts[$stage] = $values['clusters'];
         }

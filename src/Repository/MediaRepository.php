@@ -89,6 +89,7 @@ readonly class MediaRepository implements MemberMediaLookupInterface
     public function findNearestByPhash(string $phashHex, int $maxHamming, int $limit = 20): array
     {
         $phashHex = strtolower(trim($phashHex));
+
         if ($phashHex === '' || $maxHamming < 0) {
             return [];
         }
@@ -105,6 +106,7 @@ readonly class MediaRepository implements MemberMediaLookupInterface
         );
         $phashPrefix = $prefixLength > 0 ? substr($phashHex, 0, $prefixLength) : '';
         $phash64Hex  = substr($phashHex, 0, 16);
+
         if (strlen($phash64Hex) < 16) {
             $phash64Hex = str_pad($phash64Hex, 16, '0');
         }
@@ -145,13 +147,16 @@ SQL;
         }
 
         $result = [];
+
         foreach ($rows as $row) {
             $id = isset($row['id']) ? (int) $row['id'] : 0;
+
             if ($id <= 0) {
                 continue;
             }
 
             $media = $this->em->find(Media::class, $id);
+
             if (!$media instanceof Media) {
                 continue;
             }
@@ -171,6 +176,7 @@ SQL;
     public function findBurstMembers(string $burstUuid, ?string $excludePath = null): array
     {
         $burstUuid = trim($burstUuid);
+
         if ($burstUuid === '') {
             return [];
         }
@@ -185,6 +191,7 @@ SQL;
             ->addOrderBy('m.id', 'ASC');
 
         $excludePath = $excludePath !== null ? trim($excludePath) : null;
+
         if ($excludePath !== null && $excludePath !== '') {
             $qb->andWhere('m.path <> :excludePath')
                 ->setParameter('excludePath', $excludePath);

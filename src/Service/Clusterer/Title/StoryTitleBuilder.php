@@ -84,12 +84,14 @@ final readonly class StoryTitleBuilder
         $params         = $cluster->getParams();
 
         $label = $this->stringOrEmpty($params['label'] ?? null);
+
         if ($label === '') {
             $label = 'Reise';
         }
 
         $timeRange = $params['time_range'] ?? null;
         $subtitle  = $this->dateFormatter->formatRange($timeRange, $resolvedLocale);
+
         if ($subtitle === '') {
             $subtitle = $this->dateFormatter->formatDate($params['start_date'] ?? null, $resolvedLocale);
         }
@@ -105,11 +107,11 @@ final readonly class StoryTitleBuilder
      */
     private function buildTitle(array $params, ?RouteSummary $summary): string
     {
-        $base = '';
         if ($summary instanceof RouteSummary && $summary->routeLabel !== '') {
             $base = $summary->routeLabel;
         } else {
             $classification = $this->stringOrEmpty($params['classification_label'] ?? null);
+
             if ($classification === '') {
                 $classification = 'Reise';
             }
@@ -119,6 +121,7 @@ final readonly class StoryTitleBuilder
         }
 
         $companions = $this->formatCompanionNames($params);
+
         if ($companions !== '') {
             return $base . ' mit ' . $companions;
         }
@@ -138,11 +141,13 @@ final readonly class StoryTitleBuilder
                 $parts[] = $summary->metricsLabel;
             } else {
                 $distance = $summary->distanceLabel;
+
                 if ($distance !== '') {
                     $parts[] = $distance;
                 }
 
                 $stop = $summary->stopLabel;
+
                 if ($stop !== '') {
                     $parts[] = $stop;
                 }
@@ -153,11 +158,13 @@ final readonly class StoryTitleBuilder
         $parts[] = $this->formatPeopleShare($params);
 
         $subtitle = $this->joinParts($parts);
+
         if ($subtitle !== '') {
             return $subtitle;
         }
 
         $fallback = $this->resolveDateLabel($params, $locale);
+
         if ($fallback !== '') {
             return $fallback;
         }
@@ -171,13 +178,16 @@ final readonly class StoryTitleBuilder
     private function resolveDateLabel(array $params, string $locale): string
     {
         $explicit = $this->stringOrEmpty($params['date_range'] ?? null);
+
         if ($explicit !== '') {
             return $explicit;
         }
 
         $range = $params['time_range'] ?? null;
+
         if (is_array($range)) {
             $formatted = $this->dateFormatter->formatRange($range, $locale);
+
             if ($formatted !== '') {
                 return $formatted;
             }
@@ -218,13 +228,16 @@ final readonly class StoryTitleBuilder
     private function formatCompanionNames(array $params): string
     {
         $names = $this->extractCompanionNames($params);
+
         if ($names === []) {
             return '';
         }
 
         $displayNames = [];
+
         foreach ($names as $name) {
             $formatted = $this->formatName($name);
+
             if ($formatted === '') {
                 continue;
             }
@@ -239,6 +252,7 @@ final readonly class StoryTitleBuilder
         }
 
         $maxNames = 3;
+
         if (count($displayNames) > $maxNames) {
             $visible      = array_slice($displayNames, 0, $maxNames - 1);
             $remaining    = count($displayNames) - ($maxNames - 1);
@@ -272,10 +286,13 @@ final readonly class StoryTitleBuilder
 
         $telemetryCounts = null;
         $memberQuality   = $params['member_quality'] ?? null;
+
         if (is_array($memberQuality)) {
             $summary = $memberQuality['summary'] ?? null;
+
             if (is_array($summary)) {
                 $selectionTelemetry = $summary['selection_telemetry'] ?? null;
+
                 if (is_array($selectionTelemetry) && array_key_exists('people_balance_counts', $selectionTelemetry)) {
                     $telemetryCounts = $selectionTelemetry['people_balance_counts'];
                 }
@@ -289,12 +306,14 @@ final readonly class StoryTitleBuilder
             arsort($cohortMembers);
 
             $selected = [];
+
             foreach ($cohortMembers as $personId => $count) {
                 if ($count <= 0) {
                     continue;
                 }
 
                 $name = $map[$personId] ?? null;
+
                 if ($name === null) {
                     continue;
                 }
@@ -330,12 +349,14 @@ final readonly class StoryTitleBuilder
         }
 
         $map = [];
+
         foreach ($peopleCounts as $name => $count) {
             if ($count <= 0) {
                 continue;
             }
 
             $signature = $this->hashPerson($name);
+
             if ($signature === null) {
                 continue;
             }
@@ -358,6 +379,7 @@ final readonly class StoryTitleBuilder
         }
 
         $result = [];
+
         foreach ($value as $personId => $count) {
             if (!is_int($personId)) {
                 continue;
@@ -368,6 +390,7 @@ final readonly class StoryTitleBuilder
             }
 
             $normalized = $this->intOrNull($count);
+
             if ($normalized === null) {
                 continue;
             }
@@ -392,17 +415,20 @@ final readonly class StoryTitleBuilder
         }
 
         $counts = [];
+
         foreach ($value as $name => $count) {
             if (!is_string($name)) {
                 continue;
             }
 
             $trimmed = trim($name);
+
             if ($trimmed === '') {
                 continue;
             }
 
             $normalized = $this->intOrNull($count);
+
             if ($normalized === null) {
                 continue;
             }
@@ -420,6 +446,7 @@ final readonly class StoryTitleBuilder
     private function formatName(string $name): string
     {
         $trimmed = trim($name);
+
         if ($trimmed === '') {
             return '';
         }
@@ -448,6 +475,7 @@ final readonly class StoryTitleBuilder
             }
 
             $trimmed = trim($candidate);
+
             if ($trimmed !== '') {
                 return $trimmed;
             }
@@ -465,6 +493,7 @@ final readonly class StoryTitleBuilder
 
         foreach ($parts as $part) {
             $trimmed = trim($part);
+
             if ($trimmed !== '') {
                 $filtered[] = $trimmed;
             }
@@ -481,6 +510,7 @@ final readonly class StoryTitleBuilder
     {
         if (is_string($locale)) {
             $trimmed = trim($locale);
+
             if ($trimmed !== '') {
                 return $trimmed;
             }
@@ -535,12 +565,14 @@ final readonly class StoryTitleBuilder
     private function hashPerson(string $name): ?int
     {
         $normalized = trim(mb_strtolower($name, 'UTF-8'));
+
         if ($normalized === '') {
             return null;
         }
 
         $hash  = substr(hash('sha256', $normalized), 0, 15);
         $value = intval($hash, 16);
+
         if ($value < 1) {
             return 1;
         }

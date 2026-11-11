@@ -37,6 +37,7 @@ final readonly class GpsExifMetadataProcessor implements ExifMetadataProcessorIn
         }
 
         $metadata = $this->accessor->gpsFromExif($exif['GPS']);
+
         if (!$metadata instanceof GpsMetadata) {
             return;
         }

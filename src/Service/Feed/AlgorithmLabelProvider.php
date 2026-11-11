@@ -57,6 +57,7 @@ final class AlgorithmLabelProvider
         }
 
         $normalized = trim(str_replace('_', ' ', $algorithm));
+
         if ($normalized === '') {
             return 'Strategie';
         }

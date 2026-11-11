@@ -74,6 +74,7 @@ final class SlideshowGenerateCommand extends Command
         if ($dryRun) {
             $storyboardPath = $this->storyboardWriter->write($job);
             $this->cleanup($job);
+
             if (is_file($job->jobFile())) {
                 unlink($job->jobFile());
             }
@@ -115,6 +116,7 @@ final class SlideshowGenerateCommand extends Command
     private function writeError(SlideshowJob $job, Throwable $throwable): void
     {
         $message = $throwable->getMessage();
+
         if ($message === '') {
             $message = 'Unbekannter Fehler bei der Videoerstellung.';
         }

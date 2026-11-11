@@ -76,6 +76,7 @@ final class MemberQualityRankingStage extends AbstractClusterScoreHeuristic impl
     public function process(array $drafts, ?callable $progress = null): array
     {
         $total = count($drafts);
+
         if ($total === 0) {
             if ($progress !== null) {
                 $progress(0, 0);
@@ -86,6 +87,7 @@ final class MemberQualityRankingStage extends AbstractClusterScoreHeuristic impl
 
         /** @var array<int,true> $memberIds */
         $memberIds = [];
+
         foreach ($drafts as $draft) {
             foreach ($draft->getMembers() as $id) {
                 $memberIds[$id] = true;
@@ -99,10 +101,13 @@ final class MemberQualityRankingStage extends AbstractClusterScoreHeuristic impl
         }
 
         $processed = 0;
+
         foreach ($drafts as $draft) {
             $members = $draft->getMembers();
+
             if ($members === []) {
                 ++$processed;
+
                 continue;
             }
 
@@ -125,8 +130,10 @@ final class MemberQualityRankingStage extends AbstractClusterScoreHeuristic impl
             $positions = [];
 
             $visibleMembers = [];
+
             foreach ($members as $idx => $memberId) {
                 $media = $mediaMap[$memberId] ?? null;
+
                 if (!$media instanceof Media) {
                     continue;
                 }
@@ -139,6 +146,7 @@ final class MemberQualityRankingStage extends AbstractClusterScoreHeuristic impl
                 $duplicateFactor = $this->computeDuplicatePenalty($media, $seenPhash, $seenDhash, $seenBurst);
 
                 $baseScore = ($this->qualityWeight * $qualityScore) + ($this->aestheticWeight * $aestheticScore);
+
                 if ($duplicateFactor > 0.0) {
                     $baseScore *= max(0.0, 1.0 - $duplicateFactor);
                 }
@@ -178,6 +186,7 @@ final class MemberQualityRankingStage extends AbstractClusterScoreHeuristic impl
                 ]);
 
                 ++$processed;
+
                 if ($progress !== null && ($processed % 200) === 0) {
                     $progress($processed, $total);
                 }
@@ -198,6 +207,7 @@ final class MemberQualityRankingStage extends AbstractClusterScoreHeuristic impl
             });
 
             $ranked = [];
+
             foreach ($qualityOrdered as $memberId) {
                 $detail   = $details[(string) $memberId];
                 $ranked[] = [
@@ -235,6 +245,7 @@ final class MemberQualityRankingStage extends AbstractClusterScoreHeuristic impl
             ]);
 
             ++$processed;
+
             if ($progress !== null && ($processed % 200) === 0) {
                 $progress($processed, $total);
             }
@@ -259,6 +270,7 @@ final class MemberQualityRankingStage extends AbstractClusterScoreHeuristic impl
         }
 
         $map = [];
+
         foreach ($this->mediaLookup->findByIds($ids) as $media) {
             if ($media->isNoShow()) {
                 continue;
@@ -291,10 +303,12 @@ final class MemberQualityRankingStage extends AbstractClusterScoreHeuristic impl
             $sharpness = $sharpness !== null ? $this->clamp01($sharpness) : $avgSharpness;
 
             $isoScore = $media->getQualityNoise();
+
             if ($isoScore !== null) {
                 $isoScore = $this->clamp01($isoScore);
             } else {
                 $isoValue = $media->getIso();
+
                 if ($isoValue !== null && $isoValue > 0) {
                     $isoScore = $this->normalizeIso($isoValue);
                 } elseif ($avgIso !== null) {
@@ -326,6 +340,7 @@ final class MemberQualityRankingStage extends AbstractClusterScoreHeuristic impl
 
         $components = [];
         $exposure   = $media->getQualityExposure();
+
         if ($exposure !== null) {
             $components[] = [$this->clamp01($exposure), 0.50];
         } else {
@@ -369,6 +384,7 @@ final class MemberQualityRankingStage extends AbstractClusterScoreHeuristic impl
     private function phashDuplicateKey(Media $media): ?string
     {
         $hash64 = $media->getPhash64();
+
         if (is_string($hash64) && $hash64 !== '') {
             return $hash64;
         }
@@ -404,6 +420,7 @@ final class MemberQualityRankingStage extends AbstractClusterScoreHeuristic impl
     {
         $width  = $media->getWidth();
         $height = $media->getHeight();
+
         if ($width === null || $height === null || $width <= 0 || $height <= 0) {
             return null;
         }

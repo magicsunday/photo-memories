@@ -37,41 +37,49 @@ final readonly class CameraExifMetadataProcessor implements ExifMetadataProcesso
     public function process(array $exif, Media $media): void
     {
         $make = $this->accessor->strOrNull($exif['IFD0']['Make'] ?? null);
+
         if ($make !== null) {
             $media->setCameraMake($make);
         }
 
         $model = $this->accessor->strOrNull($exif['IFD0']['Model'] ?? null);
+
         if ($model !== null) {
             $media->setCameraModel($model);
         }
 
         $owner = $this->accessor->strOrNull($exif['EXIF']['CameraOwnerName'] ?? null);
+
         if ($owner !== null) {
             $media->setCameraOwner($owner);
         }
 
         $bodySerial = $this->accessor->strOrNull($exif['EXIF']['BodySerialNumber'] ?? null);
+
         if ($bodySerial !== null) {
             $media->setCameraBodySerial($bodySerial);
         }
 
         $lensMake = $this->accessor->strOrNull($exif['EXIF']['LensMake'] ?? null);
+
         if ($lensMake !== null) {
             $media->setLensMake($lensMake);
         }
 
         $lens = $this->accessor->strOrNull($exif['EXIF']['LensModel'] ?? null);
+
         if ($lens !== null) {
             $media->setLensModel($lens);
         }
 
         $lensSpecification = $this->normaliseLensSpecification($exif['EXIF']['LensSpecification'] ?? null);
+
         if ($lensSpecification !== null) {
             $media->setLensSpecification($lensSpecification);
         }
 
         $lensSerial = $this->accessor->strOrNull($exif['EXIF']['LensSerialNumber'] ?? null);
+
         if ($lensSerial !== null) {
             $media->setLensSerialNumber($lensSerial);
         }
@@ -91,11 +99,13 @@ final readonly class CameraExifMetadataProcessor implements ExifMetadataProcesso
         $parts = [];
 
         $focal = $this->formatFocalRange($focalMin, $focalMax);
+
         if ($focal !== null) {
             $parts[] = $focal;
         }
 
         $aperture = $this->formatApertureRange($apertureMin, $apertureMax);
+
         if ($aperture !== null) {
             $parts[] = $aperture;
         }

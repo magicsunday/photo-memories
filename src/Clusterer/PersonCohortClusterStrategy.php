@@ -158,8 +158,10 @@ final readonly class PersonCohortClusterStrategy implements ClusterStrategyInter
         // Phase 1: bucket by persons signature per day
         foreach ($candidates as $m) {
             $persons = $this->personSignatureHelper->personIds($m);
+
             if (count($persons) < $this->minPersons) {
                 ++$processedCandidates;
+
                 continue;
             }
 
@@ -167,7 +169,7 @@ final readonly class PersonCohortClusterStrategy implements ClusterStrategyInter
             $sig = 'p:' . implode('-', array_map(static fn (int $id): string => (string) $id, $persons));
             $day = $m->getTakenAt()?->format('Y-m-d') ?? '1970-01-01';
 
-            $buckets[$sig] ??= [];
+            $buckets[$sig]       ??= [];
             $buckets[$sig][$day] ??= [];
             $buckets[$sig][$day][] = $m;
 
@@ -196,8 +198,10 @@ final readonly class PersonCohortClusterStrategy implements ClusterStrategyInter
             $buckets,
             function (array $byDay): bool {
                 $total = 0;
+
                 foreach ($byDay as $list) {
                     $total += count($list);
+
                     if ($total >= $this->minItemsTotal) {
                         return true;
                     }
@@ -232,6 +236,7 @@ final readonly class PersonCohortClusterStrategy implements ClusterStrategyInter
         $processedGroups = 0;
         $groupBase       = $progress;
         $groupThreshold  = $eligibleCount > 0 ? max(1, (int) ($eligibleCount / 10)) : 1;
+
         foreach ($eligibleBuckets as $byDay) {
             ++$processedGroups;
 
@@ -253,6 +258,7 @@ final readonly class PersonCohortClusterStrategy implements ClusterStrategyInter
                 if ($lastDay === null) {
                     $current = $list;
                     $lastDay = $day;
+
                     continue;
                 }
 
@@ -262,6 +268,7 @@ final readonly class PersonCohortClusterStrategy implements ClusterStrategyInter
                     /** @var list<Media> $current */
                     $current = array_merge($current, $list);
                     $lastDay = $day;
+
                     continue;
                 }
 
@@ -308,12 +315,14 @@ final readonly class PersonCohortClusterStrategy implements ClusterStrategyInter
             }
 
             $labels = $media->getPersons();
+
             if (!is_array($labels)) {
                 continue;
             }
 
             foreach ($labels as $label) {
                 $normalized = trim($label);
+
                 if ($normalized === '') {
                     continue;
                 }
@@ -350,6 +359,7 @@ final readonly class PersonCohortClusterStrategy implements ClusterStrategyInter
         );
 
         $tagMetadata = $this->collectDominantTags($members);
+
         foreach ($tagMetadata as $key => $value) {
             $draft->setParam($key, $value);
         }
@@ -357,6 +367,7 @@ final readonly class PersonCohortClusterStrategy implements ClusterStrategyInter
         $this->applyLocationMetadata($draft, $members);
 
         $qualityParams = $this->qualityAggregator->buildParams($members);
+
         foreach ($qualityParams as $qualityKey => $qualityValue) {
             if ($qualityValue !== null) {
                 $draft->setParam($qualityKey, $qualityValue);

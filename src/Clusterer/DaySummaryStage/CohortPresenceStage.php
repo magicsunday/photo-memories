@@ -60,6 +60,7 @@ final class CohortPresenceStage implements DaySummaryStageInterface
 
             foreach ($aliases as $aliasId) {
                 $alias = $this->normalizePersonId($aliasId);
+
                 if ($alias === $canonical) {
                     continue;
                 }
@@ -115,6 +116,7 @@ final class CohortPresenceStage implements DaySummaryStageInterface
 
                 foreach ($personIds as $personId) {
                     $canonicalId = $this->aliasToCanonical[$personId] ?? null;
+
                     if ($canonicalId === null) {
                         continue;
                     }
@@ -131,6 +133,7 @@ final class CohortPresenceStage implements DaySummaryStageInterface
             }
 
             $ratio = (float) count($present) / $totalImportant;
+
             if ($ratio > 1.0) {
                 $ratio = 1.0;
             }

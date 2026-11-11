@@ -62,11 +62,13 @@ final readonly class DefaultVacationSegmentAssembler implements VacationSegmentA
 
         $clusters = [];
         $runs     = $this->runDetector->detectVacationRuns($days, $home);
+
         foreach ($runs as $run) {
             $this->recordDebugSegment($run, $days, $home);
 
             $dayContext = $this->classifyRunDays($run, $days);
             $draft      = $this->scoreCalculator->buildDraft($run, $days, $home, $dayContext);
+
             if ($draft instanceof ClusterDraft) {
                 $params        = $draft->getParams();
                 $title         = $params['vacation_title'] ?? null;
@@ -76,6 +78,7 @@ final readonly class DefaultVacationSegmentAssembler implements VacationSegmentA
 
                 if ($needsTitle || $needsSubtitle) {
                     $storyTitle = $this->storyTitleBuilder->build($draft);
+
                     if ($needsTitle) {
                         $draft->setParam('vacation_title', $storyTitle['title']);
                     }
@@ -133,6 +136,7 @@ final readonly class DefaultVacationSegmentAssembler implements VacationSegmentA
         $totalDays = count($scores);
         $minCore   = (int) ceil($totalDays * 0.6);
         $maxCore   = (int) floor($totalDays * 0.7);
+
         if ($maxCore < 1) {
             $maxCore = 1;
         }
@@ -146,6 +150,7 @@ final readonly class DefaultVacationSegmentAssembler implements VacationSegmentA
         }
 
         $targetCore = (int) round($totalDays * 0.65);
+
         if ($targetCore < $minCore) {
             $targetCore = $minCore;
         }
@@ -182,18 +187,21 @@ final readonly class DefaultVacationSegmentAssembler implements VacationSegmentA
 
         $faceCount      = 0;
         $qualitySamples = [];
+
         foreach ($members as $media) {
             if ($media->hasFaces()) {
                 ++$faceCount;
             }
 
             $quality = $media->getQualityScore();
+
             if ($quality !== null) {
                 $qualitySamples[] = $quality;
             }
         }
 
         $faceShare = $memberCount > 0 ? $faceCount / $memberCount : 0.0;
+
         if ($faceShare === 0.0) {
             $faceShare = $summary['cohortPresenceRatio'];
         }
@@ -205,6 +213,7 @@ final readonly class DefaultVacationSegmentAssembler implements VacationSegmentA
         $diversity     = min(1.0, $diversityBase / 6.0);
 
         $poiBoost = $summary['tourismRatio'];
+
         if ($summary['poiDensity'] > 0.0) {
             $poiBoost += min(0.25, $summary['poiDensity'] * 0.5);
         }
@@ -221,6 +230,7 @@ final readonly class DefaultVacationSegmentAssembler implements VacationSegmentA
         ];
 
         $score = 0.0;
+
         foreach ($weights as $component) {
             $score += $component;
         }
@@ -244,8 +254,10 @@ final readonly class DefaultVacationSegmentAssembler implements VacationSegmentA
         }
 
         $timestamps = [];
+
         foreach ($members as $media) {
             $takenAt = $media->getTakenAt();
+
             if ($takenAt === null) {
                 continue;
             }
@@ -268,6 +280,7 @@ final readonly class DefaultVacationSegmentAssembler implements VacationSegmentA
     private function median(array $samples): ?float
     {
         $count = count($samples);
+
         if ($count === 0) {
             return null;
         }
@@ -275,6 +288,7 @@ final readonly class DefaultVacationSegmentAssembler implements VacationSegmentA
         sort($samples, SORT_NUMERIC);
 
         $middle = intdiv($count, 2);
+
         if ($count % 2 === 1) {
             return $samples[$middle];
         }
@@ -327,11 +341,13 @@ final readonly class DefaultVacationSegmentAssembler implements VacationSegmentA
 
         foreach ($run as $dayKey) {
             $summary = $days[$dayKey] ?? null;
+
             if ($summary === null) {
                 continue;
             }
 
             $members += count($summary['members']);
+
             if ($summary['baseAway']) {
                 ++$awayDays;
             }

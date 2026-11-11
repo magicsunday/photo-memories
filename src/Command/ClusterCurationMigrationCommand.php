@@ -74,6 +74,7 @@ final class ClusterCurationMigrationCommand extends Command
 
         $algorithmOption = $input->getOption('algorithm');
         $algorithms      = [];
+
         if (is_array($algorithmOption)) {
             $algorithms = array_values(array_filter(
                 $algorithmOption,
@@ -118,7 +119,7 @@ final class ClusterCurationMigrationCommand extends Command
                 ++$processed;
 
                 $result = $this->overlayRefresher->refreshExistingCluster($cluster);
-                $rawTotal += $result['raw_count'];
+                $rawTotal     += $result['raw_count'];
                 $curatedTotal += $result['curated_count'];
                 $overlayTotal += $result['overlay_count'];
 

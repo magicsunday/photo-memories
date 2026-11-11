@@ -76,11 +76,13 @@ final readonly class TravelWaypointAnnotator
 
         foreach ($members as $media) {
             $location = $media->getLocation();
+
             if (!$location instanceof Location) {
                 continue;
             }
 
             $key = $this->buildWaypointKey($location);
+
             if ($key === null) {
                 continue;
             }
@@ -126,11 +128,13 @@ final readonly class TravelWaypointAnnotator
             $waypoints,
             static function (array $left, array $right): int {
                 $countComparison = $right['count'] <=> $left['count'];
+
                 if ($countComparison !== 0) {
                     return $countComparison;
                 }
 
                 $firstSeenComparison = $left['first_seen_at'] <=> $right['first_seen_at'];
+
                 if ($firstSeenComparison !== 0) {
                     return $firstSeenComparison;
                 }
@@ -152,6 +156,7 @@ final readonly class TravelWaypointAnnotator
     private function buildWaypointKey(Location $location): ?string
     {
         $label = $this->resolveLabel($location);
+
         if ($label === null) {
             return null;
         }
@@ -180,6 +185,7 @@ final readonly class TravelWaypointAnnotator
 
         foreach ($candidates as $candidate) {
             $normalised = $this->normaliseComponent($candidate);
+
             if ($normalised !== null && $normalised !== '') {
                 return $normalised;
             }
@@ -191,6 +197,7 @@ final readonly class TravelWaypointAnnotator
     private function resolveRegion(Location $location): ?string
     {
         $region = $location->getState();
+
         if ($region === null || $region === '') {
             $region = $location->getCounty();
         }
@@ -205,11 +212,13 @@ final readonly class TravelWaypointAnnotator
         }
 
         $trimmed = trim($value);
+
         if ($trimmed === '') {
             return null;
         }
 
         $lower = mb_strtolower($trimmed, 'UTF-8');
+
         if ($lower === $trimmed) {
             return mb_convert_case($trimmed, MB_CASE_TITLE, 'UTF-8');
         }
@@ -224,6 +233,7 @@ final readonly class TravelWaypointAnnotator
         }
 
         $trimmed = trim($code);
+
         if ($trimmed === '') {
             return null;
         }
@@ -237,12 +247,14 @@ final readonly class TravelWaypointAnnotator
     private function collectEventKeywords(Location $location, array &$eventCounters): void
     {
         $pois = $location->getPois();
+
         if (!is_array($pois)) {
             return;
         }
 
         foreach ($pois as $poi) {
             $tags = $poi['tags'] ?? null;
+
             if (!is_array($tags)) {
                 continue;
             }
@@ -257,6 +269,7 @@ final readonly class TravelWaypointAnnotator
                 }
 
                 $keyword = $this->mapEventKeyword($tagKey, $tagValue);
+
                 if ($keyword === null) {
                     continue;
                 }
@@ -323,6 +336,7 @@ final readonly class TravelWaypointAnnotator
     private function buildEventList(array $eventCounters): array
     {
         $events = [];
+
         foreach ($eventCounters as $label => $count) {
             if ($label === '') {
                 continue;
@@ -342,6 +356,7 @@ final readonly class TravelWaypointAnnotator
             $events,
             static function (array $left, array $right): int {
                 $countComparison = $right['count'] <=> $left['count'];
+
                 if ($countComparison !== 0) {
                     return $countComparison;
                 }

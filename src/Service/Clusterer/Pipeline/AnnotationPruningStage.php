@@ -101,6 +101,7 @@ final class AnnotationPruningStage implements ClusterConsolidationStageInterface
 
         /** @var array<int,int> $memberUse */
         $memberUse = [];
+
         foreach ($drafts as $index => $draft) {
             if ($this->isAnnotateOnly($draft->getAlgorithm())) {
                 continue;
@@ -113,6 +114,7 @@ final class AnnotationPruningStage implements ClusterConsolidationStageInterface
 
         /** @var list<ClusterDraft> $result */
         $result = [];
+
         foreach ($drafts as $index => $draft) {
             if ($progress !== null && (($index + 1) % 200) === 0) {
                 $progress($index + 1, $total);
@@ -120,19 +122,24 @@ final class AnnotationPruningStage implements ClusterConsolidationStageInterface
 
             if (!$this->isAnnotateOnly($draft->getAlgorithm())) {
                 $result[] = $draft;
+
                 continue;
             }
 
             $members = $normalized[$index];
             $size    = count($members);
+
             if ($size === 0) {
                 ++$droppedAnnotations;
+
                 continue;
             }
 
             $unique = 0;
+
             foreach ($members as $member) {
                 $usage = ($memberUse[$member] ?? 0);
+
                 if ($usage === 0) {
                     ++$unique;
                 }
@@ -140,8 +147,10 @@ final class AnnotationPruningStage implements ClusterConsolidationStageInterface
 
             $share      = $unique / (float) $size;
             $minAllowed = ($this->minUniqueShare[$draft->getAlgorithm()] ?? 0.0);
+
             if ($share < $minAllowed) {
                 ++$droppedAnnotations;
+
                 continue;
             }
 

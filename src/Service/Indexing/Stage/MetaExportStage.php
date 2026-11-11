@@ -52,11 +52,13 @@ final class MetaExportStage implements MediaIngestionStageInterface
         }
 
         $media = $context->getMedia();
+
         if (!$media instanceof Media) {
             return $context;
         }
 
         $targetDir = dirname($media->getPath());
+
         if ($targetDir === '' || is_dir($targetDir) === false) {
             throw new RuntimeException(sprintf('Target directory "%s" is not accessible for media export.', $targetDir));
         }

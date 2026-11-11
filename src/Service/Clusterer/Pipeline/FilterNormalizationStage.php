@@ -79,25 +79,31 @@ final readonly class FilterNormalizationStage implements ClusterConsolidationSta
         /** @var list<ClusterDraft> $kept */
         $kept  = [];
         $index = 0;
+
         foreach ($drafts as $draft) {
             ++$index;
+
             if ($progress !== null && ($index % 200) === 0) {
                 $progress($index, $total);
             }
 
             if ($this->requireValidTime && !$this->hasValidTimeRange($draft, $this->minValidYear)) {
                 ++$droppedInvalidTime;
+
                 continue;
             }
 
             $normalized = $this->normalizeMembers($draft->getMembers());
+
             if (count($normalized) < $this->minSize) {
                 ++$droppedTooSmall;
+
                 continue;
             }
 
             if ($this->computeScore($draft, $normalized) < $this->minScore) {
                 ++$droppedBelowMinScore;
+
                 continue;
             }
 

@@ -27,6 +27,7 @@ final class StaypointQuotaStage implements SelectionStageInterface
     public function apply(array $candidates, SelectionPolicy $policy, SelectionTelemetry $telemetry): array
     {
         $maxPerStaypoint = $policy->getMaxPerStaypoint();
+
         if ($maxPerStaypoint === null || $maxPerStaypoint <= 0) {
             return $candidates;
         }
@@ -36,6 +37,7 @@ final class StaypointQuotaStage implements SelectionStageInterface
 
         foreach ($candidates as $candidate) {
             $staypoint = $candidate['staypoint'];
+
             if ($staypoint === null) {
                 $selected[] = $candidate;
 

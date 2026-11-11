@@ -71,6 +71,7 @@ final readonly class DefaultMediaFileLocator implements MediaFileLocatorInterfac
             }
 
             $path = $fileInfo->getPathname();
+
             if ($this->isSupported($path, $includeVideos) === false) {
                 continue;
             }

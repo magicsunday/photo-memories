@@ -45,6 +45,7 @@ final class PhashDiversityStage implements SelectionStageInterface
     public function apply(array $candidates, SelectionPolicy $policy, SelectionTelemetry $telemetry): array
     {
         $threshold = $policy->getPhashMinHamming();
+
         if ($threshold <= 0) {
             return $candidates;
         }
@@ -53,6 +54,7 @@ final class PhashDiversityStage implements SelectionStageInterface
         $threshold       = $policyThreshold;
 
         $adaptiveThreshold = $this->determineAdaptiveThreshold($candidates, $policy);
+
         if ($adaptiveThreshold !== null) {
             // Keep adaptive adjustments from undercutting the configured minimum or the global floor.
             $threshold = max($policyThreshold, $adaptiveThreshold);
@@ -66,6 +68,7 @@ final class PhashDiversityStage implements SelectionStageInterface
 
             foreach ($selected as $existing) {
                 $distance = $this->hammingDistance($candidate, $existing);
+
                 if ($distance !== null && $distance < $threshold) {
                     $telemetry->increment(SelectionTelemetry::REASON_PHASH);
                     $isDuplicate = true;
@@ -92,11 +95,13 @@ final class PhashDiversityStage implements SelectionStageInterface
     {
         $hashA = $a['hash_bits'];
         $hashB = $b['hash_bits'];
+
         if ($hashA === null || $hashB === null) {
             return null;
         }
 
         $cacheKey = $a['id'] < $b['id'] ? $a['id'] . ':' . $b['id'] : $b['id'] . ':' . $a['id'];
+
         if (array_key_exists($cacheKey, $this->distanceCache)) {
             return $this->distanceCache[$cacheKey];
         }
@@ -114,6 +119,7 @@ final class PhashDiversityStage implements SelectionStageInterface
     private function determineAdaptiveThreshold(array $candidates, SelectionPolicy $policy): ?int
     {
         $percentile = $policy->getPhashPercentile();
+
         if ($percentile <= 0.0) {
             return null;
         }
@@ -123,12 +129,14 @@ final class PhashDiversityStage implements SelectionStageInterface
 
         for ($i = 0; $i < $total; ++$i) {
             $hashA = $candidates[$i]['hash_bits'] ?? null;
+
             if (!is_array($hashA)) {
                 continue;
             }
 
             for ($j = $i + 1; $j < $total; ++$j) {
                 $hashB = $candidates[$j]['hash_bits'] ?? null;
+
                 if (!is_array($hashB)) {
                     continue;
                 }
@@ -144,6 +152,7 @@ final class PhashDiversityStage implements SelectionStageInterface
 
         sort($distances, SORT_NUMERIC);
         $index = (int) floor($percentile * (count($distances) - 1));
+
         if ($index < 0) {
             $index = 0;
         }
@@ -163,6 +172,7 @@ final class PhashDiversityStage implements SelectionStageInterface
     {
         $length   = min(count($hashA), count($hashB));
         $distance = abs(count($hashA) - count($hashB));
+
         for ($idx = 0; $idx < $length; ++$idx) {
             if ($hashA[$idx] !== $hashB[$idx]) {
                 ++$distance;

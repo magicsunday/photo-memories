@@ -158,6 +158,7 @@ final class DuplicateCollapseStageTest extends TestCase
     private function createDraft(string $algorithm, float $score, array $members, array $extraParams = []): ClusterDraft
     {
         $params = ['score' => $score];
+
         foreach ($extraParams as $key => $value) {
             $params[$key] = $value;
         }

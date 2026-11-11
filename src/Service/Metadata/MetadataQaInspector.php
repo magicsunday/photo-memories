@@ -45,6 +45,7 @@ final readonly class MetadataQaInspector
         }
 
         $takenAt = $media->getTakenAt();
+
         if ($takenAt instanceof DateTimeImmutable) {
             if ($media->getTimezoneOffsetMin() === null) {
                 $missing[]     = 'timezoneOffsetMin';
@@ -52,6 +53,7 @@ final readonly class MetadataQaInspector
             }
 
             $confidence = $media->getTzConfidence();
+
             if ($confidence === null || $confidence < $this->minimumTzConfidence) {
                 $missing[]     = 'tzConfidence';
                 $suggestions[] = 'Zeitzonenquellen priorisieren';
