@@ -152,9 +152,9 @@ Mehrere Werte können wie bisher kommasepariert oder als wiederholte `--types`-O
 
 ## Tests & Qualitätssicherung
 
-- Die QA-Werkzeuge kommen aus dem gemeinsamen Paket `magicsunday/coding-standard` (`require-dev`): php-cs-fixer, PHPStan samt Regelpaketen, Rector, phplint, Deptrac und PHPUnit. Die Konfigurationen liegen im Projektstamm (`.php-cs-fixer.dist.php`, `phpstan.neon`, `rector.php`, `fractor.php`, `deptrac.yaml`, `phpunit.xml`, `.phplint.yml`, `.jscpd.json`) und binden die gemeinsamen Teile aus `vendor/magicsunday/coding-standard/…` ein.
-- Komplettes CI-Profil: `composer ci:test` (Linting, Coding-Guidelines, Rector/Fractor Dry-Run, PHPStan, Deptrac, Template-Abgleich, PHPUnit, Copy-Paste-Erkennung).
-- Einzelne Schritte: `composer ci:test:php:lint`, `:cgl`, `:rector`, `:fractor`, `:phpstan`, `:deptrac`, `:templates`, `:unit`, `:cpd`.
+- Die QA-Werkzeuge kommen aus dem gemeinsamen Paket `magicsunday/coding-standard` (`require-dev`): php-cs-fixer, PHPStan samt Regelpaketen, Rector, phplint, Deptrac und PHPUnit. Die Konfigurationen liegen im Projektstamm (`.php-cs-fixer.dist.php`, `phpstan.neon`, `rector.php`, `deptrac.yaml`, `phpunit.xml`, `.phplint.yml`, `.jscpd.json`) und binden die gemeinsamen Teile aus `vendor/magicsunday/coding-standard/…` ein.
+- Komplettes CI-Profil: `composer ci:test` (Linting, Coding-Guidelines, Rector-Dry-Run, PHPStan, Deptrac, Template-Abgleich, PHPUnit, Copy-Paste-Erkennung).
+- Einzelne Schritte: `composer ci:test:php:lint`, `:cgl`, `:rector`, `:phpstan`, `:deptrac`, `:templates`, `:unit`, `:cpd`.
 - Stand der Einführung (#783): PHPStan läuft vorerst auf `level: 8`, die Deptrac-Schichtzuordnung ist noch offen; mehrere Gates sind bis zu den Folgearbeiten rot.
 - Frontend-E2E: `npm run test:e2e` bzw. `make web-test` startet Playwright.
 

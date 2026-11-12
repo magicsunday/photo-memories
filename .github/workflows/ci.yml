@@ -60,10 +60,6 @@ jobs:
               if: ${{ always() && steps.install.conclusion == 'success' }}
               run: composer ci:test:php:rector
 
-            - name: Fractor
-              if: ${{ always() && steps.install.conclusion == 'success' }}
-              run: composer ci:test:php:fractor
-
             - name: PHPStan
               if: ${{ always() && steps.install.conclusion == 'success' }}
               run: composer ci:test:php:phpstan -- --error-format=github

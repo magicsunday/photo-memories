@@ -26,7 +26,6 @@
   - `composer ci:test:php:lint` – phplint
   - `composer ci:test:php:cgl` – php-cs-fixer dry-run
   - `composer ci:test:php:rector` – Rector dry-run
-  - `composer ci:test:php:fractor` – Fractor dry-run
   - `composer ci:test:php:phpstan` – PHPStan
   - `composer ci:test:php:deptrac` – Deptrac layers, unassigned classes and the layer-cycle gate
   - `composer ci:test:php:templates` – template lockstep check against the shared canon

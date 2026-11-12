@@ -14,7 +14,7 @@
   - Lint: `composer ci:test:php:lint`
   - Coding standards: `composer ci:test:php:cgl`
   - Static analysis: `composer ci:test:php:phpstan`
-  - Refactoring safety: `composer ci:test:php:rector` and `composer ci:test:php:fractor`
+  - Refactoring safety: `composer ci:test:php:rector`
   - Unit tests: `composer ci:test:php:unit`
   - Layering: `composer ci:test:php:deptrac` (shared Deptrac layers; the repository's own layer map is pending in #783)
 - For regression fixes, write a failing PHPUnit test in `tests/Unit` or `tests/Integration` before applying the fix.
