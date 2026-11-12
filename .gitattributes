@@ -19,7 +19,6 @@
 /.phplint.yml               export-ignore
 /AGENTS.md                  export-ignore
 /deptrac.yaml               export-ignore
-/fractor.php                export-ignore
 /phpstan.neon               export-ignore
 /phpunit.xml                export-ignore
 /rector.php                 export-ignore

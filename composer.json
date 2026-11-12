@@ -45,7 +45,6 @@
         "doctrine/dbal": "^4.2"
     },
     "require-dev": {
-        "a9f/fractor": "^1.0",
         "magicsunday/coding-standard": "^3.0",
         "phpdocumentor/reflection-docblock": "^6.0"
     },
@@ -67,9 +66,6 @@
         "ci:rector": [
             "rector process --config rector.php"
         ],
-        "ci:fractor": [
-            "fractor process --config fractor.php"
-        ],
         "ci:test:php:lint": [
             "phplint --configuration .phplint.yml"
         ],
@@ -78,9 +74,6 @@
         ],
         "ci:test:php:rector": [
             "@ci:rector --dry-run"
-        ],
-        "ci:test:php:fractor": [
-            "@ci:fractor --dry-run"
         ],
         "ci:test:php:phpstan": [
             "phpstan analyze --configuration phpstan.neon --memory-limit=-1"
@@ -108,7 +101,6 @@
             "@ci:test:php:lint",
             "@ci:test:php:cgl",
             "@ci:test:php:rector",
-            "@ci:test:php:fractor",
             "@ci:test:php:phpstan",
             "@ci:test:php:deptrac",
             "@ci:test:php:templates",
