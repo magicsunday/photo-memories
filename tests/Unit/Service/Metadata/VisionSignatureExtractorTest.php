@@ -136,7 +136,7 @@ final class VisionSignatureExtractorTest extends TestCase
             $extractor->extract($imagePath, $media);
 
             self::assertNotNull($media->getQualityClipping());
-            self::assertEqualsWithDelta(1.0, $media->getQualityClipping() ?? 0.0, 0.0005);
+            self::assertEqualsWithDelta(1.0, $media->getQualityClipping(), 0.0005);
             self::assertTrue($media->isLowQuality());
 
             $entries = $this->decodeIndexLog($media->getIndexLog());
@@ -190,7 +190,7 @@ final class VisionSignatureExtractorTest extends TestCase
             $extractor->extract($videoPath, $media);
 
             self::assertNotNull($media->getQualityClipping());
-            self::assertEqualsWithDelta(1.0, $media->getQualityClipping() ?? 0.0, 0.0005);
+            self::assertEqualsWithDelta(1.0, $media->getQualityClipping(), 0.0005);
             self::assertTrue($media->isLowQuality());
 
             $entries = $this->decodeIndexLog($media->getIndexLog());
