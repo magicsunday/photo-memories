@@ -140,6 +140,8 @@ final class VacationClusterStrategyTest extends TestCase
 
             /**
              * {@inheritDoc}
+             *
+             * @param list<Media> $items
              */
             public function buildDaySummaries(array $items, array $home): array
             {

@@ -117,7 +117,7 @@ namespace MagicSunday\Memories\Test\Unit\Service\Thumbnail {
          *
          * @return list<string>
          */
-        private static function globFiles(string $pattern): array
+        private function globFiles(string $pattern): array
         {
             $files = glob($pattern);
 
@@ -278,7 +278,7 @@ namespace MagicSunday\Memories\Test\Unit\Service\Thumbnail {
                 }
 
                 if (is_dir($thumbnailDir)) {
-                    foreach (self::globFiles($thumbnailDir . DIRECTORY_SEPARATOR . '*') as $file) {
+                    foreach ($this->globFiles($thumbnailDir . DIRECTORY_SEPARATOR . '*') as $file) {
                         @unlink($file);
                     }
 
@@ -361,7 +361,7 @@ namespace MagicSunday\Memories\Test\Unit\Service\Thumbnail {
                 }
 
                 if (is_dir($thumbnailDir)) {
-                    foreach (self::globFiles($thumbnailDir . DIRECTORY_SEPARATOR . '*') as $file) {
+                    foreach ($this->globFiles($thumbnailDir . DIRECTORY_SEPARATOR . '*') as $file) {
                         @unlink($file);
                     }
 
@@ -450,7 +450,7 @@ namespace MagicSunday\Memories\Test\Unit\Service\Thumbnail {
                 }
 
                 if (is_dir($sourceDir)) {
-                    foreach (self::globFiles($sourceDir . DIRECTORY_SEPARATOR . '*') as $file) {
+                    foreach ($this->globFiles($sourceDir . DIRECTORY_SEPARATOR . '*') as $file) {
                         @unlink($file);
                     }
 
@@ -458,7 +458,7 @@ namespace MagicSunday\Memories\Test\Unit\Service\Thumbnail {
                 }
 
                 if (is_dir($thumbnailDir)) {
-                    foreach (self::globFiles($thumbnailDir . DIRECTORY_SEPARATOR . '*') as $file) {
+                    foreach ($this->globFiles($thumbnailDir . DIRECTORY_SEPARATOR . '*') as $file) {
                         @unlink($file);
                     }
 
@@ -585,7 +585,7 @@ namespace MagicSunday\Memories\Test\Unit\Service\Thumbnail {
                 }
 
                 if (is_dir($thumbnailDir)) {
-                    foreach (self::globFiles($thumbnailDir . DIRECTORY_SEPARATOR . '*') as $file) {
+                    foreach ($this->globFiles($thumbnailDir . DIRECTORY_SEPARATOR . '*') as $file) {
                         @unlink($file);
                     }
 
@@ -1171,7 +1171,7 @@ namespace MagicSunday\Memories\Test\Unit\Service\Thumbnail {
                     @rmdir($sourceDir);
                 }
 
-                foreach (self::globFiles($thumbnailDir . DIRECTORY_SEPARATOR . '*.jpg') as $file) {
+                foreach ($this->globFiles($thumbnailDir . DIRECTORY_SEPARATOR . '*.jpg') as $file) {
                     @unlink($file);
                 }
 
@@ -1179,7 +1179,7 @@ namespace MagicSunday\Memories\Test\Unit\Service\Thumbnail {
                     @rmdir($thumbnailDir);
                 }
 
-                foreach (self::globFiles($relocatedDir . DIRECTORY_SEPARATOR . '*.jpg') as $file) {
+                foreach ($this->globFiles($relocatedDir . DIRECTORY_SEPARATOR . '*.jpg') as $file) {
                     @unlink($file);
                 }
 
