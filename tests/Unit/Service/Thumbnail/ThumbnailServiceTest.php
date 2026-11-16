@@ -1623,7 +1623,7 @@ namespace MagicSunday\Memories\Test\Unit\Service\Thumbnail {
 
             foreach ($iterator as $y => $row) {
                 foreach ($row as $x => $pixel) {
-                    $pixel->setColor($layout[$y][$x]);
+                    $pixel->setColor($layout[(int) $y][(int) $x]);
                 }
 
                 $iterator->syncIterator();
