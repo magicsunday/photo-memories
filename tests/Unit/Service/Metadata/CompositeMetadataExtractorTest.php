@@ -21,7 +21,6 @@ use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\Test;
 use RuntimeException;
 
-use function array_key_last;
 use function chmod;
 use function file_put_contents;
 use function is_file;
@@ -150,7 +149,7 @@ final class CompositeMetadataExtractorTest extends TestCase
 
         $entries = $this->decodeIndexLog($media->getIndexLog());
         self::assertNotSame([], $entries);
-        $last = $entries[array_key_last($entries)];
+        $last = array_last($entries);
 
         if (str_contains((string) $last['message'], 'MIME-Bestimmung erfolgreich')) {
             self::markTestSkipped('Testumgebung erlaubt trotz chmod(0) noch Lesezugriff; Fehlerfall kann nicht simuliert werden.');
@@ -200,7 +199,7 @@ final class CompositeMetadataExtractorTest extends TestCase
         self::assertFalse($extractor->supportsCalled);
         $entries = $this->decodeIndexLog($media->getIndexLog());
         self::assertNotSame([], $entries);
-        $last = $entries[array_key_last($entries)];
+        $last = array_last($entries);
         self::assertSame('metadata.pipeline', $last['component']);
         self::assertSame('extractor.skip', $last['event']);
         self::assertStringContainsString('Extractor SingleMetadataExtractorInterface@anonymous', (string) $last['message']);
@@ -240,7 +239,7 @@ final class CompositeMetadataExtractorTest extends TestCase
 
         $entries = $this->decodeIndexLog($media->getIndexLog());
         self::assertNotSame([], $entries);
-        $last = $entries[array_key_last($entries)];
+        $last = array_last($entries);
         self::assertSame('metadata.pipeline', $last['component']);
         self::assertSame('extractor.failure', $last['event']);
         self::assertStringContainsString('Extractor SingleMetadataExtractorInterface@anonymous', (string) $last['message']);

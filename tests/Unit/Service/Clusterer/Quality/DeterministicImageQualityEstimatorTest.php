@@ -19,7 +19,6 @@ use MagicSunday\Memories\Test\Support\GdColorAllocationTrait;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\TestCase;
 
-use function array_key_last;
 use function file_put_contents;
 use function filesize;
 use function imagecreatetruecolor;
@@ -66,7 +65,7 @@ final class DeterministicImageQualityEstimatorTest extends TestCase
             }
 
             if (str_contains($binary, 'ffmpeg')) {
-                $targetPath = $command[array_key_last($command)];
+                $targetPath = array_last($command);
                 file_put_contents($targetPath, $frameData);
 
                 return [

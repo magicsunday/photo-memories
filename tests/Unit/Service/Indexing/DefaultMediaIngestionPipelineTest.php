@@ -57,7 +57,6 @@ use Symfony\Component\Console\Output\BufferedOutput;
 use Symfony\Component\Console\Output\OutputInterface;
 
 use function array_filter;
-use function array_key_first;
 use function dirname;
 use function file_put_contents;
 use function filesize;
@@ -576,7 +575,7 @@ final class DefaultMediaIngestionPipelineTest extends TestCase
 
         self::assertNotEmpty($warnings);
 
-        $entry = $warnings[array_key_first($warnings)];
+        $entry = array_first($warnings);
         self::assertSame([], $entry['context']['videoExtensions'] ?? null);
     }
 

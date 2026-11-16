@@ -25,7 +25,6 @@ use Stringable;
 use Symfony\Component\Console\Output\NullOutput;
 
 use function array_filter;
-use function array_key_first;
 use function str_ends_with;
 use function str_repeat;
 use function sys_get_temp_dir;
@@ -66,7 +65,7 @@ final class MediaIngestionTelemetryIntegrationTest extends TestCase
 
         self::assertCount(1, $records);
 
-        $entry   = $records[array_key_first($records)];
+        $entry   = array_first($records);
         $context = $entry['context'] ?? [];
 
         self::assertFalse($context['dryRun'] ?? null);
@@ -110,7 +109,7 @@ final class MediaIngestionTelemetryIntegrationTest extends TestCase
 
         self::assertNotEmpty($warnings);
 
-        $entry = $warnings[array_key_first($warnings)];
+        $entry = array_first($warnings);
         self::assertSame(1, $entry['context']['missing_count'] ?? null);
     }
 
