@@ -471,9 +471,9 @@ final class MemberCurationStageTest extends TestCase
         $policyProvider = new SelectionPolicyProvider($profiles, 'default');
 
         return new MemberCurationStage(
-            mediaLookup: $this->createStub(MemberMediaLookupInterface::class),
+            mediaLookup: self::createStub(MemberMediaLookupInterface::class),
             policyProvider: $policyProvider,
-            selector: $this->createStub(ClusterMemberSelectorInterface::class),
+            selector: self::createStub(ClusterMemberSelectorInterface::class),
         );
     }
 }

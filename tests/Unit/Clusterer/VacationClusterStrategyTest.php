@@ -2068,7 +2068,7 @@ final class VacationClusterStrategyTest extends TestCase
      */
     private function createHolidayResolver(array $holidayDates = []): HolidayResolverInterface
     {
-        $resolver = $this->createStub(HolidayResolverInterface::class);
+        $resolver = self::createStub(HolidayResolverInterface::class);
         $resolver
             ->method('isHoliday')
             ->willReturnCallback(static fn (DateTimeImmutable $day): bool => in_array($day->format('Y-m-d'), $holidayDates, true));
@@ -2093,11 +2093,11 @@ final class VacationClusterStrategyTest extends TestCase
         };
 
         return new ClusterPersistenceService(
-            $this->createStub(EntityManagerInterface::class),
+            self::createStub(EntityManagerInterface::class),
             $lookup,
             $selector,
             $this->createPolicyProvider(),
-            $this->createStub(CoverPickerInterface::class),
+            self::createStub(CoverPickerInterface::class),
             250,
             $maxMembers,
         );

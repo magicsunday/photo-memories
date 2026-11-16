@@ -415,7 +415,7 @@ final class DefaultVacationSegmentAssemblerTest extends TestCase
 
         foreach ($travelByDay as $day => $travelKm) {
             $moment = new DateTimeImmutable($day . 'T08:00:00+00:00');
-            $member = $this->createConfiguredStub(Media::class, [
+            $member = self::createConfiguredStub(Media::class, [
                 'hasFaces'        => false,
                 'getQualityScore' => 0.7,
                 'getTakenAt'      => $moment,

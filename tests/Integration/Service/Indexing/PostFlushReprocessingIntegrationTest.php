@@ -43,7 +43,7 @@ final class PostFlushReprocessingIntegrationTest extends TestCase
     #[Test]
     public function itLinksBurstMembersAfterSingleRun(): void
     {
-        $repository          = new InMemoryMediaRepository($this->createStub(EntityManagerInterface::class));
+        $repository          = new InMemoryMediaRepository(self::createStub(EntityManagerInterface::class));
         $tracker             = new PersistedMediaTracker();
         $duplicateRepository = new RecordingMediaDuplicateRepository();
 
@@ -97,7 +97,7 @@ final class PostFlushReprocessingIntegrationTest extends TestCase
     #[Test]
     public function itLinksLivePairsAfterSingleRun(): void
     {
-        $repository          = new InMemoryMediaRepository($this->createStub(EntityManagerInterface::class));
+        $repository          = new InMemoryMediaRepository(self::createStub(EntityManagerInterface::class));
         $tracker             = new PersistedMediaTracker();
         $duplicateRepository = new RecordingMediaDuplicateRepository();
 

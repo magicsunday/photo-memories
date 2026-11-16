@@ -47,7 +47,7 @@ final class CompositeClusterScorerTest extends TestCase
     {
         $mediaMap = $this->createMediaFixtures();
 
-        $entityManager = $this->createStub(EntityManagerInterface::class);
+        $entityManager = self::createStub(EntityManagerInterface::class);
         $queryBuilder  = self::getStubBuilder(QueryBuilder::class)
             ->disableOriginalConstructor()
             ->getStub();
@@ -163,7 +163,7 @@ final class CompositeClusterScorerTest extends TestCase
     #[Test]
     public function scoreRespectsPersistedHeuristicMetrics(): void
     {
-        $entityManager = $this->createStub(EntityManagerInterface::class);
+        $entityManager = self::createStub(EntityManagerInterface::class);
 
         $heuristics = [
             new QualityClusterScoreHeuristic(new ClusterQualityAggregator(12.0)),
@@ -233,7 +233,7 @@ final class CompositeClusterScorerTest extends TestCase
     {
         $mediaMap = $this->createMediaFixtures();
 
-        $entityManager = $this->createStub(EntityManagerInterface::class);
+        $entityManager = self::createStub(EntityManagerInterface::class);
         $queryBuilder  = self::getStubBuilder(QueryBuilder::class)
             ->disableOriginalConstructor()
             ->getStub();
@@ -325,7 +325,7 @@ final class CompositeClusterScorerTest extends TestCase
     #[Test]
     public function appliesAlgorithmAndClusterWeightOverrides(): void
     {
-        $entityManager = $this->createStub(EntityManagerInterface::class);
+        $entityManager = self::createStub(EntityManagerInterface::class);
 
         $heuristics = [
             new QualityClusterScoreHeuristic(new ClusterQualityAggregator(12.0)),
@@ -373,7 +373,7 @@ final class CompositeClusterScorerTest extends TestCase
     #[Test]
     public function appliesStorylineWeightOverrides(): void
     {
-        $entityManager = $this->createStub(EntityManagerInterface::class);
+        $entityManager = self::createStub(EntityManagerInterface::class);
 
         $heuristics = [
             new QualityClusterScoreHeuristic(new ClusterQualityAggregator(12.0)),
@@ -420,7 +420,7 @@ final class CompositeClusterScorerTest extends TestCase
     #[Test]
     public function normalisesScoresPerAlgorithm(): void
     {
-        $entityManager = $this->createStub(EntityManagerInterface::class);
+        $entityManager = self::createStub(EntityManagerInterface::class);
 
         $heuristics = [
             new class implements ClusterScoreHeuristicInterface {
