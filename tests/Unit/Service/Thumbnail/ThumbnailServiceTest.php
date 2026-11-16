@@ -109,6 +109,18 @@ namespace MagicSunday\Memories\Test\Unit\Service\Thumbnail {
 
         private static ?string $lastGdLoader = null;
 
+        /**
+         * Lists the files matching a glob pattern, treating a failed glob as no match.
+         *
+         * @return list<string>
+         */
+        private static function globFiles(string $pattern): array
+        {
+            $files = glob($pattern);
+
+            return $files === false ? [] : $files;
+        }
+
         public static function isGdResampleFailureForced(): bool
         {
             return self::$forceGdResampleFailure;
@@ -263,7 +275,7 @@ namespace MagicSunday\Memories\Test\Unit\Service\Thumbnail {
                 }
 
                 if (is_dir($thumbnailDir)) {
-                    foreach (glob($thumbnailDir . DIRECTORY_SEPARATOR . '*') ?: [] as $file) {
+                    foreach (self::globFiles($thumbnailDir . DIRECTORY_SEPARATOR . '*') as $file) {
                         @unlink($file);
                     }
 
@@ -346,7 +358,7 @@ namespace MagicSunday\Memories\Test\Unit\Service\Thumbnail {
                 }
 
                 if (is_dir($thumbnailDir)) {
-                    foreach (glob($thumbnailDir . DIRECTORY_SEPARATOR . '*') ?: [] as $file) {
+                    foreach (self::globFiles($thumbnailDir . DIRECTORY_SEPARATOR . '*') as $file) {
                         @unlink($file);
                     }
 
@@ -435,7 +447,7 @@ namespace MagicSunday\Memories\Test\Unit\Service\Thumbnail {
                 }
 
                 if (is_dir($sourceDir)) {
-                    foreach (glob($sourceDir . DIRECTORY_SEPARATOR . '*') ?: [] as $file) {
+                    foreach (self::globFiles($sourceDir . DIRECTORY_SEPARATOR . '*') as $file) {
                         @unlink($file);
                     }
 
@@ -443,7 +455,7 @@ namespace MagicSunday\Memories\Test\Unit\Service\Thumbnail {
                 }
 
                 if (is_dir($thumbnailDir)) {
-                    foreach (glob($thumbnailDir . DIRECTORY_SEPARATOR . '*') ?: [] as $file) {
+                    foreach (self::globFiles($thumbnailDir . DIRECTORY_SEPARATOR . '*') as $file) {
                         @unlink($file);
                     }
 
@@ -570,7 +582,7 @@ namespace MagicSunday\Memories\Test\Unit\Service\Thumbnail {
                 }
 
                 if (is_dir($thumbnailDir)) {
-                    foreach (glob($thumbnailDir . DIRECTORY_SEPARATOR . '*') ?: [] as $file) {
+                    foreach (self::globFiles($thumbnailDir . DIRECTORY_SEPARATOR . '*') as $file) {
                         @unlink($file);
                     }
 
@@ -1152,7 +1164,7 @@ namespace MagicSunday\Memories\Test\Unit\Service\Thumbnail {
                     @rmdir($sourceDir);
                 }
 
-                foreach (glob($thumbnailDir . DIRECTORY_SEPARATOR . '*.jpg') ?: [] as $file) {
+                foreach (self::globFiles($thumbnailDir . DIRECTORY_SEPARATOR . '*.jpg') as $file) {
                     @unlink($file);
                 }
 
@@ -1160,7 +1172,7 @@ namespace MagicSunday\Memories\Test\Unit\Service\Thumbnail {
                     @rmdir($thumbnailDir);
                 }
 
-                foreach (glob($relocatedDir . DIRECTORY_SEPARATOR . '*.jpg') ?: [] as $file) {
+                foreach (self::globFiles($relocatedDir . DIRECTORY_SEPARATOR . '*.jpg') as $file) {
                     @unlink($file);
                 }
 

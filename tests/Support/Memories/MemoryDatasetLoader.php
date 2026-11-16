@@ -47,7 +47,8 @@ final readonly class MemoryDatasetLoader
             return [];
         }
 
-        $entries = array_values(array_filter(scandir($this->fixturesBaseDir) ?: [], static fn (string $entry): bool => !str_starts_with($entry, '.')));
+        $scanned = scandir($this->fixturesBaseDir);
+        $entries = array_values(array_filter($scanned === false ? [] : $scanned, static fn (string $entry): bool => !str_starts_with($entry, '.')));
         usort($entries, static fn (string $left, string $right): int => $left <=> $right);
 
         return $entries;
