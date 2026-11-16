@@ -272,6 +272,7 @@ final class MediaRepositoryTest extends TestCase
             ->method('setParameter')
             ->willReturnCallback(static function (string $name, mixed $value) use (&$parameterExpectations, $qb): QueryBuilder {
                 $expected = array_shift($parameterExpectations);
+                self::assertNotNull($expected);
                 self::assertSame($expected[0], $name);
                 self::assertSame($expected[1], $value);
 
