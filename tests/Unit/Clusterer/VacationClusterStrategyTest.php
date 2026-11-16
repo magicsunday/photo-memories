@@ -14,8 +14,8 @@ namespace MagicSunday\Memories\Test\Unit\Clusterer;
 use DateInterval;
 use DateTimeImmutable;
 use DateTimeZone;
-use LogicException;
 use Doctrine\ORM\EntityManagerInterface;
+use LogicException;
 use MagicSunday\Memories\Clusterer\ClusterDraft;
 use MagicSunday\Memories\Clusterer\Context;
 use MagicSunday\Memories\Clusterer\Contract\DaySummaryBuilderInterface;
@@ -55,7 +55,6 @@ use MagicSunday\Memories\Service\Clusterer\Title\LocalizedDateFormatter;
 use MagicSunday\Memories\Service\Clusterer\Title\RouteSummarizer;
 use MagicSunday\Memories\Service\Clusterer\Title\StoryTitleBuilder;
 use MagicSunday\Memories\Service\Feed\CoverPickerInterface;
-use MagicSunday\Memories\Service\Monitoring\Contract\JobMonitoringEmitterInterface;
 use MagicSunday\Memories\Test\TestCase;
 use MagicSunday\Memories\Test\Unit\Clusterer\Fixtures\FixedDaySummaryBuilder;
 use MagicSunday\Memories\Test\Unit\Clusterer\Fixtures\RecordingMonitoringEmitter;
@@ -65,7 +64,6 @@ use MagicSunday\Memories\Utility\MediaMath;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\Test;
 use ReflectionClass;
-use Stringable;
 use Symfony\Component\Yaml\Yaml;
 
 #[CoversClass(VacationClusterStrategy::class)]
@@ -188,14 +186,14 @@ final class VacationClusterStrategyTest extends TestCase
                         'firstGpsMedia'           => null,
                         'lastGpsMedia'            => null,
                         'isSynthetic'             => false,
-                        'distanceSum' => 0.0,
-                        'distanceCount' => 0,
-                        'spotDensity' => 0.0,
-                        'staypointCount' => 0,
-                        'staypointDwellSeconds' => 0,
-                        'primaryStaypointKey' => null,
-                        'cohortPresenceRatio' => 0.0,
-                        'cohortMembers' => [],
+                        'distanceSum'             => 0.0,
+                        'distanceCount'           => 0,
+                        'spotDensity'             => 0.0,
+                        'staypointCount'          => 0,
+                        'staypointDwellSeconds'   => 0,
+                        'primaryStaypointKey'     => null,
+                        'cohortPresenceRatio'     => 0.0,
+                        'cohortMembers'           => [],
                     ],
                 ];
             }
@@ -391,14 +389,14 @@ final class VacationClusterStrategyTest extends TestCase
                 'firstGpsMedia'           => $mediaA,
                 'lastGpsMedia'            => $mediaA,
                 'isSynthetic'             => false,
-                'distanceSum' => 0.0,
-                'distanceCount' => 0,
-                'spotDensity' => 0.0,
-                'staypointCount' => 0,
-                'staypointDwellSeconds' => 0,
-                'primaryStaypointKey' => null,
-                'cohortPresenceRatio' => 0.0,
-                'cohortMembers' => [],
+                'distanceSum'             => 0.0,
+                'distanceCount'           => 0,
+                'spotDensity'             => 0.0,
+                'staypointCount'          => 0,
+                'staypointDwellSeconds'   => 0,
+                'primaryStaypointKey'     => null,
+                'cohortPresenceRatio'     => 0.0,
+                'cohortMembers'           => [],
             ],
             '2024-08-02' => [
                 'date'                    => '2024-08-02',
@@ -440,14 +438,14 @@ final class VacationClusterStrategyTest extends TestCase
                 'firstGpsMedia'           => $mediaB,
                 'lastGpsMedia'            => $mediaB,
                 'isSynthetic'             => false,
-                'distanceSum' => 0.0,
-                'distanceCount' => 0,
-                'spotDensity' => 0.0,
-                'staypointCount' => 0,
-                'staypointDwellSeconds' => 0,
-                'primaryStaypointKey' => null,
-                'cohortPresenceRatio' => 0.0,
-                'cohortMembers' => [],
+                'distanceSum'             => 0.0,
+                'distanceCount'           => 0,
+                'spotDensity'             => 0.0,
+                'staypointCount'          => 0,
+                'staypointDwellSeconds'   => 0,
+                'primaryStaypointKey'     => null,
+                'cohortPresenceRatio'     => 0.0,
+                'cohortMembers'           => [],
             ],
         ];
 

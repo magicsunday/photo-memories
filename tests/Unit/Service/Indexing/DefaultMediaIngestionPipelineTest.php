@@ -355,7 +355,7 @@ final class DefaultMediaIngestionPipelineTest extends TestCase
 
     /**
      * @param array<string, array<string, SingleMetadataExtractorInterface&MockObject>> $extractors
-     * @param list<string>                                                   $callLog
+     * @param list<string>                                                              $callLog
      */
     private function configureExtractorOrderExpectations(array $extractors, array &$callLog): void
     {

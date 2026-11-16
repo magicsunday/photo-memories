@@ -1789,6 +1789,7 @@ final class FeedControllerTest extends TestCase
      * @param array<string, mixed> $spaGestures
      * @param array<string, mixed> $spaOffline
      * @param array<string, mixed> $spaAnimations
+     *
      * @return array{0: FeedController, 1: string}
      */
     private function createControllerWithDependencies(

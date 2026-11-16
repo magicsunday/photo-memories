@@ -11,8 +11,8 @@ declare(strict_types=1);
 
 namespace MagicSunday\Memories\Test\Integration\Clusterer;
 
-use DateInterval;
 use Closure;
+use DateInterval;
 use DateTimeImmutable;
 use DateTimeZone;
 use MagicSunday\Memories\Clusterer\Selection\SelectionProfileProvider;

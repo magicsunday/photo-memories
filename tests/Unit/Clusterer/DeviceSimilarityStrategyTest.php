@@ -227,8 +227,8 @@ final class DeviceSimilarityStrategyTest extends TestCase
         $serialByDevice  = [];
 
         foreach ($clusters as $cluster) {
-            $params                        = $cluster->getParams();
-            $deviceLabel                   = $params['device'];
+            $params      = $cluster->getParams();
+            $deviceLabel = $params['device'];
             self::assertIsString($deviceLabel);
             $membersByDevice[$deviceLabel] = $cluster->getMembers();
             $ownersByDevice[$deviceLabel]  = $params['device_owner'] ?? null;

@@ -12,7 +12,6 @@ declare(strict_types=1);
 namespace MagicSunday\Memories\Test\Integration\Service\Clusterer;
 
 use DateTimeImmutable;
-use LogicException;
 use Doctrine\DBAL\DriverManager;
 use Doctrine\ORM\EntityManager;
 use Doctrine\ORM\EntityManagerInterface;
@@ -20,6 +19,7 @@ use Doctrine\ORM\ORMSetup;
 use Doctrine\ORM\Query;
 use Doctrine\ORM\QueryBuilder;
 use Doctrine\ORM\Tools\SchemaTool;
+use LogicException;
 use MagicSunday\Memories\Clusterer\ClusterDraft;
 use MagicSunday\Memories\Entity\Cluster;
 use MagicSunday\Memories\Entity\ClusterMember;

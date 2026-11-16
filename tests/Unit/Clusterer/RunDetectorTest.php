@@ -1057,8 +1057,9 @@ final class RunDetectorTest extends TestCase
     }
 
     /**
-     * @param list<Media> $gpsMembers
+     * @param list<Media>          $gpsMembers
      * @param array<string, mixed> $overrides
+     *
      * @return array<string, mixed>
      */
     private function makeDaySummary(

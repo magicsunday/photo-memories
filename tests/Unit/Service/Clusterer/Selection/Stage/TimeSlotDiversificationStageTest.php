@@ -107,7 +107,7 @@ final class TimeSlotDiversificationStageTest extends TestCase
     }
 
     /**
-     * @param array<string, int> $dayQuotas
+     * @param array<string, int>                                                                              $dayQuotas
      * @param array<string, array{score:float,category:string,duration:int|null,metrics:array<string,float>}> $dayContext
      */
     private function createPolicy(

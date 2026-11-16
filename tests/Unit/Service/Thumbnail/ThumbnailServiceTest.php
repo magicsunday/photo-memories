@@ -1269,14 +1269,14 @@ namespace MagicSunday\Memories\Test\Unit\Service\Thumbnail {
 
                     $cornerColorIndex = imagecolorat($thumbnailImage, 0, 0);
                     self::assertNotFalse($cornerColorIndex);
-                    $cornerColor      = imagecolorsforindex($thumbnailImage, $cornerColorIndex);
+                    $cornerColor = imagecolorsforindex($thumbnailImage, $cornerColorIndex);
                     self::assertGreaterThanOrEqual(250, $cornerColor['red']);
                     self::assertGreaterThanOrEqual(250, $cornerColor['green']);
                     self::assertGreaterThanOrEqual(250, $cornerColor['blue']);
 
                     $centerColorIndex = imagecolorat($thumbnailImage, 25, 25);
                     self::assertNotFalse($centerColorIndex);
-                    $centerColor      = imagecolorsforindex($thumbnailImage, $centerColorIndex);
+                    $centerColor = imagecolorsforindex($thumbnailImage, $centerColorIndex);
                     self::assertLessThanOrEqual(80, $centerColor['red']);
 
                     imagedestroy($thumbnailImage);
@@ -1596,7 +1596,7 @@ namespace MagicSunday\Memories\Test\Unit\Service\Thumbnail {
                 for ($x = 0; $x < $width; ++$x) {
                     $colorIndex = imagecolorat($image, $x, $y);
                     self::assertNotFalse($colorIndex);
-                    $color      = imagecolorsforindex($image, $colorIndex);
+                    $color = imagecolorsforindex($image, $colorIndex);
 
                     $row[] = $this->rgbToHex($color['red'], $color['green'], $color['blue']);
                 }

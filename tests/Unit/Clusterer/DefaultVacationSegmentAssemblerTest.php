@@ -334,16 +334,16 @@ final class DefaultVacationSegmentAssemblerTest extends TestCase
                 'distance_km' => 190.0,
                 'source'      => 'staypoint',
             ],
-            'baseAway'       => true,
-            'awayByDistance' => true,
-            'firstGpsMedia'  => null,
-            'lastGpsMedia'   => null,
-            'isSynthetic'    => true,
-            'distanceSum' => 0.0,
-            'distanceCount' => 0,
-            'spotDensity' => 0.0,
+            'baseAway'              => true,
+            'awayByDistance'        => true,
+            'firstGpsMedia'         => null,
+            'lastGpsMedia'          => null,
+            'isSynthetic'           => true,
+            'distanceSum'           => 0.0,
+            'distanceCount'         => 0,
+            'spotDensity'           => 0.0,
             'staypointDwellSeconds' => 0,
-            'primaryStaypointKey' => null,
+            'primaryStaypointKey'   => null,
         ];
 
         ksort($days);
@@ -473,11 +473,11 @@ final class DefaultVacationSegmentAssemblerTest extends TestCase
                 'firstGpsMedia'           => $member,
                 'lastGpsMedia'            => $member,
                 'isSynthetic'             => false,
-                'distanceSum' => 0.0,
-                'distanceCount' => 0,
-                'staypointCount' => 0,
-                'staypointDwellSeconds' => 0,
-                'primaryStaypointKey' => null,
+                'distanceSum'             => 0.0,
+                'distanceCount'           => 0,
+                'staypointCount'          => 0,
+                'staypointDwellSeconds'   => 0,
+                'primaryStaypointKey'     => null,
             ];
         }
 

@@ -189,7 +189,7 @@ final class VacationScoreCalculatorTest extends TestCase
         self::assertStringContainsString('Personenanteil:', $params['vacation_subtitle']);
 
         self::assertArrayHasKey('member_selection', $params);
-        $memberSelection      = $params['member_selection'];
+        $memberSelection = $params['member_selection'];
         self::assertIsArray($memberSelection);
         self::assertIsInt($params['min_items_per_day']);
         self::assertIsInt($params['away_days']);
@@ -2251,6 +2251,7 @@ final class VacationScoreCalculatorTest extends TestCase
 
     /**
      * @param array<string, mixed> $telemetryOverrides
+     *
      * @return VacationScoreCalculator
      */
     private function createCalculator(

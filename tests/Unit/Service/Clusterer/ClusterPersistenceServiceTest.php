@@ -287,9 +287,9 @@ final class ClusterPersistenceServiceTest extends TestCase
         $params        = $draft->getParams();
         $memberQuality = $params['member_quality'] ?? [];
         self::assertIsArray($memberQuality);
-        $memberQuality['ordered']  = [2, 1, 3];
-        $params['member_quality']  = $memberQuality;
-        $draft                     = $draft->withParams($params);
+        $memberQuality['ordered'] = [2, 1, 3];
+        $params['member_quality'] = $memberQuality;
+        $draft                    = $draft->withParams($params);
 
         $persistedCount = $service->persistStreaming([$draft], null);
 
