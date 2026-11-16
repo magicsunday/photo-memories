@@ -39,6 +39,20 @@ abstract class TestCase extends BaseTestCase
         $this->assignEntityId($media, $id);
     }
 
+    /**
+     * Returns the identifier of a fixture media and fails the test when it has none.
+     */
+    protected static function mediaId(Media $media): int
+    {
+        $id = $media->getId();
+
+        if ($id === null) {
+            self::fail('The media fixture has no identifier.');
+        }
+
+        return $id;
+    }
+
     protected function makeMedia(
         int $id,
         string $path,

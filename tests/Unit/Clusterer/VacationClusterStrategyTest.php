@@ -452,7 +452,7 @@ final class VacationClusterStrategyTest extends TestCase
                 'vacation',
                 ['classification' => 'vacation'],
                 ['lat' => 40.7128, 'lon' => -74.0060],
-                [$mediaA->getId(), $mediaB->getId()],
+                [self::mediaId($mediaA), self::mediaId($mediaB)],
             ),
         ];
 

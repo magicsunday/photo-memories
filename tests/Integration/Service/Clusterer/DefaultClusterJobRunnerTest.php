@@ -12,6 +12,7 @@ declare(strict_types=1);
 namespace MagicSunday\Memories\Test\Integration\Service\Clusterer;
 
 use DateTimeImmutable;
+use LogicException;
 use Doctrine\DBAL\DriverManager;
 use Doctrine\ORM\EntityManager;
 use Doctrine\ORM\EntityManagerInterface;
@@ -182,12 +183,12 @@ final class DefaultClusterJobRunnerTest extends TestCase
         $entityManager->persist($mediaTwo);
         $entityManager->flush();
 
-        $existingCluster = new Cluster('story', 'legacy', [], ['lat' => 0.0, 'lon' => 0.0], [$mediaOne->getId()]);
+        $existingCluster = new Cluster('story', 'legacy', [], ['lat' => 0.0, 'lon' => 0.0], [self::mediaId($mediaOne)]);
         $entityManager->persist($existingCluster);
         $entityManager->flush();
 
         $clusterer = new SequenceHybridClusterer([
-            new ClusterDraft('replacement', [], ['lat' => 1.0, 'lon' => 1.0], [$mediaOne->getId(), $mediaTwo->getId()]),
+            new ClusterDraft('replacement', [], ['lat' => 1.0, 'lon' => 1.0], [self::mediaId($mediaOne), self::mediaId($mediaTwo)]),
         ]);
         $consolidator = new PassthroughClusterConsolidator();
 
@@ -260,7 +261,7 @@ final class DefaultClusterJobRunnerTest extends TestCase
                     ],
                 ],
                 ['lat' => 10.0, 'lon' => 20.0],
-                [$mediaOne->getId(), $mediaTwo->getId()],
+                [self::mediaId($mediaOne), self::mediaId($mediaTwo)],
                 'sunny-days',
             ),
         ]);
@@ -342,7 +343,7 @@ final class DefaultClusterJobRunnerTest extends TestCase
                     ],
                 ],
                 ['lat' => 0.0, 'lon' => 0.0],
-                [$mediaA->getId()],
+                [self::mediaId($mediaA)],
                 'top-story',
             ),
             new ClusterDraft(
@@ -355,7 +356,7 @@ final class DefaultClusterJobRunnerTest extends TestCase
                     ],
                 ],
                 ['lat' => 1.0, 'lon' => 1.0],
-                [$mediaB->getId()],
+                [self::mediaId($mediaB)],
                 'backup-story',
             ),
         ]);
@@ -603,7 +604,13 @@ final class InMemoryMemberMediaLookup implements MemberMediaLookupInterface
     public function __construct(array $media)
     {
         foreach ($media as $item) {
-            $this->mediaById[$item->getId()] = $item;
+            $id = $item->getId();
+
+            if ($id === null) {
+                throw new LogicException('The media fixture has no identifier.');
+            }
+
+            $this->mediaById[$id] = $item;
         }
     }
 

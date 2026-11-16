@@ -2310,7 +2310,7 @@ final class VacationScoreCalculatorTest extends TestCase
 
                     $media->setHasFaces(true);
 
-                    if ($media->getId() % 3 === 0) {
+                    if (self::mediaId($media) % 3 === 0) {
                         $media->setPersons(['Alex']);
                     } else {
                         $media->setPersons(['Alex', 'Jamie']);
