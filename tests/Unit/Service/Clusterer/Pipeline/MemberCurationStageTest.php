@@ -185,7 +185,7 @@ final class MemberCurationStageTest extends TestCase
             }
 
             /**
-             * @return Media[]
+             * @return list<Media>
              */
             public function findByIds(array $ids, bool $onlyVideos = false): array
             {
@@ -306,7 +306,7 @@ final class MemberCurationStageTest extends TestCase
             }
 
             /**
-             * @return Media[]
+             * @return list<Media>
              */
             public function findByIds(array $ids, bool $onlyVideos = false): array
             {

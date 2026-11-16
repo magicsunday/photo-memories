@@ -51,7 +51,7 @@ final class ClusterMemberSelectionServiceTest extends TestCase
             }
 
             /**
-             * @return Media[]
+             * @return list<Media>
              */
             public function findByIds(array $ids, bool $onlyVideos = false): array
             {
@@ -156,7 +156,7 @@ final class ClusterMemberSelectionServiceTest extends TestCase
             }
 
             /**
-             * @return Media[]
+             * @return list<Media>
              */
             public function findByIds(array $ids, bool $onlyVideos = false): array
             {
@@ -244,7 +244,7 @@ final class ClusterMemberSelectionServiceTest extends TestCase
             }
 
             /**
-             * @return Media[]
+             * @return list<Media>
              */
             public function findByIds(array $ids, bool $onlyVideos = false): array
             {
@@ -318,7 +318,7 @@ final class ClusterMemberSelectionServiceTest extends TestCase
             }
 
             /**
-             * @return Media[]
+             * @return list<Media>
              */
             public function findByIds(array $ids, bool $onlyVideos = false): array
             {

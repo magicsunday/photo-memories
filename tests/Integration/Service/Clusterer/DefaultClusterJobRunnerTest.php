@@ -608,7 +608,7 @@ final class InMemoryMemberMediaLookup implements MemberMediaLookupInterface
     }
 
     /**
-     * @return Media[]
+     * @return list<Media>
      */
     public function findByIds(array $ids, bool $onlyVideos = false): array
     {

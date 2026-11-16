@@ -204,7 +204,7 @@ final class VacationClusterStrategyTest extends TestCase
             }
 
             /**
-             * @return ClusterDraft[]
+             * @return list<ClusterDraft>
              */
             public function detectSegments(array $days, array $home): array
             {
@@ -867,7 +867,7 @@ final class VacationClusterStrategyTest extends TestCase
             }
 
             /**
-             * @return Media[]
+             * @return list<Media>
              */
             public function findByIds(array $ids, bool $onlyVideos = false): array
             {
