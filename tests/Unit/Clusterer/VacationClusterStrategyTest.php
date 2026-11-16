@@ -57,6 +57,7 @@ use MagicSunday\Memories\Service\Clusterer\Title\StoryTitleBuilder;
 use MagicSunday\Memories\Service\Feed\CoverPickerInterface;
 use MagicSunday\Memories\Service\Monitoring\Contract\JobMonitoringEmitterInterface;
 use MagicSunday\Memories\Test\TestCase;
+use MagicSunday\Memories\Test\Unit\Clusterer\Fixtures\FixedDaySummaryBuilder;
 use MagicSunday\Memories\Test\Unit\Clusterer\Fixtures\RecordingMonitoringEmitter;
 use MagicSunday\Memories\Test\Unit\Clusterer\Fixtures\VacationTestMemberSelector;
 use MagicSunday\Memories\Utility\LocationHelper;
@@ -250,6 +251,9 @@ final class VacationClusterStrategyTest extends TestCase
         ];
 
         $homeLocator = new class($home) implements HomeLocatorInterface {
+            /**
+             * @param array{lat: float, lon: float, radius_km: float, country: string|null, timezone_offset: int|null} $home
+             */
             public function __construct(private array $home)
             {
             }
@@ -479,19 +483,7 @@ final class VacationClusterStrategyTest extends TestCase
             }
         };
 
-        $daySummaryBuilder = new readonly class($days) implements DaySummaryBuilderInterface {
-            /**
-             * @param array<string, array<string, mixed>> $days
-             */
-            public function __construct(private array $days)
-            {
-            }
-
-            public function buildDaySummaries(array $items, array $home): array
-            {
-                return $this->days;
-            }
-        };
+        $daySummaryBuilder = new FixedDaySummaryBuilder($days);
 
         $segmentAssembler = new readonly class($segments) implements VacationSegmentAssemblerInterface {
             /**
