@@ -15,13 +15,13 @@ use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Service\Clusterer\Quality\DeterministicImageQualityEstimator;
 use MagicSunday\Memories\Service\Clusterer\Quality\VideoFrameSampler;
 use MagicSunday\Memories\Service\Clusterer\Quality\VideoFrameSamplerInterface;
+use MagicSunday\Memories\Test\Support\GdColorAllocationTrait;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\TestCase;
 
 use function array_key_last;
 use function file_put_contents;
 use function filesize;
-use function imagecolorallocate;
 use function imagecreatetruecolor;
 use function imagedestroy;
 use function imagejpeg;
@@ -41,6 +41,8 @@ use function unlink;
 #[CoversClass(DeterministicImageQualityEstimator::class)]
 final class DeterministicImageQualityEstimatorTest extends TestCase
 {
+    use GdColorAllocationTrait;
+
     public function testScoreVideoUsesFfprobeSample(): void
     {
         $videoPath = $this->createTemporaryFile('video_', '.mp4');
@@ -175,7 +177,7 @@ final class DeterministicImageQualityEstimatorTest extends TestCase
         for ($y = 0; $y < 8; ++$y) {
             for ($x = 0; $x < 8; ++$x) {
                 $gray  = (int) (255 * (($x + $y) / 14));
-                $color = imagecolorallocate($image, $gray, $gray, $gray);
+                $color = self::allocateGdColor($image, $gray, $gray, $gray);
                 imagesetpixel($image, $x, $y, $color);
             }
         }

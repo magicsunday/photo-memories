@@ -13,6 +13,7 @@ namespace MagicSunday\Memories\Test\Unit\Service\Metadata;
 
 use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Service\Metadata\PerceptualHashExtractor;
+use MagicSunday\Memories\Test\Support\GdColorAllocationTrait;
 use MagicSunday\Memories\Test\TestCase;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\Test;
@@ -23,7 +24,6 @@ use function base_convert;
 use function chr;
 use function file_get_contents;
 use function file_put_contents;
-use function imagecolorallocate;
 use function imagecreatefromjpeg;
 use function imagecreatetruecolor;
 use function imagedestroy;
@@ -43,6 +43,8 @@ use function unlink;
 #[CoversClass(PerceptualHashExtractor::class)]
 final class PerceptualHashExtractorTest extends TestCase
 {
+    use GdColorAllocationTrait;
+
     /**
      * Maximum Hamming distance (in bits) tolerated between a freshly computed
      * perceptual hash and the recorded reference. Perceptual hashes drift by a
@@ -225,7 +227,7 @@ final class PerceptualHashExtractorTest extends TestCase
         for ($y = 0; $y < 64; ++$y) {
             for ($x = 0; $x < 64; ++$x) {
                 $gray  = ($x + $y) % 256;
-                $color = imagecolorallocate($image, $gray, $gray, $gray);
+                $color = self::allocateGdColor($image, $gray, $gray, $gray);
                 imagefilledrectangle($image, $x, $y, $x, $y, $color);
             }
         }
