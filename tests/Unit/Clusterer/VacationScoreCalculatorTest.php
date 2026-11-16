@@ -11,6 +11,7 @@ declare(strict_types=1);
 
 namespace MagicSunday\Memories\Test\Unit\Clusterer;
 
+use Closure;
 use DateInterval;
 use DateTimeImmutable;
 use DateTimeZone;
@@ -2238,7 +2239,7 @@ final class VacationScoreCalculatorTest extends TestCase
     private function createCalculator(
         LocationHelper $locationHelper,
         ?VacationSelectionOptions $options = null,
-        ?callable $curationFilter = null,
+        ?Closure $curationFilter = null,
         array $telemetryOverrides = [],
         ?RecordingMonitoringEmitter $emitter = null,
         ?HolidayResolverInterface $holidayResolver = null,
