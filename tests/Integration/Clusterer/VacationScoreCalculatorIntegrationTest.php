@@ -76,7 +76,12 @@ final class VacationScoreCalculatorIntegrationTest extends TestCase
             ),
         ];
 
-        $dayContext = [$dayKey => ['category' => 'peripheral']];
+        $dayContext = [$dayKey => [
+            'score'    => 0.35,
+            'category' => 'peripheral',
+            'duration' => null,
+            'metrics'  => [],
+        ]];
 
         self::assertNull($calculator->buildDraft([$dayKey], $days, $home, $dayContext));
         self::assertCount(2, $emitter->events);
@@ -155,7 +160,12 @@ final class VacationScoreCalculatorIntegrationTest extends TestCase
             'timezone_offset' => 60,
         ];
 
-        $dayContext = [$dayKey => ['category' => 'core']];
+        $dayContext = [$dayKey => [
+            'score'    => 1.0,
+            'category' => 'core',
+            'duration' => null,
+            'metrics'  => [],
+        ]];
 
         $draft = $calculator->buildDraft([$dayKey], $days, $home, $dayContext);
 
