@@ -45,6 +45,7 @@ use MagicSunday\Memories\Test\TestCase;
 use Override;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\Test;
+use PHPUnit\Framework\MockObject\Stub;
 use RuntimeException;
 use Symfony\Component\Yaml\Yaml;
 
@@ -464,7 +465,7 @@ final class DefaultClusterJobRunnerTest extends TestCase
     /**
      * @param list<non-empty-string> $methods
      */
-    private function createQueryBuilderStub(array $methods): QueryBuilder
+    private function createQueryBuilderStub(array $methods): QueryBuilder&Stub
     {
         $qb = self::getStubBuilder(QueryBuilder::class)
             ->disableOriginalConstructor()

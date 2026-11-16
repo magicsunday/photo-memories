@@ -27,6 +27,8 @@ use MagicSunday\Memories\Service\Metadata\MetadataFeatureVersion;
 use MagicSunday\Memories\Test\TestCase;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\Test;
+use PHPUnit\Framework\MockObject\MockObject;
+use PHPUnit\Framework\MockObject\Stub;
 use Traversable;
 
 use function iterator_to_array;
@@ -334,7 +336,7 @@ final class DefaultClusterJobRunnerTest extends TestCase
     /**
      * @param list<non-empty-string> $methods
      */
-    private function createQueryBuilderMock(array $methods): QueryBuilder
+    private function createQueryBuilderMock(array $methods): QueryBuilder&MockObject
     {
         $qb = $this->getMockBuilder(QueryBuilder::class)
             ->disableOriginalConstructor()
@@ -355,7 +357,7 @@ final class DefaultClusterJobRunnerTest extends TestCase
     /**
      * @param list<non-empty-string> $methods
      */
-    private function createQueryBuilderStub(array $methods): QueryBuilder
+    private function createQueryBuilderStub(array $methods): QueryBuilder&Stub
     {
         $qb = self::getStubBuilder(QueryBuilder::class)
             ->disableOriginalConstructor()
