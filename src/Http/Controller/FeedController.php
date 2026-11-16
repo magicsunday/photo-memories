@@ -893,7 +893,7 @@ final class FeedController
 
             foreach ($mediaItems as $media) {
                 $this->mediaCache[(int) $media->getId()] = $media;
-                unset($missing[$media->getId()]);
+                unset($missing[(int) $media->getId()]);
             }
 
             if ($missing !== []) {

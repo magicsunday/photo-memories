@@ -885,7 +885,7 @@ final readonly class MemoryFeedBuilder implements FeedBuilderInterface
         $map = [];
 
         foreach ($members as $media) {
-            $map[$media->getId()] = $media;
+            $map[(int) $media->getId()] = $media;
         }
 
         $curated = [];
