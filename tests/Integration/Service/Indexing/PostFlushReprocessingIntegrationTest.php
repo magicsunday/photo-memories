@@ -243,9 +243,6 @@ final class PostFlushReprocessingIntegrationTest extends TestCase
     }
 }
 
-/**
- * @extends MediaRepository
- */
 final readonly class InMemoryMediaRepository extends MediaRepository
 {
     /**

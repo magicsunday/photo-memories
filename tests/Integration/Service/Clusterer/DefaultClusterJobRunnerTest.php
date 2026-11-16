@@ -485,9 +485,6 @@ final class DefaultClusterJobRunnerTest extends TestCase
     }
 }
 
-/**
- * @implements HybridClustererInterface
- */
 final readonly class SequenceHybridClusterer implements HybridClustererInterface
 {
     /**
