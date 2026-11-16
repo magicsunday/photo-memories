@@ -136,6 +136,7 @@ final readonly class ClusterDeviceMetadataAggregator
             ];
         }
 
+        /** @var array<string, array{count: int, label: string}> $descriptorCounts */
         $descriptorCounts = [];
         $makeCounts       = [];
         $modelCounts      = [];
