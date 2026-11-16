@@ -65,7 +65,7 @@ final class ClusterPersistenceServiceTest extends TestCase
             }
         };
 
-        $coverPicker = $this->createMock(CoverPickerInterface::class);
+        $coverPicker = self::createStub(CoverPickerInterface::class);
         $coverPicker->method('pickCover')->willReturn(null);
 
         $selector = new class implements ClusterMemberSelectorInterface {
@@ -105,16 +105,16 @@ final class ClusterPersistenceServiceTest extends TestCase
         $qbMocks = [];
 
         foreach ($chunkedResults as $index => $rows) {
-            $query = $this->getMockBuilder(Query::class)
+            $query = self::getStubBuilder(Query::class)
                 ->disableOriginalConstructor()
                 ->onlyMethods(['getResult'])
-                ->getMock();
+                ->getStub();
             $query->method('getResult')->willReturn($rows);
 
-            $qb = $this->getMockBuilder(QueryBuilder::class)
+            $qb = self::getStubBuilder(QueryBuilder::class)
                 ->disableOriginalConstructor()
                 ->onlyMethods(['select', 'from', 'where', 'andWhere', 'setParameter', 'getQuery'])
-                ->getMock();
+                ->getStub();
 
             $qb->method('select')->willReturnSelf();
             $qb->method('from')->willReturnSelf();
@@ -205,23 +205,23 @@ final class ClusterPersistenceServiceTest extends TestCase
             }
         };
 
-        $coverPicker = $this->createMock(CoverPickerInterface::class);
+        $coverPicker = self::createStub(CoverPickerInterface::class);
         $coverPicker->method('pickCover')->willReturn($media[2]);
 
         $persisted = null;
 
-        $em = $this->createMock(EntityManagerInterface::class);
+        $em = self::createStub(EntityManagerInterface::class);
 
-        $query = $this->getMockBuilder(Query::class)
+        $query = self::getStubBuilder(Query::class)
             ->disableOriginalConstructor()
             ->onlyMethods(['getResult'])
-            ->getMock();
+            ->getStub();
         $query->method('getResult')->willReturn([]);
 
-        $qb = $this->getMockBuilder(QueryBuilder::class)
+        $qb = self::getStubBuilder(QueryBuilder::class)
             ->disableOriginalConstructor()
             ->onlyMethods(['select', 'from', 'where', 'andWhere', 'setParameter', 'getQuery'])
-            ->getMock();
+            ->getStub();
         $qb->method('select')->willReturnSelf();
         $qb->method('from')->willReturnSelf();
         $qb->method('where')->willReturnSelf();
@@ -394,21 +394,21 @@ final class ClusterPersistenceServiceTest extends TestCase
             }
         };
 
-        $coverPicker = $this->createMock(CoverPickerInterface::class);
+        $coverPicker = self::createStub(CoverPickerInterface::class);
         $coverPicker->method('pickCover')->willReturn(null);
 
         $em = $this->createMock(EntityManagerInterface::class);
 
-        $query = $this->getMockBuilder(Query::class)
+        $query = self::getStubBuilder(Query::class)
             ->disableOriginalConstructor()
             ->onlyMethods(['getResult'])
-            ->getMock();
+            ->getStub();
         $query->method('getResult')->willReturn([]);
 
-        $qb = $this->getMockBuilder(QueryBuilder::class)
+        $qb = self::getStubBuilder(QueryBuilder::class)
             ->disableOriginalConstructor()
             ->onlyMethods(['select', 'from', 'where', 'andWhere', 'setParameter', 'getQuery'])
-            ->getMock();
+            ->getStub();
         $qb->method('select')->willReturnSelf();
         $qb->method('from')->willReturnSelf();
         $qb->method('where')->willReturnSelf();
@@ -502,7 +502,7 @@ final class ClusterPersistenceServiceTest extends TestCase
             }
         };
 
-        $coverPicker = $this->createMock(CoverPickerInterface::class);
+        $coverPicker = self::createStub(CoverPickerInterface::class);
         $coverPicker->method('pickCover')->willReturn($media[1]);
 
         $selector = new class implements ClusterMemberSelectorInterface {
@@ -516,7 +516,7 @@ final class ClusterPersistenceServiceTest extends TestCase
             }
         };
 
-        $em = $this->createMock(EntityManagerInterface::class);
+        $em = self::createStub(EntityManagerInterface::class);
 
         $service = new ClusterPersistenceService(
             $em,
@@ -626,11 +626,11 @@ final class ClusterPersistenceServiceTest extends TestCase
             }
         };
 
-        $coverPicker = $this->createMock(CoverPickerInterface::class);
+        $coverPicker = self::createStub(CoverPickerInterface::class);
         $coverPicker->method('pickCover')->willReturn($media[1]);
 
         $service = new ClusterPersistenceService(
-            $this->createMock(EntityManagerInterface::class),
+            self::createStub(EntityManagerInterface::class),
             $lookup,
             $selector,
             $this->createPolicyProvider(),

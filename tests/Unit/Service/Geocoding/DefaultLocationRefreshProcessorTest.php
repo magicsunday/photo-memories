@@ -182,9 +182,9 @@ final class DefaultLocationRefreshProcessorTest extends TestCase
 
     private function createResolver(EntityManagerInterface $entityManager): LocationResolver
     {
-        $httpClient     = $this->createMock(HttpClientInterface::class);
-        $queryBuilder   = $this->createMock(OverpassQueryBuilderInterface::class);
-        $responseParser = $this->createMock(OverpassResponseParserInterface::class);
+        $httpClient     = self::createStub(HttpClientInterface::class);
+        $queryBuilder   = self::createStub(OverpassQueryBuilderInterface::class);
+        $responseParser = self::createStub(OverpassResponseParserInterface::class);
 
         $overpassClient = new OverpassClient($httpClient, $queryBuilder, $responseParser);
         $poiEnricher    = new LocationPoiEnricher(

@@ -47,7 +47,7 @@ final class PostFlushReprocessingIntegrationTest extends TestCase
         $tracker             = new PersistedMediaTracker();
         $duplicateRepository = new RecordingMediaDuplicateRepository();
 
-        $entityManager = $this->createMock(EntityManagerInterface::class);
+        $entityManager = self::createStub(EntityManagerInterface::class);
         $this->configureEntityManager($entityManager, $repository);
 
         $nearDuplicateStage = new NearDuplicateStage($entityManager, $repository, $duplicateRepository, 6);
@@ -101,7 +101,7 @@ final class PostFlushReprocessingIntegrationTest extends TestCase
         $tracker             = new PersistedMediaTracker();
         $duplicateRepository = new RecordingMediaDuplicateRepository();
 
-        $entityManager = $this->createMock(EntityManagerInterface::class);
+        $entityManager = self::createStub(EntityManagerInterface::class);
         $this->configureEntityManager($entityManager, $repository);
 
         $nearDuplicateStage = new NearDuplicateStage($entityManager, $repository, $duplicateRepository, 6);

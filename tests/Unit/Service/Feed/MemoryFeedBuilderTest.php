@@ -33,11 +33,11 @@ final class MemoryFeedBuilderTest extends TestCase
     #[Test]
     public function filtersHiddenMediaFromFeedItems(): void
     {
-        $titleGen = $this->createMock(TitleGeneratorInterface::class);
+        $titleGen = self::createStub(TitleGeneratorInterface::class);
         $titleGen->method('makeTitle')->willReturn('Titel');
         $titleGen->method('makeSubtitle')->willReturn('Untertitel');
 
-        $coverPicker = $this->createMock(CoverPickerInterface::class);
+        $coverPicker = self::createStub(CoverPickerInterface::class);
         $coverPicker->method('pickCover')->willReturnCallback(static fn (array $members): ?Media => $members[0] ?? null);
 
         $visible = $this->buildMedia(1, false);
@@ -86,11 +86,11 @@ final class MemoryFeedBuilderTest extends TestCase
     #[Test]
     public function resortsItemsByAdjustedScoreAfterPreferencePenalties(): void
     {
-        $titleGen = $this->createMock(TitleGeneratorInterface::class);
+        $titleGen = self::createStub(TitleGeneratorInterface::class);
         $titleGen->method('makeTitle')->willReturnOnConsecutiveCalls('Penalised', 'Preferred');
         $titleGen->method('makeSubtitle')->willReturn('Untertitel');
 
-        $coverPicker = $this->createMock(CoverPickerInterface::class);
+        $coverPicker = self::createStub(CoverPickerInterface::class);
         $coverPicker->method('pickCover')->willReturnCallback(static fn (array $members): ?Media => $members[0] ?? null);
 
         $mediaRepository = $this->createMock(MediaRepository::class);
@@ -195,11 +195,11 @@ final class MemoryFeedBuilderTest extends TestCase
     #[Test]
     public function usesCuratedOverlayWhenAvailable(): void
     {
-        $titleGen = $this->createMock(TitleGeneratorInterface::class);
+        $titleGen = self::createStub(TitleGeneratorInterface::class);
         $titleGen->method('makeTitle')->willReturn('Titel');
         $titleGen->method('makeSubtitle')->willReturn('Untertitel');
 
-        $coverPicker = $this->createMock(CoverPickerInterface::class);
+        $coverPicker = self::createStub(CoverPickerInterface::class);
         $coverPicker->method('pickCover')->willReturnCallback(static fn (array $members): ?Media => $members[0] ?? null);
 
         $mediaRepository = $this->createMock(MediaRepository::class);
@@ -265,11 +265,11 @@ final class MemoryFeedBuilderTest extends TestCase
     #[Test]
     public function fallsBackToChronologicalWhenCuratedBelowMinimum(): void
     {
-        $titleGen = $this->createMock(TitleGeneratorInterface::class);
+        $titleGen = self::createStub(TitleGeneratorInterface::class);
         $titleGen->method('makeTitle')->willReturn('Titel');
         $titleGen->method('makeSubtitle')->willReturn('Untertitel');
 
-        $coverPicker = $this->createMock(CoverPickerInterface::class);
+        $coverPicker = self::createStub(CoverPickerInterface::class);
         $coverPicker->method('pickCover')->willReturnCallback(static fn (array $members): ?Media => $members[0] ?? null);
 
         $mediaRepository = $this->createMock(MediaRepository::class);
@@ -335,11 +335,11 @@ final class MemoryFeedBuilderTest extends TestCase
     #[Test]
     public function fallsBackWhenPolicyMinimumExceedsOrderedOverlay(): void
     {
-        $titleGen = $this->createMock(TitleGeneratorInterface::class);
+        $titleGen = self::createStub(TitleGeneratorInterface::class);
         $titleGen->method('makeTitle')->willReturn('Titel');
         $titleGen->method('makeSubtitle')->willReturn('Untertitel');
 
-        $coverPicker = $this->createMock(CoverPickerInterface::class);
+        $coverPicker = self::createStub(CoverPickerInterface::class);
         $coverPicker->method('pickCover')->willReturnCallback(static fn (array $members): ?Media => $members[0] ?? null);
 
         $mediaRepository = $this->createMock(MediaRepository::class);
@@ -409,11 +409,11 @@ final class MemoryFeedBuilderTest extends TestCase
     #[Test]
     public function honoursQualityAndPeopleThresholds(): void
     {
-        $titleGen = $this->createMock(TitleGeneratorInterface::class);
+        $titleGen = self::createStub(TitleGeneratorInterface::class);
         $titleGen->method('makeTitle')->willReturn('Titel');
         $titleGen->method('makeSubtitle')->willReturn('Untertitel');
 
-        $coverPicker = $this->createMock(CoverPickerInterface::class);
+        $coverPicker = self::createStub(CoverPickerInterface::class);
         $coverPicker->method('pickCover')->willReturnCallback(static fn (array $members): ?Media => $members[0] ?? null);
 
         $mediaRepository = $this->createMock(MediaRepository::class);
@@ -499,11 +499,11 @@ final class MemoryFeedBuilderTest extends TestCase
     #[Test]
     public function appliesCustomPersonalizationProfile(): void
     {
-        $titleGen = $this->createMock(TitleGeneratorInterface::class);
+        $titleGen = self::createStub(TitleGeneratorInterface::class);
         $titleGen->method('makeTitle')->willReturn('Titel');
         $titleGen->method('makeSubtitle')->willReturn('Untertitel');
 
-        $coverPicker = $this->createMock(CoverPickerInterface::class);
+        $coverPicker = self::createStub(CoverPickerInterface::class);
         $coverPicker->method('pickCover')->willReturnCallback(static fn (array $members): ?Media => $members[0] ?? null);
 
         $mediaRepository = $this->createMock(MediaRepository::class);
@@ -611,11 +611,11 @@ final class MemoryFeedBuilderTest extends TestCase
     #[Test]
     public function appliesFavouritePersonBoostFromPreferences(): void
     {
-        $titleGen = $this->createMock(TitleGeneratorInterface::class);
+        $titleGen = self::createStub(TitleGeneratorInterface::class);
         $titleGen->method('makeTitle')->willReturn('Titel');
         $titleGen->method('makeSubtitle')->willReturn('Untertitel');
 
-        $coverPicker = $this->createMock(CoverPickerInterface::class);
+        $coverPicker = self::createStub(CoverPickerInterface::class);
         $coverPicker->method('pickCover')->willReturnCallback(static fn (array $members): ?Media => $members[0] ?? null);
 
         $media = $this->buildMedia(1, false, new DateTimeImmutable('2024-01-01T10:00:00Z'));
@@ -679,11 +679,11 @@ final class MemoryFeedBuilderTest extends TestCase
     #[Test]
     public function appliesNegativePlacePenaltyFromPreferences(): void
     {
-        $titleGen = $this->createMock(TitleGeneratorInterface::class);
+        $titleGen = self::createStub(TitleGeneratorInterface::class);
         $titleGen->method('makeTitle')->willReturn('Titel');
         $titleGen->method('makeSubtitle')->willReturn('Untertitel');
 
-        $coverPicker = $this->createMock(CoverPickerInterface::class);
+        $coverPicker = self::createStub(CoverPickerInterface::class);
         $coverPicker->method('pickCover')->willReturnCallback(static fn (array $members): ?Media => $members[0] ?? null);
 
         $media = $this->buildMedia(5, false, new DateTimeImmutable('2024-01-01T10:00:00Z'));

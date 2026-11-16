@@ -98,7 +98,7 @@ final class MediaRepositoryTest extends TestCase
             ->willReturn([$existing, $candidate]);
 
         $em = $this->createMock(EntityManagerInterface::class);
-        $em->method('getConnection')->willReturn($this->createMock(Connection::class));
+        $em->method('getConnection')->willReturn(self::createStub(Connection::class));
         $em->expects(self::once())->method('getRepository')->with(Media::class)->willReturn($repoMock);
 
         $repository = new MediaRepository($em);

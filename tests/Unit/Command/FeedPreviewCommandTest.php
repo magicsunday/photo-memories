@@ -553,12 +553,12 @@ final class FeedPreviewCommandTest extends TestCase
      */
     private function createEntityManagerWithResult(array $result, int $expectedLimit): EntityManagerInterface
     {
-        $entityManager = $this->createMock(EntityManagerInterface::class);
+        $entityManager = self::createStub(EntityManagerInterface::class);
 
-        $query = $this->getMockBuilder(Query::class)
+        $query = self::getStubBuilder(Query::class)
             ->disableOriginalConstructor()
             ->onlyMethods(['getResult'])
-            ->getMock();
+            ->getStub();
         $query->method('getResult')->willReturn($result);
 
         $queryBuilder = $this->getMockBuilder(QueryBuilder::class)

@@ -105,7 +105,7 @@ final class ClusterCurationMigrationCommandTest extends TestCase
      */
     private function createRepository(array $clusters): TestClusterRepository
     {
-        $em = $this->createMock(EntityManagerInterface::class);
+        $em = self::createStub(EntityManagerInterface::class);
 
         return new TestClusterRepository($em, $clusters);
     }

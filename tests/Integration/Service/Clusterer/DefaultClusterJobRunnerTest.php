@@ -64,7 +64,7 @@ final class DefaultClusterJobRunnerTest extends TestCase
         $mediaTwo->setMime('image/jpeg');
         $mediaTwo->setIsVideo(false);
 
-        $countQb    = $this->createQueryBuilderMock(['select', 'from', 'andWhere', 'setParameter', 'getQuery']);
+        $countQb    = $this->createQueryBuilderStub(['select', 'from', 'andWhere', 'setParameter', 'getQuery']);
         $countQuery = $this->getMockBuilder(Query::class)
             ->disableOriginalConstructor()
             ->onlyMethods(['getSingleScalarResult'])
@@ -72,7 +72,7 @@ final class DefaultClusterJobRunnerTest extends TestCase
         $countQuery->expects(self::once())->method('getSingleScalarResult')->willReturn('2');
         $countQb->method('getQuery')->willReturn($countQuery);
 
-        $listQb    = $this->createQueryBuilderMock(['select', 'from', 'orderBy', 'addOrderBy', 'andWhere', 'setParameter', 'setMaxResults', 'getQuery']);
+        $listQb    = $this->createQueryBuilderStub(['select', 'from', 'orderBy', 'addOrderBy', 'andWhere', 'setParameter', 'setMaxResults', 'getQuery']);
         $listQuery = $this->getMockBuilder(Query::class)
             ->disableOriginalConstructor()
             ->onlyMethods(['toIterable'])
@@ -97,7 +97,7 @@ final class DefaultClusterJobRunnerTest extends TestCase
         $pendingClusters = [];
         $flushCalls      = 0;
 
-        $clusterEntityManager = $this->createMock(EntityManagerInterface::class);
+        $clusterEntityManager = self::createStub(EntityManagerInterface::class);
         $clusterEntityManager->method('persist')->willReturnCallback(
             static function (object $entity) use (&$pendingClusters): void {
                 if ($entity instanceof Cluster) {
@@ -444,27 +444,32 @@ final class DefaultClusterJobRunnerTest extends TestCase
      */
     private function createEmptyResultQueryBuilder(): QueryBuilder
     {
-        $query = $this->getMockBuilder(Query::class)
+        $query = self::getStubBuilder(Query::class)
             ->disableOriginalConstructor()
             ->onlyMethods(['getResult'])
-            ->getMock();
+            ->getStub();
         $query->method('getResult')->willReturn([]);
 
-        $queryBuilder = $this->createQueryBuilderMock(['select', 'from', 'where', 'andWhere', 'setParameter', 'getQuery']);
+        $queryBuilder = self::createStub(QueryBuilder::class);
+
+        foreach (['select', 'from', 'where', 'andWhere', 'setParameter'] as $method) {
+            $queryBuilder->method($method)->willReturnSelf();
+        }
+
         $queryBuilder->method('getQuery')->willReturn($query);
 
         return $queryBuilder;
     }
 
     /**
-     * @param list<string> $methods
+     * @param list<non-empty-string> $methods
      */
-    private function createQueryBuilderMock(array $methods): QueryBuilder
+    private function createQueryBuilderStub(array $methods): QueryBuilder
     {
-        $qb = $this->getMockBuilder(QueryBuilder::class)
+        $qb = self::getStubBuilder(QueryBuilder::class)
             ->disableOriginalConstructor()
             ->onlyMethods($methods)
-            ->getMock();
+            ->getStub();
 
         foreach ($methods as $method) {
             if ($method === 'getQuery') {

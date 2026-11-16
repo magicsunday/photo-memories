@@ -48,12 +48,12 @@ final class CompositeClusterScorerTest extends TestCase
         $mediaMap = $this->createMediaFixtures();
 
         $entityManager = $this->createStub(EntityManagerInterface::class);
-        $queryBuilder  = $this->getMockBuilder(QueryBuilder::class)
+        $queryBuilder  = self::getStubBuilder(QueryBuilder::class)
             ->disableOriginalConstructor()
-            ->getMock();
-        $query = $this->getMockBuilder(Query::class)
+            ->getStub();
+        $query = self::getStubBuilder(Query::class)
             ->disableOriginalConstructor()
-            ->getMock();
+            ->getStub();
 
         $entityManager->method('createQueryBuilder')->willReturn($queryBuilder);
         $queryBuilder->method('select')->willReturnSelf();
@@ -234,12 +234,12 @@ final class CompositeClusterScorerTest extends TestCase
         $mediaMap = $this->createMediaFixtures();
 
         $entityManager = $this->createStub(EntityManagerInterface::class);
-        $queryBuilder  = $this->getMockBuilder(QueryBuilder::class)
+        $queryBuilder  = self::getStubBuilder(QueryBuilder::class)
             ->disableOriginalConstructor()
-            ->getMock();
-        $query = $this->getMockBuilder(Query::class)
+            ->getStub();
+        $query = self::getStubBuilder(Query::class)
             ->disableOriginalConstructor()
-            ->getMock();
+            ->getStub();
 
         $entityManager->method('createQueryBuilder')->willReturn($queryBuilder);
         $queryBuilder->method('select')->willReturnSelf();

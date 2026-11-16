@@ -58,11 +58,11 @@ final class HybridClustererTest extends TestCase
         };
 
         $scorer = new CompositeClusterScorer(
-            $this->createMock(EntityManagerInterface::class),
+            self::createStub(EntityManagerInterface::class),
             [],
         );
 
-        $titleGenerator = $this->createMock(TitleGeneratorInterface::class);
+        $titleGenerator = self::createStub(TitleGeneratorInterface::class);
         $titleGenerator->method('makeTitle')->willReturn('Titel');
         $titleGenerator->method('makeSubtitle')->willReturn('Untertitel');
 
@@ -182,11 +182,11 @@ final class HybridClustererTest extends TestCase
         };
 
         $scorer = new CompositeClusterScorer(
-            $this->createMock(EntityManagerInterface::class),
+            self::createStub(EntityManagerInterface::class),
             [],
         );
 
-        $titleGenerator = $this->createMock(TitleGeneratorInterface::class);
+        $titleGenerator = self::createStub(TitleGeneratorInterface::class);
         $titleGenerator->method('makeTitle')->willReturn('Titel');
         $titleGenerator->method('makeSubtitle')->willReturn('Untertitel');
 

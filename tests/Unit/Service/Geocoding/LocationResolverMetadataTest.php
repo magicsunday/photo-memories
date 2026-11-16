@@ -27,7 +27,7 @@ final class LocationResolverMetadataTest extends TestCase
     #[Test]
     public function appliesGeocodeMetadataWhenCreatingLocation(): void
     {
-        $repository = $this->createMock(EntityRepository::class);
+        $repository = self::createStub(EntityRepository::class);
         $repository->method('findOneBy')->willReturn(null);
         $repository->method('findBy')->willReturn([]);
 

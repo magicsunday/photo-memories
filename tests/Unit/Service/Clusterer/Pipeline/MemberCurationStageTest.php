@@ -172,9 +172,9 @@ final class MemberCurationStageTest extends TestCase
     #[Test]
     public function processKeepsRawMembersAndAnnotatesQuality(): void
     {
-        $mediaA = $this->createConfiguredMock(Media::class, ['getId' => 1, 'isVideo' => false]);
-        $mediaB = $this->createConfiguredMock(Media::class, ['getId' => 2, 'isVideo' => true]);
-        $mediaC = $this->createConfiguredMock(Media::class, ['getId' => 3, 'isVideo' => false]);
+        $mediaA = self::createConfiguredStub(Media::class, ['getId' => 1, 'isVideo' => false]);
+        $mediaB = self::createConfiguredStub(Media::class, ['getId' => 2, 'isVideo' => true]);
+        $mediaC = self::createConfiguredStub(Media::class, ['getId' => 3, 'isVideo' => false]);
 
         $lookup = new readonly class([$mediaA, $mediaB, $mediaC]) implements MemberMediaLookupInterface {
             /**
@@ -293,9 +293,9 @@ final class MemberCurationStageTest extends TestCase
     #[Test]
     public function processEmitsMonitoringCountsAndPolicy(): void
     {
-        $mediaA = $this->createConfiguredMock(Media::class, ['getId' => 1, 'isVideo' => false]);
-        $mediaB = $this->createConfiguredMock(Media::class, ['getId' => 2, 'isVideo' => true]);
-        $mediaC = $this->createConfiguredMock(Media::class, ['getId' => 3, 'isVideo' => false]);
+        $mediaA = self::createConfiguredStub(Media::class, ['getId' => 1, 'isVideo' => false]);
+        $mediaB = self::createConfiguredStub(Media::class, ['getId' => 2, 'isVideo' => true]);
+        $mediaC = self::createConfiguredStub(Media::class, ['getId' => 3, 'isVideo' => false]);
 
         $lookup = new readonly class([$mediaA, $mediaB, $mediaC]) implements MemberMediaLookupInterface {
             /**
