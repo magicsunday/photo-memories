@@ -41,8 +41,8 @@ return static function (RectorConfig $rectorConfig): void {
     $rectorConfig->containerCacheDirectory($rectorContainerCacheDirectory);
     $rectorConfig->phpstanConfig(__DIR__ . '/phpstan.neon');
 
-    // The shared rule sets and skips; 80400 is this application's PHP floor.
-    (require __DIR__ . '/vendor/magicsunday/coding-standard/rector/base.php')($rectorConfig, 80400);
+    // The shared rule sets and skips; 80500 is this application's PHP floor.
+    (require __DIR__ . '/vendor/magicsunday/coding-standard/rector/base.php')($rectorConfig, 80500);
 
     // Repository-specific skips on top of the shared ones.
     $rectorConfig->skip([
