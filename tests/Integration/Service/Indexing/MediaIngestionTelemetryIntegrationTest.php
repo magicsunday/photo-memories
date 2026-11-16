@@ -21,6 +21,7 @@ use MagicSunday\Memories\Test\TestCase;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\Test;
 use Psr\Log\AbstractLogger;
+use Stringable;
 use Symfony\Component\Console\Output\NullOutput;
 
 use function array_filter;
@@ -182,10 +183,10 @@ final class MissingFfprobeStage implements MediaIngestionStageInterface
 
 final class ArrayLogger extends AbstractLogger
 {
-    /** @var array<int, array{level:string,message:string,context:array}> */
+    /** @var list<array{level: string, message: string, context: array<string, mixed>}> */
     public array $records = [];
 
-    public function log($level, $message, array $context = []): void
+    public function log($level, string|Stringable $message, array $context = []): void
     {
         $this->records[] = [
             'level'   => (string) $level,

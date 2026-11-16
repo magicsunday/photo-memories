@@ -1043,11 +1043,11 @@ final class InMemoryLogger extends AbstractLogger
      */
     private array $records = [];
 
-    public function log($level, $message, array $context = []): void
+    public function log($level, string|Stringable $message, array $context = []): void
     {
         $this->records[] = [
             'level'   => (string) $level,
-            'message' => $message instanceof Stringable ? (string) $message : (string) $message,
+            'message' => (string) $message,
             'context' => $context,
         ];
     }
