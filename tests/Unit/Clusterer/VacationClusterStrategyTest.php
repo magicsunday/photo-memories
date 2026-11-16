@@ -658,8 +658,8 @@ final class VacationClusterStrategyTest extends TestCase
                     ++$id,
                     sprintf('vacation-%d-%d.jpg', $dayIndex, $pointIndex),
                     $timestamp->format('Y-m-d H:i:s'),
-                    (float) $data['lat'],
-                    (float) $data['lon'],
+                    $data['lat'],
+                    $data['lon'],
                     $data['location'],
                     static function (Media $media): void {
                         $media->setTimezoneOffsetMin(120);
@@ -1664,8 +1664,8 @@ final class VacationClusterStrategyTest extends TestCase
                         ++$id,
                         sprintf('trip-%d-%d-%d.jpg', $dayIndex, $clusterIndex, $pointIndex),
                         $timestamp->format('Y-m-d H:i:s'),
-                        (float) $coordinates['lat'],
-                        (float) $coordinates['lon'],
+                        $coordinates['lat'],
+                        $coordinates['lon'],
                         $clusterData['location'],
                         static function (Media $media): void {
                             $media->setTimezoneOffsetMin(120);
@@ -1681,8 +1681,8 @@ final class VacationClusterStrategyTest extends TestCase
                 ++$id,
                 sprintf('trip-night-%d.jpg', $dayIndex),
                 $nightTimestamp->format('Y-m-d H:i:s'),
-                (float) $nightPoint['lat'],
-                (float) $nightPoint['lon'],
+                $nightPoint['lat'],
+                $nightPoint['lon'],
                 $nightLocation,
                 static function (Media $media): void {
                     $media->setTimezoneOffsetMin(120);

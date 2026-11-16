@@ -152,7 +152,7 @@ final class SeasonOverYearsClusterStrategyTest extends TestCase
 
         $groupingUpdates = array_values(array_filter(
             $updates,
-            static fn (array $update): bool => str_starts_with((string) $update['stage'], 'Gruppiere'),
+            static fn (array $update): bool => str_starts_with($update['stage'], 'Gruppiere'),
         ));
 
         self::assertNotEmpty($groupingUpdates);
