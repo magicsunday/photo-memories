@@ -15,8 +15,10 @@ use MagicSunday\Memories\Clusterer\ClusterDraft;
 use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Service\Clusterer\Scoring\LivelinessClusterScoreHeuristic;
 use MagicSunday\Memories\Test\TestCase;
+use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\Test;
 
+#[CoversClass(LivelinessClusterScoreHeuristic::class)]
 final class LivelinessClusterScoreHeuristicTest extends TestCase
 {
     #[Test]

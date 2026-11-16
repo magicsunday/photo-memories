@@ -23,6 +23,7 @@ use MagicSunday\Memories\Service\Indexing\MediaFileLocatorInterface;
 use MagicSunday\Memories\Service\Indexing\MediaIngestionPipelineInterface;
 use MagicSunday\Memories\Service\Metadata\MetadataQaReportCollector;
 use MagicSunday\Memories\Test\TestCase;
+use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\Test;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputInterface;
@@ -32,6 +33,7 @@ use Symfony\Component\Console\Tester\CommandTester;
 use function sys_get_temp_dir;
 use function uniqid;
 
+#[CoversClass(MemoriesCurateVacationCommand::class)]
 final class MemoriesCurateVacationCommandTest extends TestCase
 {
     private const array CLUSTER_GROUP_MAP = [
@@ -102,12 +104,12 @@ final class MemoriesCurateVacationCommandTest extends TestCase
 
     private function createCurateCommand(): MemoriesCurateCommand
     {
-        $locator     = $this->createMock(MediaFileLocatorInterface::class);
-        $pipeline    = $this->createMock(MediaIngestionPipelineInterface::class);
+        $locator     = self::createStub(MediaFileLocatorInterface::class);
+        $pipeline    = self::createStub(MediaIngestionPipelineInterface::class);
         $qaCollector = new MetadataQaReportCollector();
-        $runner      = $this->createMock(ClusterJobRunnerInterface::class);
+        $runner      = self::createStub(ClusterJobRunnerInterface::class);
         $runner->method('run')->willReturn(new ClusterJobResult(0, 0, 0, 0, 0, 0, false, null, []));
-        $export = $this->createMock(FeedExportServiceInterface::class);
+        $export = self::createStub(FeedExportServiceInterface::class);
         $export->method('export')->willReturn(new FeedExportResult(
             'out',
             'images',

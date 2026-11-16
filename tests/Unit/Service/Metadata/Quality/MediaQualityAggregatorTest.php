@@ -15,6 +15,7 @@ use DateTimeImmutable;
 use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Service\Metadata\Quality\MediaQualityAggregator;
 use MagicSunday\Memories\Test\TestCase;
+use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\Test;
 
 use function explode;
@@ -23,6 +24,7 @@ use function log;
 
 use const JSON_THROW_ON_ERROR;
 
+#[CoversClass(MediaQualityAggregator::class)]
 final class MediaQualityAggregatorTest extends TestCase
 {
     #[Test]

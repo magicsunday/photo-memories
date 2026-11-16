@@ -22,10 +22,12 @@ use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Repository\MediaRepository;
 use MagicSunday\Memories\Service\Metadata\MetadataFeatureVersion;
 use MagicSunday\Memories\Test\TestCase;
+use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\Test;
 
 use function str_contains;
 
+#[CoversClass(MediaRepository::class)]
 final class MediaRepositoryTest extends TestCase
 {
     #[Test]
@@ -96,8 +98,8 @@ final class MediaRepositoryTest extends TestCase
             ->willReturn([$existing, $candidate]);
 
         $em = $this->createMock(EntityManagerInterface::class);
-        $em->method('getConnection')->willReturn($this->createMock(Connection::class));
-        $em->method('getRepository')->with(Media::class)->willReturn($repoMock);
+        $em->method('getConnection')->willReturn(self::createStub(Connection::class));
+        $em->expects(self::once())->method('getRepository')->with(Media::class)->willReturn($repoMock);
 
         $repository = new MediaRepository($em);
 

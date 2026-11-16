@@ -114,7 +114,7 @@ final class FeedStoryboardIntegrationTest extends TestCase
             ->with([], $profileProvider->getProfile('default'), self::anything(), self::anything())
             ->willReturn($fixtures['items']);
 
-        $mediaRepository = $this->createMock(MediaRepository::class);
+        $mediaRepository = self::createStub(MediaRepository::class);
         $mediaRepository
             ->method('findByIds')
             ->willReturnCallback(
@@ -140,7 +140,7 @@ final class FeedStoryboardIntegrationTest extends TestCase
         $thumbnailService = $this->createMock(ThumbnailServiceInterface::class);
         $thumbnailService->expects(self::never())->method('generateAll');
 
-        $slideshowManager = $this->createMock(SlideshowVideoManagerInterface::class);
+        $slideshowManager = self::createStub(SlideshowVideoManagerInterface::class);
         $slideshowManager
             ->method('getStatusForItem')
             ->willReturn(SlideshowVideoStatus::unavailable(3.5));

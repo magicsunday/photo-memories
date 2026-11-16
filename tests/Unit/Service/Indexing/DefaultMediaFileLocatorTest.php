@@ -13,6 +13,7 @@ namespace MagicSunday\Memories\Test\Unit\Service\Indexing;
 
 use MagicSunday\Memories\Service\Indexing\DefaultMediaFileLocator;
 use MagicSunday\Memories\Test\TestCase;
+use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\Test;
 use RecursiveDirectoryIterator;
 use RecursiveIteratorIterator;
@@ -31,6 +32,7 @@ use function sys_get_temp_dir;
 use function uniqid;
 use function unlink;
 
+#[CoversClass(DefaultMediaFileLocator::class)]
 final class DefaultMediaFileLocatorTest extends TestCase
 {
     /**

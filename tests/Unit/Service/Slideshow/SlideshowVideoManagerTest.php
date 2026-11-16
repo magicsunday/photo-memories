@@ -19,6 +19,7 @@ use MagicSunday\Memories\Service\Slideshow\SlideshowVideoManager;
 use MagicSunday\Memories\Service\Slideshow\SlideshowVideoStatus;
 use MagicSunday\Memories\Service\Slideshow\TransitionSequenceGenerator;
 use MagicSunday\Memories\Test\TestCase;
+use PHPUnit\Framework\Attributes\CoversClass;
 use ReflectionClass;
 use RuntimeException;
 
@@ -43,6 +44,7 @@ use const LOCK_EX;
 /**
  * @covers \MagicSunday\Memories\Service\Slideshow\SlideshowVideoManager
  */
+#[CoversClass(SlideshowVideoManager::class)]
 final class SlideshowVideoManagerTest extends TestCase
 {
     public function testEnsureForItemGeneratesVideoInline(): void

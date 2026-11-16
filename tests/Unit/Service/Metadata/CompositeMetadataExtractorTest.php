@@ -17,6 +17,7 @@ use MagicSunday\Memories\Service\Metadata\MetadataExtractorPipelineConfiguration
 use MagicSunday\Memories\Service\Metadata\MetadataExtractorTelemetry;
 use MagicSunday\Memories\Service\Metadata\SingleMetadataExtractorInterface;
 use MagicSunday\Memories\Test\TestCase;
+use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\Test;
 use RuntimeException;
 
@@ -30,6 +31,7 @@ use function sys_get_temp_dir;
 use function tempnam;
 use function unlink;
 
+#[CoversClass(CompositeMetadataExtractor::class)]
 final class CompositeMetadataExtractorTest extends TestCase
 {
     #[Test]

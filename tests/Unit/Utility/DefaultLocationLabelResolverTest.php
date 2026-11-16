@@ -15,8 +15,10 @@ use MagicSunday\Memories\Entity\Location;
 use MagicSunday\Memories\Utility\Contract\PoiContextAnalyzerInterface;
 use MagicSunday\Memories\Utility\Contract\PoiLabelResolverInterface;
 use MagicSunday\Memories\Utility\DefaultLocationLabelResolver;
+use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\TestCase;
 
+#[CoversClass(DefaultLocationLabelResolver::class)]
 final class DefaultLocationLabelResolverTest extends TestCase
 {
     public function testMajorityLabelSkipsNonStringPoiLabel(): void

@@ -45,8 +45,10 @@ use MagicSunday\Memories\Service\Clusterer\Title\StoryTitleBuilder;
 use MagicSunday\Memories\Test\TestCase;
 use MagicSunday\Memories\Test\Unit\Clusterer\Fixtures\VacationTestMemberSelector;
 use MagicSunday\Memories\Utility\LocationHelper;
+use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\Test;
 
+#[CoversClass(DefaultVacationSegmentAssembler::class)]
 final class DefaultVacationSegmentAssemblerTest extends TestCase
 {
     #[Test]

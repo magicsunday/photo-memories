@@ -14,8 +14,10 @@ namespace MagicSunday\Memories\Test\Unit\Service\Clusterer\Pipeline;
 use MagicSunday\Memories\Clusterer\ClusterDraft;
 use MagicSunday\Memories\Service\Clusterer\Pipeline\NestingResolverStage;
 use MagicSunday\Memories\Test\TestCase;
+use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\Test;
 
+#[CoversClass(NestingResolverStage::class)]
 final class NestingResolverStageTest extends TestCase
 {
     #[Test]

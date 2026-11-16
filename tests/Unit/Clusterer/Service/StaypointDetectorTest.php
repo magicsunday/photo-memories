@@ -17,8 +17,10 @@ use DateTimeZone;
 use MagicSunday\Memories\Clusterer\Service\StaypointDetector;
 use MagicSunday\Memories\Clusterer\Support\GeoDbscanHelper;
 use MagicSunday\Memories\Test\TestCase;
+use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\Test;
 
+#[CoversClass(StaypointDetector::class)]
 final class StaypointDetectorTest extends TestCase
 {
     #[Test]

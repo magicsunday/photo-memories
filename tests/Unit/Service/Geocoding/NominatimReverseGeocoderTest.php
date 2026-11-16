@@ -13,11 +13,13 @@ namespace MagicSunday\Memories\Test\Unit\Service\Geocoding;
 
 use MagicSunday\Memories\Service\Geocoding\NominatimReverseGeocoder;
 use MagicSunday\Memories\Utility\MediaMath;
+use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 use Symfony\Contracts\HttpClient\HttpClientInterface;
 use Symfony\Contracts\HttpClient\ResponseInterface;
 
+#[CoversClass(NominatimReverseGeocoder::class)]
 final class NominatimReverseGeocoderTest extends TestCase
 {
     #[Test]
@@ -45,7 +47,7 @@ final class NominatimReverseGeocoderTest extends TestCase
             ->willReturn($response);
 
         $response->method('getStatusCode')->willReturn(200);
-        $response->method('toArray')->with(false)->willReturn([
+        $response->expects(self::once())->method('toArray')->with(false)->willReturn([
             'place_id'     => 123456,
             'display_name' => 'Berlin, Deutschland',
             'lat'          => '52.520008',

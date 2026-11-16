@@ -14,8 +14,10 @@ namespace MagicSunday\Memories\Test\Unit\Service\Feed;
 use InvalidArgumentException;
 use MagicSunday\Memories\Service\Feed\FeedPersonalizationProfileProvider;
 use MagicSunday\Memories\Test\TestCase;
+use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\Test;
 
+#[CoversClass(FeedPersonalizationProfileProvider::class)]
 final class FeedPersonalizationProfileProviderTest extends TestCase
 {
     #[Test]

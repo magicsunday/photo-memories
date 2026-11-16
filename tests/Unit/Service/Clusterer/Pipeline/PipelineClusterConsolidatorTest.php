@@ -21,8 +21,10 @@ use MagicSunday\Memories\Service\Clusterer\Pipeline\OverlapResolverStage;
 use MagicSunday\Memories\Service\Clusterer\Pipeline\PerMediaCapStage;
 use MagicSunday\Memories\Service\Clusterer\Pipeline\PipelineClusterConsolidator;
 use MagicSunday\Memories\Test\TestCase;
+use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\Test;
 
+#[CoversClass(PipelineClusterConsolidator::class)]
 final class PipelineClusterConsolidatorTest extends TestCase
 {
     #[Test]

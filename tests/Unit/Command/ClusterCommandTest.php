@@ -24,10 +24,12 @@ use MagicSunday\Memories\Service\Clusterer\ConsoleProgressReporter;
 use MagicSunday\Memories\Service\Clusterer\Contract\ClusterJobRunnerInterface;
 use MagicSunday\Memories\Service\Clusterer\Debug\VacationDebugContext;
 use MagicSunday\Memories\Test\TestCase;
+use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\Test;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Tester\CommandTester;
 
+#[CoversClass(ClusterCommand::class)]
 final class ClusterCommandTest extends TestCase
 {
     #[Test]

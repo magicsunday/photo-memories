@@ -29,6 +29,7 @@ use MagicSunday\Memories\Service\Feed\HtmlFeedRenderer;
 use MagicSunday\Memories\Service\Feed\ThumbnailPathResolver;
 use MagicSunday\Memories\Support\ClusterEntityToDraftMapper;
 use MagicSunday\Memories\Test\TestCase;
+use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\Test;
 use RecursiveDirectoryIterator;
 use RecursiveIteratorIterator;
@@ -48,6 +49,7 @@ use function sys_get_temp_dir;
 use function uniqid;
 use function unlink;
 
+#[CoversClass(HtmlFeedExportService::class)]
 final class HtmlFeedExportServiceTest extends TestCase
 {
     /**

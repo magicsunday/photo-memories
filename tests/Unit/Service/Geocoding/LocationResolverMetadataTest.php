@@ -17,20 +17,22 @@ use Doctrine\ORM\EntityRepository;
 use MagicSunday\Memories\Entity\Location;
 use MagicSunday\Memories\Service\Geocoding\GeocodeResult;
 use MagicSunday\Memories\Service\Geocoding\LocationResolver;
+use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 
+#[CoversClass(LocationResolver::class)]
 final class LocationResolverMetadataTest extends TestCase
 {
     #[Test]
     public function appliesGeocodeMetadataWhenCreatingLocation(): void
     {
-        $repository = $this->createMock(EntityRepository::class);
+        $repository = self::createStub(EntityRepository::class);
         $repository->method('findOneBy')->willReturn(null);
         $repository->method('findBy')->willReturn([]);
 
         $entityManager = $this->createMock(EntityManagerInterface::class);
-        $entityManager->method('getRepository')->with(Location::class)->willReturn($repository);
+        $entityManager->expects(self::atLeastOnce())->method('getRepository')->with(Location::class)->willReturn($repository);
         $entityManager->method('contains')->willReturn(false);
         $entityManager->expects(self::once())->method('persist')->with(self::isInstanceOf(Location::class));
 

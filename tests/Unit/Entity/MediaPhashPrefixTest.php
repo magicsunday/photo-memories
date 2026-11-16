@@ -11,9 +11,12 @@ declare(strict_types=1);
 
 namespace MagicSunday\Memories\Test\Unit\Entity;
 
+use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Test\TestCase;
+use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\Test;
 
+#[CoversClass(Media::class)]
 final class MediaPhashPrefixTest extends TestCase
 {
     #[Test]

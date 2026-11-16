@@ -38,6 +38,7 @@ use MagicSunday\Memories\Service\Slideshow\SlideshowVideoStatus;
 use MagicSunday\Memories\Service\Thumbnail\ThumbnailServiceInterface;
 use MagicSunday\Memories\Support\ClusterEntityToDraftMapper;
 use MagicSunday\Memories\Test\Support\EntityIdAssignmentTrait;
+use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\TestCase;
 use ReflectionClass;
 use ReflectionMethod;
@@ -57,6 +58,7 @@ use const JSON_THROW_ON_ERROR;
  *
  * @covers \MagicSunday\Memories\Http\Controller\FeedController
  */
+#[CoversClass(FeedController::class)]
 final class FeedControllerTest extends TestCase
 {
     use EntityIdAssignmentTrait;
@@ -106,10 +108,10 @@ final class FeedControllerTest extends TestCase
 
         $thumbnailResolver = new ThumbnailPathResolver();
         $mediaRepo         = $this->createMock(MediaRepository::class);
-        $thumbnailService  = $this->createMock(ThumbnailServiceInterface::class);
-        $slideshowManager  = $this->createMock(SlideshowVideoManagerInterface::class);
+        $thumbnailService  = self::createStub(ThumbnailServiceInterface::class);
+        $slideshowManager  = self::createStub(SlideshowVideoManagerInterface::class);
         $slideshowManager->method('getStatusForItem')->willReturn(SlideshowVideoStatus::unavailable(4.0));
-        $entityManager = $this->createMock(EntityManagerInterface::class);
+        $entityManager = self::createStub(EntityManagerInterface::class);
 
         $mediaOne   = new Media('/media/1.jpg', 'checksum-1', 100);
         $mediaTwo   = new Media('/media/2.jpg', 'checksum-2', 110);
@@ -238,10 +240,10 @@ final class FeedControllerTest extends TestCase
 
         $thumbnailResolver = new ThumbnailPathResolver();
         $mediaRepo         = $this->createMock(MediaRepository::class);
-        $thumbnailService  = $this->createMock(ThumbnailServiceInterface::class);
-        $slideshowManager  = $this->createMock(SlideshowVideoManagerInterface::class);
+        $thumbnailService  = self::createStub(ThumbnailServiceInterface::class);
+        $slideshowManager  = self::createStub(SlideshowVideoManagerInterface::class);
         $slideshowManager->method('getStatusForItem')->willReturn(SlideshowVideoStatus::unavailable(4.0));
-        $entityManager = $this->createMock(EntityManagerInterface::class);
+        $entityManager = self::createStub(EntityManagerInterface::class);
 
         $mediaOne = new Media('/media/1.jpg', 'checksum-1', 100);
         $mediaTwo = new Media('/media/2.jpg', 'checksum-2', 110);
@@ -337,10 +339,10 @@ final class FeedControllerTest extends TestCase
 
         $thumbnailResolver = new ThumbnailPathResolver();
         $mediaRepo         = $this->createMock(MediaRepository::class);
-        $thumbnailService  = $this->createMock(ThumbnailServiceInterface::class);
-        $slideshowManager  = $this->createMock(SlideshowVideoManagerInterface::class);
+        $thumbnailService  = self::createStub(ThumbnailServiceInterface::class);
+        $slideshowManager  = self::createStub(SlideshowVideoManagerInterface::class);
         $slideshowManager->method('getStatusForItem')->willReturn(SlideshowVideoStatus::unavailable(4.0));
-        $entityManager = $this->createMock(EntityManagerInterface::class);
+        $entityManager = self::createStub(EntityManagerInterface::class);
 
         $media = $this->createMedia(5, '/media/5.jpg', '2024-02-01T09:30:00+00:00');
         $media->setWidth(4032);
@@ -445,7 +447,7 @@ final class FeedControllerTest extends TestCase
             ->willReturn($items);
 
         $thumbnailResolver = new ThumbnailPathResolver();
-        $mediaRepo         = $this->createMock(MediaRepository::class);
+        $mediaRepo         = self::createStub(MediaRepository::class);
 
         $mediaMap = [
             10 => $this->createMedia(10, '/media/10.jpg', '2024-01-01T09:00:00+00:00'),
@@ -468,10 +470,10 @@ final class FeedControllerTest extends TestCase
                 }
             );
 
-        $thumbnailService = $this->createMock(ThumbnailServiceInterface::class);
-        $slideshowManager = $this->createMock(SlideshowVideoManagerInterface::class);
+        $thumbnailService = self::createStub(ThumbnailServiceInterface::class);
+        $slideshowManager = self::createStub(SlideshowVideoManagerInterface::class);
         $slideshowManager->method('getStatusForItem')->willReturn(SlideshowVideoStatus::unavailable(4.0));
-        $entityManager = $this->createMock(EntityManagerInterface::class);
+        $entityManager = self::createStub(EntityManagerInterface::class);
 
         [$controller, $storagePath] = $this->createControllerWithDependencies(
             $feedBuilder,
@@ -546,7 +548,7 @@ final class FeedControllerTest extends TestCase
             ->willReturn($items);
 
         $thumbnailResolver = new ThumbnailPathResolver();
-        $mediaRepo         = $this->createMock(MediaRepository::class);
+        $mediaRepo         = self::createStub(MediaRepository::class);
 
         $mediaMap = [
             21 => $this->createMedia(21, '/media/21.jpg', '2023-12-31T22:30:00+00:00'),
@@ -569,10 +571,10 @@ final class FeedControllerTest extends TestCase
                 }
             );
 
-        $thumbnailService = $this->createMock(ThumbnailServiceInterface::class);
-        $slideshowManager = $this->createMock(SlideshowVideoManagerInterface::class);
+        $thumbnailService = self::createStub(ThumbnailServiceInterface::class);
+        $slideshowManager = self::createStub(SlideshowVideoManagerInterface::class);
         $slideshowManager->method('getStatusForItem')->willReturn(SlideshowVideoStatus::unavailable(4.0));
-        $entityManager = $this->createMock(EntityManagerInterface::class);
+        $entityManager = self::createStub(EntityManagerInterface::class);
 
         $spaGestures = [
             'feed'         => ['refresh' => 'pull-down'],
@@ -689,10 +691,10 @@ final class FeedControllerTest extends TestCase
             ->willReturn([$media]);
 
         $thumbnailResolver = new ThumbnailPathResolver();
-        $thumbnailService  = $this->createMock(ThumbnailServiceInterface::class);
-        $slideshowManager  = $this->createMock(SlideshowVideoManagerInterface::class);
+        $thumbnailService  = self::createStub(ThumbnailServiceInterface::class);
+        $slideshowManager  = self::createStub(SlideshowVideoManagerInterface::class);
         $slideshowManager->method('getStatusForItem')->willReturn(SlideshowVideoStatus::unavailable(4.0));
-        $entityManager = $this->createMock(EntityManagerInterface::class);
+        $entityManager = self::createStub(EntityManagerInterface::class);
 
         [$controller, $storagePath] = $this->createControllerWithDependencies(
             $feedBuilder,
@@ -772,10 +774,10 @@ final class FeedControllerTest extends TestCase
             ->with([7, 8], false)
             ->willReturn([$mediaSeven]);
 
-        $thumbnailService = $this->createMock(ThumbnailServiceInterface::class);
+        $thumbnailService = self::createStub(ThumbnailServiceInterface::class);
         $slideshowManager = $this->createMock(SlideshowVideoManagerInterface::class);
         $slideshowManager->expects(self::never())->method('getStatusForItem');
-        $entityManager = $this->createMock(EntityManagerInterface::class);
+        $entityManager = self::createStub(EntityManagerInterface::class);
 
         [$controller, $storagePath] = $this->createControllerWithDependencies(
             $feedBuilder,
@@ -857,10 +859,10 @@ final class FeedControllerTest extends TestCase
                 );
             });
 
-        $thumbnailService = $this->createMock(ThumbnailServiceInterface::class);
-        $slideshowManager = $this->createMock(SlideshowVideoManagerInterface::class);
+        $thumbnailService = self::createStub(ThumbnailServiceInterface::class);
+        $slideshowManager = self::createStub(SlideshowVideoManagerInterface::class);
         $slideshowManager->method('getStatusForItem')->willReturn(SlideshowVideoStatus::unavailable(4.0));
-        $entityManager = $this->createMock(EntityManagerInterface::class);
+        $entityManager = self::createStub(EntityManagerInterface::class);
 
         [$controller, $storagePath] = $this->createControllerWithDependencies(
             $feedBuilder,
@@ -912,9 +914,9 @@ final class FeedControllerTest extends TestCase
         $mediaRepo         = $this->createMock(MediaRepository::class);
         $mediaRepo->expects(self::never())->method('findByIds');
 
-        $thumbnailService = $this->createMock(ThumbnailServiceInterface::class);
-        $slideshowManager = $this->createMock(SlideshowVideoManagerInterface::class);
-        $entityManager    = $this->createMock(EntityManagerInterface::class);
+        $thumbnailService = self::createStub(ThumbnailServiceInterface::class);
+        $slideshowManager = self::createStub(SlideshowVideoManagerInterface::class);
+        $entityManager    = self::createStub(EntityManagerInterface::class);
 
         [$controller, $storagePath] = $this->createControllerWithDependencies(
             $feedBuilder,
@@ -943,14 +945,14 @@ final class FeedControllerTest extends TestCase
         $clusterRepo = $this->createMock(ClusterRepository::class);
         $clusterRepo->expects(self::never())->method('findLatest');
 
-        $feedBuilder       = $this->createMock(FeedBuilderInterface::class);
+        $feedBuilder       = self::createStub(FeedBuilderInterface::class);
         $mapper            = new ClusterEntityToDraftMapper([]);
         $thumbnailResolver = new ThumbnailPathResolver();
-        $mediaRepo         = $this->createMock(MediaRepository::class);
-        $thumbnailService  = $this->createMock(ThumbnailServiceInterface::class);
-        $slideshowManager  = $this->createMock(SlideshowVideoManagerInterface::class);
+        $mediaRepo         = self::createStub(MediaRepository::class);
+        $thumbnailService  = self::createStub(ThumbnailServiceInterface::class);
+        $slideshowManager  = self::createStub(SlideshowVideoManagerInterface::class);
         $slideshowManager->method('getStatusForItem')->willReturn(SlideshowVideoStatus::unavailable(4.0));
-        $entityManager = $this->createMock(EntityManagerInterface::class);
+        $entityManager = self::createStub(EntityManagerInterface::class);
 
         [$controller, $storagePath] = $this->createControllerWithDependencies(
             $feedBuilder,
@@ -1002,9 +1004,9 @@ final class FeedControllerTest extends TestCase
 
         $thumbnailResolver = new ThumbnailPathResolver();
         $mediaRepo         = $this->createMock(MediaRepository::class);
-        $thumbnailService  = $this->createMock(ThumbnailServiceInterface::class);
+        $thumbnailService  = self::createStub(ThumbnailServiceInterface::class);
         $slideshowManager  = $this->createMock(SlideshowVideoManagerInterface::class);
-        $entityManager     = $this->createMock(EntityManagerInterface::class);
+        $entityManager     = self::createStub(EntityManagerInterface::class);
 
         $mediaOne = $this->createMedia(1, '/media/1.jpg', '2024-01-01T10:00:00+00:00');
         $mediaTwo = $this->createMedia(2, '/media/2.jpg', '2024-01-02T11:00:00+00:00');
@@ -1108,9 +1110,9 @@ final class FeedControllerTest extends TestCase
             new ClusterEntityToDraftMapper([]),
             new ThumbnailPathResolver(),
             $mediaRepo,
-            $this->createMock(ThumbnailServiceInterface::class),
+            self::createStub(ThumbnailServiceInterface::class),
             $slideshowManager,
-            $this->createMock(EntityManagerInterface::class),
+            self::createStub(EntityManagerInterface::class),
         );
 
         $itemId   = hash('sha1', 'holiday_event|1,2');
@@ -1154,9 +1156,9 @@ final class FeedControllerTest extends TestCase
         $thumbnailResolver = new ThumbnailPathResolver();
         $mediaRepo         = $this->createMock(MediaRepository::class);
         $mediaRepo->expects(self::never())->method('findByIds');
-        $thumbnailService = $this->createMock(ThumbnailServiceInterface::class);
-        $slideshowManager = $this->createMock(SlideshowVideoManagerInterface::class);
-        $entityManager    = $this->createMock(EntityManagerInterface::class);
+        $thumbnailService = self::createStub(ThumbnailServiceInterface::class);
+        $slideshowManager = self::createStub(SlideshowVideoManagerInterface::class);
+        $entityManager    = self::createStub(EntityManagerInterface::class);
 
         [$controller, $storagePath] = $this->createControllerWithDependencies(
             $feedBuilder,
@@ -1239,10 +1241,10 @@ final class FeedControllerTest extends TestCase
             ->with([1, 2], false)
             ->willReturn([$mediaOne, $mediaTwo]);
 
-        $thumbnailService = $this->createMock(ThumbnailServiceInterface::class);
-        $slideshowManager = $this->createMock(SlideshowVideoManagerInterface::class);
+        $thumbnailService = self::createStub(ThumbnailServiceInterface::class);
+        $slideshowManager = self::createStub(SlideshowVideoManagerInterface::class);
         $slideshowManager->method('getStatusForItem')->willReturn(SlideshowVideoStatus::unavailable(4.0));
-        $entityManager = $this->createMock(EntityManagerInterface::class);
+        $entityManager = self::createStub(EntityManagerInterface::class);
 
         [$controller, $storagePath] = $this->createControllerWithDependencies(
             $feedBuilder,
@@ -1351,7 +1353,7 @@ final class FeedControllerTest extends TestCase
 
         $thumbnailResolver = new ThumbnailPathResolver();
 
-        $mediaRepo = $this->createMock(MediaRepository::class);
+        $mediaRepo = self::createStub(MediaRepository::class);
         $mediaById = [
             10 => $this->createMedia(10, '/media/10.jpg', '2024-02-01T12:00:00+00:00'),
             20 => $this->createMedia(20, '/media/20.jpg', '2024-02-02T12:00:00+00:00'),
@@ -1370,10 +1372,10 @@ final class FeedControllerTest extends TestCase
                 return $result;
             });
 
-        $thumbnailService = $this->createMock(ThumbnailServiceInterface::class);
-        $slideshowManager = $this->createMock(SlideshowVideoManagerInterface::class);
+        $thumbnailService = self::createStub(ThumbnailServiceInterface::class);
+        $slideshowManager = self::createStub(SlideshowVideoManagerInterface::class);
         $slideshowManager->method('getStatusForItem')->willReturn(SlideshowVideoStatus::unavailable(4.0));
-        $entityManager = $this->createMock(EntityManagerInterface::class);
+        $entityManager = self::createStub(EntityManagerInterface::class);
 
         [$controller, $storagePath] = $this->createControllerWithDependencies(
             $feedBuilder,
@@ -1456,9 +1458,9 @@ final class FeedControllerTest extends TestCase
         $mediaRepo         = $this->createMock(MediaRepository::class);
         $mediaRepo->expects(self::never())->method('findByIds');
 
-        $thumbnailService = $this->createMock(ThumbnailServiceInterface::class);
-        $slideshowManager = $this->createMock(SlideshowVideoManagerInterface::class);
-        $entityManager    = $this->createMock(EntityManagerInterface::class);
+        $thumbnailService = self::createStub(ThumbnailServiceInterface::class);
+        $slideshowManager = self::createStub(SlideshowVideoManagerInterface::class);
+        $entityManager    = self::createStub(EntityManagerInterface::class);
 
         [$controller, $storagePath] = $this->createControllerWithDependencies(
             $feedBuilder,
@@ -1540,9 +1542,9 @@ final class FeedControllerTest extends TestCase
 
         $thumbnailResolver = new ThumbnailPathResolver();
         $mediaRepo         = $this->createMock(MediaRepository::class);
-        $thumbnailService  = $this->createMock(ThumbnailServiceInterface::class);
+        $thumbnailService  = self::createStub(ThumbnailServiceInterface::class);
         $slideshowManager  = $this->createMock(SlideshowVideoManagerInterface::class);
-        $entityManager     = $this->createMock(EntityManagerInterface::class);
+        $entityManager     = self::createStub(EntityManagerInterface::class);
 
         $mediaRepo->expects(self::once())
             ->method('findByIds')
@@ -1576,13 +1578,13 @@ final class FeedControllerTest extends TestCase
 
     public function testThumbnailDeliversBinaryResponse(): void
     {
-        $feedBuilder       = $this->createMock(FeedBuilderInterface::class);
-        $clusterRepo       = $this->createMock(ClusterRepository::class);
+        $feedBuilder       = self::createStub(FeedBuilderInterface::class);
+        $clusterRepo       = self::createStub(ClusterRepository::class);
         $mapper            = new ClusterEntityToDraftMapper([]);
         $thumbnailResolver = new ThumbnailPathResolver();
         $mediaRepo         = $this->createMock(MediaRepository::class);
         $thumbnailService  = $this->createMock(ThumbnailServiceInterface::class);
-        $slideshowManager  = $this->createMock(SlideshowVideoManagerInterface::class);
+        $slideshowManager  = self::createStub(SlideshowVideoManagerInterface::class);
         $slideshowManager->method('getStatusForItem')->willReturn(SlideshowVideoStatus::unavailable(4.0));
         $entityManager = $this->createMock(EntityManagerInterface::class);
 
@@ -1627,15 +1629,15 @@ final class FeedControllerTest extends TestCase
 
     public function testThumbnailReturnsNotFoundWhenMediaMissing(): void
     {
-        $feedBuilder       = $this->createMock(FeedBuilderInterface::class);
-        $clusterRepo       = $this->createMock(ClusterRepository::class);
+        $feedBuilder       = self::createStub(FeedBuilderInterface::class);
+        $clusterRepo       = self::createStub(ClusterRepository::class);
         $mapper            = new ClusterEntityToDraftMapper([]);
         $thumbnailResolver = new ThumbnailPathResolver();
         $mediaRepo         = $this->createMock(MediaRepository::class);
-        $thumbnailService  = $this->createMock(ThumbnailServiceInterface::class);
-        $slideshowManager  = $this->createMock(SlideshowVideoManagerInterface::class);
+        $thumbnailService  = self::createStub(ThumbnailServiceInterface::class);
+        $slideshowManager  = self::createStub(SlideshowVideoManagerInterface::class);
         $slideshowManager->method('getStatusForItem')->willReturn(SlideshowVideoStatus::unavailable(4.0));
-        $entityManager = $this->createMock(EntityManagerInterface::class);
+        $entityManager = self::createStub(EntityManagerInterface::class);
 
         $mediaRepo->expects(self::once())
             ->method('findByIds')
@@ -1666,13 +1668,13 @@ final class FeedControllerTest extends TestCase
 
     public function testThumbnailGeneratesMissingThumbnailWhenAbsent(): void
     {
-        $feedBuilder       = $this->createMock(FeedBuilderInterface::class);
-        $clusterRepo       = $this->createMock(ClusterRepository::class);
+        $feedBuilder       = self::createStub(FeedBuilderInterface::class);
+        $clusterRepo       = self::createStub(ClusterRepository::class);
         $mapper            = new ClusterEntityToDraftMapper([]);
         $thumbnailResolver = new ThumbnailPathResolver();
         $mediaRepo         = $this->createMock(MediaRepository::class);
         $thumbnailService  = $this->createMock(ThumbnailServiceInterface::class);
-        $slideshowManager  = $this->createMock(SlideshowVideoManagerInterface::class);
+        $slideshowManager  = self::createStub(SlideshowVideoManagerInterface::class);
         $slideshowManager->method('getStatusForItem')->willReturn(SlideshowVideoStatus::unavailable(4.0));
         $entityManager = $this->createMock(EntityManagerInterface::class);
 
@@ -1723,13 +1725,13 @@ final class FeedControllerTest extends TestCase
 
     public function testThumbnailRegeneratesWhenMetadataIsStale(): void
     {
-        $feedBuilder       = $this->createMock(FeedBuilderInterface::class);
-        $clusterRepo       = $this->createMock(ClusterRepository::class);
+        $feedBuilder       = self::createStub(FeedBuilderInterface::class);
+        $clusterRepo       = self::createStub(ClusterRepository::class);
         $mapper            = new ClusterEntityToDraftMapper([]);
         $thumbnailResolver = new ThumbnailPathResolver();
         $mediaRepo         = $this->createMock(MediaRepository::class);
         $thumbnailService  = $this->createMock(ThumbnailServiceInterface::class);
-        $slideshowManager  = $this->createMock(SlideshowVideoManagerInterface::class);
+        $slideshowManager  = self::createStub(SlideshowVideoManagerInterface::class);
         $slideshowManager->method('getStatusForItem')->willReturn(SlideshowVideoStatus::unavailable(4.0));
         $entityManager = $this->createMock(EntityManagerInterface::class);
 

@@ -18,10 +18,12 @@ use MagicSunday\Memories\Clusterer\OnThisDayOverYearsClusterStrategy;
 use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Test\TestCase;
 use MagicSunday\Memories\Utility\LocationHelper;
+use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\Test;
 
 use function count;
 
+#[CoversClass(OnThisDayOverYearsClusterStrategy::class)]
 final class OnThisDayOverYearsClusterStrategyTest extends TestCase
 {
     #[Test]

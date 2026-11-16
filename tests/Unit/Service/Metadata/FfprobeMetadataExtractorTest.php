@@ -17,6 +17,7 @@ use MagicSunday\Memories\Entity\Enum\TimeSource;
 use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Service\Metadata\FfprobeMetadataExtractor;
 use MagicSunday\Memories\Test\TestCase;
+use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\Test;
 
 use function file_get_contents;
@@ -26,6 +27,7 @@ use function sys_get_temp_dir;
 use function tempnam;
 use function unlink;
 
+#[CoversClass(FfprobeMetadataExtractor::class)]
 final class FfprobeMetadataExtractorTest extends TestCase
 {
     #[Test]

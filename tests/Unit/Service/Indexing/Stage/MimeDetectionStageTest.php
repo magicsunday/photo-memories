@@ -14,6 +14,7 @@ namespace MagicSunday\Memories\Test\Unit\Service\Indexing\Stage;
 use MagicSunday\Memories\Service\Indexing\Contract\MediaIngestionContext;
 use MagicSunday\Memories\Service\Indexing\Stage\MimeDetectionStage;
 use MagicSunday\Memories\Test\TestCase;
+use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\Test;
 use Symfony\Component\Console\Output\BufferedOutput;
 use Symfony\Component\Console\Output\OutputInterface;
@@ -24,6 +25,7 @@ use function sys_get_temp_dir;
 use function uniqid;
 use function unlink;
 
+#[CoversClass(MimeDetectionStage::class)]
 final class MimeDetectionStageTest extends TestCase
 {
     /** @var list<string> */

@@ -15,8 +15,10 @@ use MagicSunday\Memories\Entity\Enum\TimeSource;
 use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Service\Indexing\Support\MediaIngestionTelemetryCollector;
 use MagicSunday\Memories\Test\TestCase;
+use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\Test;
 
+#[CoversClass(MediaIngestionTelemetryCollector::class)]
 final class MediaIngestionTelemetryCollectorTest extends TestCase
 {
     #[Test]

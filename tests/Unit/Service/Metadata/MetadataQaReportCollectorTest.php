@@ -14,9 +14,11 @@ namespace MagicSunday\Memories\Test\Unit\Service\Metadata;
 use MagicSunday\Memories\Service\Metadata\MetadataQaInspectionResult;
 use MagicSunday\Memories\Service\Metadata\MetadataQaReportCollector;
 use MagicSunday\Memories\Test\TestCase;
+use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\Test;
 use Symfony\Component\Console\Output\BufferedOutput;
 
+#[CoversClass(MetadataQaReportCollector::class)]
 final class MetadataQaReportCollectorTest extends TestCase
 {
     #[Test]

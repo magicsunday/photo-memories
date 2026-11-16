@@ -17,10 +17,12 @@ use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Service\Geocoding\DefaultMediaGeocodingProcessor;
 use MagicSunday\Memories\Service\Geocoding\MediaLocationLinkerInterface;
 use PHPUnit\Framework\Assert;
+use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\Console\Output\NullOutput;
 
+#[CoversClass(DefaultMediaGeocodingProcessor::class)]
 final class DefaultMediaGeocodingProcessorTest extends TestCase
 {
     #[Test]

@@ -14,10 +14,12 @@ namespace MagicSunday\Memories\Test\Unit\Service\Feed;
 use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Service\Feed\DefaultCoverPicker;
 use MagicSunday\Memories\Test\TestCase;
+use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\Attributes\Test;
 use ReflectionMethod;
 
+#[CoversClass(DefaultCoverPicker::class)]
 final class DefaultCoverPickerTest extends TestCase
 {
     #[Test]

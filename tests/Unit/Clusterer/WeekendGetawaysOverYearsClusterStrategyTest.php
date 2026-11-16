@@ -19,9 +19,11 @@ use MagicSunday\Memories\Clusterer\Context;
 use MagicSunday\Memories\Clusterer\WeekendGetawaysOverYearsClusterStrategy;
 use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Test\TestCase;
+use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\Attributes\Test;
 
+#[CoversClass(WeekendGetawaysOverYearsClusterStrategy::class)]
 final class WeekendGetawaysOverYearsClusterStrategyTest extends TestCase
 {
     #[Test]

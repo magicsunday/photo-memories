@@ -15,8 +15,10 @@ use MagicSunday\Memories\Service\Clusterer\Selection\SelectionPolicy;
 use MagicSunday\Memories\Service\Clusterer\Selection\SelectionTelemetry;
 use MagicSunday\Memories\Service\Clusterer\Selection\Stage\PeopleBalanceStage;
 use MagicSunday\Memories\Test\TestCase;
+use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\Test;
 
+#[CoversClass(PeopleBalanceStage::class)]
 final class PeopleBalanceStageTest extends TestCase
 {
     #[Test]

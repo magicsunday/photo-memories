@@ -94,11 +94,13 @@ namespace MagicSunday\Memories\Test\Unit\Service\Thumbnail {
     use MagicSunday\Memories\Entity\Media;
     use MagicSunday\Memories\Service\Thumbnail\ThumbnailService;
     use MagicSunday\Memories\Test\TestCase;
+    use PHPUnit\Framework\Attributes\CoversClass;
     use PHPUnit\Framework\Attributes\DataProvider;
     use PHPUnit\Framework\Attributes\Test;
     use ReflectionMethod;
     use RuntimeException;
 
+    #[CoversClass(ThumbnailService::class)]
     final class ThumbnailServiceTest extends TestCase
     {
         private static bool $forceGdResampleFailure = false;

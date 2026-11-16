@@ -15,6 +15,7 @@ use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Service\Metadata\Quality\MediaQualityAggregator;
 use MagicSunday\Memories\Service\Metadata\VisionSignatureExtractor;
 use MagicSunday\Memories\Test\TestCase;
+use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\Test;
 use ReflectionClass;
 use Symfony\Component\Process\Process;
@@ -33,6 +34,7 @@ use function sys_get_temp_dir;
 use function tempnam;
 use function unlink;
 
+#[CoversClass(VisionSignatureExtractor::class)]
 final class VisionSignatureExtractorTest extends TestCase
 {
     #[Test]

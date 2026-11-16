@@ -14,12 +14,14 @@ namespace MagicSunday\Memories\Test\Unit\Service\Clusterer\Selection\Stage;
 use MagicSunday\Memories\Service\Clusterer\Selection\SelectionPolicy;
 use MagicSunday\Memories\Service\Clusterer\Selection\SelectionTelemetry;
 use MagicSunday\Memories\Service\Clusterer\Selection\Stage\TimeSlotDiversificationStage;
+use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 
 use function array_column;
 use function floor;
 
+#[CoversClass(TimeSlotDiversificationStage::class)]
 final class TimeSlotDiversificationStageTest extends TestCase
 {
     #[Test]

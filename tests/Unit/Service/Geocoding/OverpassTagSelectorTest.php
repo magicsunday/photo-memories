@@ -13,9 +13,11 @@ namespace MagicSunday\Memories\Test\Unit\Service\Geocoding;
 
 use MagicSunday\Memories\Service\Geocoding\OverpassTagConfiguration;
 use MagicSunday\Memories\Service\Geocoding\OverpassTagSelector;
+use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 
+#[CoversClass(OverpassTagSelector::class)]
 final class OverpassTagSelectorTest extends TestCase
 {
     #[Test]

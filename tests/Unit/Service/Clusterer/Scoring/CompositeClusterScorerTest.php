@@ -34,10 +34,12 @@ use MagicSunday\Memories\Service\Clusterer\Scoring\QualityClusterScoreHeuristic;
 use MagicSunday\Memories\Service\Clusterer\Scoring\RecencyClusterScoreHeuristic;
 use MagicSunday\Memories\Service\Clusterer\Scoring\TemporalClusterScoreHeuristic;
 use MagicSunday\Memories\Test\TestCase;
+use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\Test;
 
 use function sprintf;
 
+#[CoversClass(CompositeClusterScorer::class)]
 final class CompositeClusterScorerTest extends TestCase
 {
     #[Test]
@@ -46,12 +48,12 @@ final class CompositeClusterScorerTest extends TestCase
         $mediaMap = $this->createMediaFixtures();
 
         $entityManager = $this->createStub(EntityManagerInterface::class);
-        $queryBuilder  = $this->getMockBuilder(QueryBuilder::class)
+        $queryBuilder  = self::getStubBuilder(QueryBuilder::class)
             ->disableOriginalConstructor()
-            ->getMock();
-        $query = $this->getMockBuilder(Query::class)
+            ->getStub();
+        $query = self::getStubBuilder(Query::class)
             ->disableOriginalConstructor()
-            ->getMock();
+            ->getStub();
 
         $entityManager->method('createQueryBuilder')->willReturn($queryBuilder);
         $queryBuilder->method('select')->willReturnSelf();
@@ -232,12 +234,12 @@ final class CompositeClusterScorerTest extends TestCase
         $mediaMap = $this->createMediaFixtures();
 
         $entityManager = $this->createStub(EntityManagerInterface::class);
-        $queryBuilder  = $this->getMockBuilder(QueryBuilder::class)
+        $queryBuilder  = self::getStubBuilder(QueryBuilder::class)
             ->disableOriginalConstructor()
-            ->getMock();
-        $query = $this->getMockBuilder(Query::class)
+            ->getStub();
+        $query = self::getStubBuilder(Query::class)
             ->disableOriginalConstructor()
-            ->getMock();
+            ->getStub();
 
         $entityManager->method('createQueryBuilder')->willReturn($queryBuilder);
         $queryBuilder->method('select')->willReturnSelf();

@@ -20,8 +20,10 @@ use MagicSunday\Memories\Clusterer\Support\PersonSignatureHelper;
 use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Test\TestCase;
 use MagicSunday\Memories\Utility\LocationHelper;
+use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\Test;
 
+#[CoversClass(PersonCohortClusterStrategy::class)]
 final class PersonCohortClusterStrategyTest extends TestCase
 {
     #[Test]

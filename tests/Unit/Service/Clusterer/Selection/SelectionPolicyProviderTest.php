@@ -13,8 +13,10 @@ namespace MagicSunday\Memories\Test\Unit\Service\Clusterer\Selection;
 
 use MagicSunday\Memories\Service\Clusterer\Selection\SelectionPolicyProvider;
 use MagicSunday\Memories\Test\TestCase;
+use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\Test;
 
+#[CoversClass(SelectionPolicyProvider::class)]
 final class SelectionPolicyProviderTest extends TestCase
 {
     #[Test]

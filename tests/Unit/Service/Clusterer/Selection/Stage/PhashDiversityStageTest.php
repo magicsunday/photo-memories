@@ -14,11 +14,13 @@ namespace MagicSunday\Memories\Test\Unit\Service\Clusterer\Selection\Stage;
 use MagicSunday\Memories\Service\Clusterer\Selection\SelectionPolicy;
 use MagicSunday\Memories\Service\Clusterer\Selection\SelectionTelemetry;
 use MagicSunday\Memories\Service\Clusterer\Selection\Stage\PhashDiversityStage;
+use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 
 use function array_column;
 
+#[CoversClass(PhashDiversityStage::class)]
 final class PhashDiversityStageTest extends TestCase
 {
     #[Test]

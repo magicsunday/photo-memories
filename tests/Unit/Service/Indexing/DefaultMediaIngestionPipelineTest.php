@@ -48,6 +48,7 @@ use MagicSunday\Memories\Service\Metadata\SolarEnricher;
 use MagicSunday\Memories\Service\Metadata\Support\CaptureTimeResolver;
 use MagicSunday\Memories\Service\Thumbnail\ThumbnailServiceInterface;
 use MagicSunday\Memories\Test\TestCase;
+use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\Test;
 use Psr\Log\AbstractLogger;
 use Symfony\Component\Console\Output\BufferedOutput;
@@ -64,6 +65,7 @@ use function sys_get_temp_dir;
 use function uniqid;
 use function unlink;
 
+#[CoversClass(DefaultMediaIngestionPipeline::class)]
 final class DefaultMediaIngestionPipelineTest extends TestCase
 {
     /**

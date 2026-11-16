@@ -69,8 +69,10 @@ use MagicSunday\Memories\Service\Clusterer\Title\StoryTitleBuilder;
 use MagicSunday\Memories\Test\TestCase;
 use MagicSunday\Memories\Test\Unit\Clusterer\Fixtures\VacationTestMemberSelector;
 use MagicSunday\Memories\Utility\LocationHelper;
+use PHPUnit\Framework\Attributes\CoversNothing;
 use PHPUnit\Framework\Attributes\DataProvider;
 
+#[CoversNothing]
 final class ClusterStrategySmokeTest extends TestCase
 {
     /**

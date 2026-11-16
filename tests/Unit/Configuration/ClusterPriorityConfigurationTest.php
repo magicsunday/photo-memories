@@ -11,6 +11,7 @@ declare(strict_types=1);
 
 namespace MagicSunday\Memories\Test\Unit\Configuration;
 
+use PHPUnit\Framework\Attributes\CoversNothing;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\Yaml\Yaml;
@@ -20,6 +21,7 @@ use function max;
 use function min;
 use function str_starts_with;
 
+#[CoversNothing]
 final class ClusterPriorityConfigurationTest extends TestCase
 {
     private const string PARAMETERS_FILE = __DIR__ . '/../../../config/parameters.yaml';

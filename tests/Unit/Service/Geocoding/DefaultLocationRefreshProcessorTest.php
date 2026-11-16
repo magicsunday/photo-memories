@@ -22,11 +22,13 @@ use MagicSunday\Memories\Service\Geocoding\OverpassClient;
 use MagicSunday\Memories\Service\Geocoding\OverpassQueryBuilderInterface;
 use MagicSunday\Memories\Service\Geocoding\OverpassResponseParserInterface;
 use MagicSunday\Memories\Service\Geocoding\ReverseGeocoderInterface;
+use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\Console\Output\NullOutput;
 use Symfony\Contracts\HttpClient\HttpClientInterface;
 
+#[CoversClass(DefaultLocationRefreshProcessor::class)]
 final class DefaultLocationRefreshProcessorTest extends TestCase
 {
     #[Test]
@@ -180,9 +182,9 @@ final class DefaultLocationRefreshProcessorTest extends TestCase
 
     private function createResolver(EntityManagerInterface $entityManager): LocationResolver
     {
-        $httpClient     = $this->createMock(HttpClientInterface::class);
-        $queryBuilder   = $this->createMock(OverpassQueryBuilderInterface::class);
-        $responseParser = $this->createMock(OverpassResponseParserInterface::class);
+        $httpClient     = self::createStub(HttpClientInterface::class);
+        $queryBuilder   = self::createStub(OverpassQueryBuilderInterface::class);
+        $responseParser = self::createStub(OverpassResponseParserInterface::class);
 
         $overpassClient = new OverpassClient($httpClient, $queryBuilder, $responseParser);
         $poiEnricher    = new LocationPoiEnricher(

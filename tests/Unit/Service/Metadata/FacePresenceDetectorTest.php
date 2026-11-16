@@ -16,6 +16,7 @@ use MagicSunday\Memories\Service\Metadata\FacePresenceDetector;
 use MagicSunday\Memories\Service\Metadata\Support\FaceDetectionBackendInterface;
 use MagicSunday\Memories\Service\Metadata\Support\FaceDetectionResult;
 use MagicSunday\Memories\Test\TestCase;
+use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\Test;
 
 use function file_put_contents;
@@ -24,6 +25,7 @@ use function sys_get_temp_dir;
 use function tempnam;
 use function unlink;
 
+#[CoversClass(FacePresenceDetector::class)]
 final class FacePresenceDetectorTest extends TestCase
 {
     #[Test]

@@ -20,8 +20,10 @@ use MagicSunday\Memories\Entity\Location;
 use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Test\TestCase;
 use MagicSunday\Memories\Utility\LocationHelper;
+use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\Test;
 
+#[CoversClass(BurstClusterStrategy::class)]
 final class BurstClusterStrategyTest extends TestCase
 {
     #[Test]

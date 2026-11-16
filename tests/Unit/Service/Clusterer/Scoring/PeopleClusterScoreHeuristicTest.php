@@ -16,8 +16,10 @@ use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Service\Clusterer\Scoring\PeopleClusterScoreHeuristic;
 use MagicSunday\Memories\Service\Feed\FeedUserPreferences;
 use MagicSunday\Memories\Test\TestCase;
+use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\Test;
 
+#[CoversClass(PeopleClusterScoreHeuristic::class)]
 final class PeopleClusterScoreHeuristicTest extends TestCase
 {
     #[Test]

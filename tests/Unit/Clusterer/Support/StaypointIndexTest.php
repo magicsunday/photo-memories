@@ -16,8 +16,10 @@ use DateTimeImmutable;
 use DateTimeZone;
 use MagicSunday\Memories\Clusterer\Support\StaypointIndex;
 use MagicSunday\Memories\Test\TestCase;
+use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\Test;
 
+#[CoversClass(StaypointIndex::class)]
 final class StaypointIndexTest extends TestCase
 {
     #[Test]

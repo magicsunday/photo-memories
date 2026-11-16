@@ -14,8 +14,10 @@ namespace MagicSunday\Memories\Test\Unit\Utility;
 use MagicSunday\Memories\Entity\Location;
 use MagicSunday\Memories\Test\TestCase;
 use MagicSunday\Memories\Utility\LocationHelper;
+use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\Test;
 
+#[CoversClass(LocationHelper::class)]
 final class LocationHelperTest extends TestCase
 {
     #[Test]

@@ -14,10 +14,12 @@ namespace MagicSunday\Memories\Test\Unit\Clusterer\Support;
 use MagicSunday\Memories\Clusterer\Support\ClusterPeopleAggregator;
 use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Test\TestCase;
+use PHPUnit\Framework\Attributes\CoversClass;
 
 /**
  * @covers \MagicSunday\Memories\Clusterer\Support\ClusterPeopleAggregator
  */
+#[CoversClass(ClusterPeopleAggregator::class)]
 final class ClusterPeopleAggregatorTest extends TestCase
 {
     public function testFavouriteHeavyClusterOutscoresNeutralCluster(): void

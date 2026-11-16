@@ -16,9 +16,11 @@ use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Service\Clusterer\Quality\ImageQualityEstimatorInterface;
 use MagicSunday\Memories\Service\Clusterer\Quality\ImageQualityScore;
 use MagicSunday\Memories\Test\TestCase;
+use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\Test;
 use RuntimeException;
 
+#[CoversClass(ClusterQualityAggregator::class)]
 final class ClusterQualityAggregatorTest extends TestCase
 {
     #[Test]

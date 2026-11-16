@@ -15,11 +15,13 @@ use MagicSunday\Memories\Clusterer\Contract\PersonTaggedMediaInterface;
 use MagicSunday\Memories\Clusterer\DaySummaryStage\CohortPresenceStage;
 use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Test\TestCase;
+use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\Test;
 
 /**
  * @covers \MagicSunday\Memories\Clusterer\DaySummaryStage\CohortPresenceStage
  */
+#[CoversClass(CohortPresenceStage::class)]
 final class CohortPresenceStageTest extends TestCase
 {
     #[Test]

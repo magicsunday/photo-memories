@@ -25,6 +25,7 @@ use MagicSunday\Memories\Service\Metadata\Support\CaptureTimeResolver;
 use MagicSunday\Memories\Test\TestCase;
 use MagicSunday\Memories\Utility\MediaMath;
 use MagicSunday\Memories\Utility\S2CellId;
+use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\Test;
 
 use function file_put_contents;
@@ -49,6 +50,7 @@ use function unlink;
  * - FacePresenceDetector (face backend) -> FakeFacePresenceExtractor
  * - XmpIptc/Filename extractors -> FakeKeywordAndPersonExtractor
  */
+#[CoversClass(CompositeMetadataExtractor::class)]
 final class CompositeMetadataExtractorClusterFieldsTest extends TestCase
 {
     #[Test]

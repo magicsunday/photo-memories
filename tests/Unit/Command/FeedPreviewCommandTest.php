@@ -27,12 +27,14 @@ use MagicSunday\Memories\Service\Feed\FeedPersonalizationProfileProvider;
 use MagicSunday\Memories\Service\Feed\FeedVisibilityFilter;
 use MagicSunday\Memories\Support\ClusterEntityToDraftMapper;
 use MagicSunday\Memories\Test\TestCase;
+use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\Test;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Tester\CommandTester;
 
 use function preg_replace;
 
+#[CoversClass(FeedPreviewCommand::class)]
 final class FeedPreviewCommandTest extends TestCase
 {
     #[Test]
@@ -551,12 +553,12 @@ final class FeedPreviewCommandTest extends TestCase
      */
     private function createEntityManagerWithResult(array $result, int $expectedLimit): EntityManagerInterface
     {
-        $entityManager = $this->createMock(EntityManagerInterface::class);
+        $entityManager = self::createStub(EntityManagerInterface::class);
 
-        $query = $this->getMockBuilder(Query::class)
+        $query = self::getStubBuilder(Query::class)
             ->disableOriginalConstructor()
             ->onlyMethods(['getResult'])
-            ->getMock();
+            ->getStub();
         $query->method('getResult')->willReturn($result);
 
         $queryBuilder = $this->getMockBuilder(QueryBuilder::class)

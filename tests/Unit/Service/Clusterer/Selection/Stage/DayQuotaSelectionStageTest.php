@@ -14,11 +14,13 @@ namespace MagicSunday\Memories\Test\Unit\Service\Clusterer\Selection\Stage;
 use MagicSunday\Memories\Service\Clusterer\Selection\SelectionPolicy;
 use MagicSunday\Memories\Service\Clusterer\Selection\SelectionTelemetry;
 use MagicSunday\Memories\Service\Clusterer\Selection\Stage\DayQuotaSelectionStage;
+use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 
 use function array_column;
 
+#[CoversClass(DayQuotaSelectionStage::class)]
 final class DayQuotaSelectionStageTest extends TestCase
 {
     #[Test]

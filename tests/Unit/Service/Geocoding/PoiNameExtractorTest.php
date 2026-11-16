@@ -12,9 +12,11 @@ declare(strict_types=1);
 namespace MagicSunday\Memories\Test\Unit\Service\Geocoding;
 
 use MagicSunday\Memories\Service\Geocoding\PoiNameExtractor;
+use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 
+#[CoversClass(PoiNameExtractor::class)]
 final class PoiNameExtractorTest extends TestCase
 {
     #[Test]

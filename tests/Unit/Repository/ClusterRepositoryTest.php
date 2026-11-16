@@ -16,25 +16,27 @@ use Doctrine\ORM\Query;
 use Doctrine\ORM\QueryBuilder;
 use MagicSunday\Memories\Repository\ClusterRepository;
 use MagicSunday\Memories\Test\TestCase;
+use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\Test;
 
+#[CoversClass(ClusterRepository::class)]
 final class ClusterRepositoryTest extends TestCase
 {
     #[Test]
     public function findLatestOrdersByStartAt(): void
     {
-        $em = $this->createMock(EntityManagerInterface::class);
+        $em = self::createStub(EntityManagerInterface::class);
 
-        $query = $this->getMockBuilder(Query::class)
+        $query = self::getStubBuilder(Query::class)
             ->disableOriginalConstructor()
             ->onlyMethods(['getResult'])
-            ->getMock();
+            ->getStub();
         $query->method('getResult')->willReturn([]);
 
-        $qb = $this->getMockBuilder(QueryBuilder::class)
+        $qb = self::getStubBuilder(QueryBuilder::class)
             ->disableOriginalConstructor()
             ->onlyMethods(['select', 'from', 'orderBy', 'addOrderBy', 'setMaxResults', 'getQuery'])
-            ->getMock();
+            ->getStub();
 
         /** @var list<array{string,string}> $orderBys */
         $orderBys = [];

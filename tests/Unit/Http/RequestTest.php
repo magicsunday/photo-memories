@@ -12,9 +12,11 @@ declare(strict_types=1);
 namespace MagicSunday\Memories\Test\Unit\Http;
 
 use MagicSunday\Memories\Http\Request;
+use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\TestCase;
 use Stringable;
 
+#[CoversClass(Request::class)]
 final class RequestTest extends TestCase
 {
     public function testCreateNormalizesNumericQueryValuesToStrings(): void

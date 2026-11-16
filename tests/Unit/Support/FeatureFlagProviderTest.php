@@ -12,6 +12,7 @@ declare(strict_types=1);
 namespace MagicSunday\Memories\Test\Unit\Support;
 
 use MagicSunday\Memories\Support\FeatureFlagProvider;
+use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\DependencyInjection\ParameterBag\ParameterBag;
 use Symfony\Component\DependencyInjection\ParameterBag\ParameterBagInterface;
@@ -23,6 +24,7 @@ use function array_key_exists;
 /**
  * @covers \MagicSunday\Memories\Support\FeatureFlagProvider
  */
+#[CoversClass(FeatureFlagProvider::class)]
 final class FeatureFlagProviderTest extends TestCase
 {
     public function testItReturnsFalseWhenFlagIsNotConfigured(): void

@@ -13,9 +13,11 @@ namespace MagicSunday\Memories\Test\Unit\Service\Clusterer\Selection;
 
 use MagicSunday\Memories\Service\Clusterer\Selection\SelectionPolicyProvider;
 use MagicSunday\Memories\Test\TestCase;
+use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\Test;
 use Symfony\Component\Yaml\Yaml;
 
+#[CoversClass(SelectionPolicyProvider::class)]
 final class SelectionPolicyProviderConfigTest extends TestCase
 {
     #[Test]

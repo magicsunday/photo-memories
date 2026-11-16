@@ -22,9 +22,11 @@ use MagicSunday\Memories\Service\Clusterer\HybridClusterer;
 use MagicSunday\Memories\Service\Clusterer\Scoring\CompositeClusterScorer;
 use MagicSunday\Memories\Service\Clusterer\TitleGeneratorInterface;
 use MagicSunday\Memories\Test\TestCase;
+use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\Test;
 use RuntimeException;
 
+#[CoversClass(HybridClusterer::class)]
 final class HybridClustererTest extends TestCase
 {
     #[Test]
@@ -56,11 +58,11 @@ final class HybridClustererTest extends TestCase
         };
 
         $scorer = new CompositeClusterScorer(
-            $this->createMock(EntityManagerInterface::class),
+            self::createStub(EntityManagerInterface::class),
             [],
         );
 
-        $titleGenerator = $this->createMock(TitleGeneratorInterface::class);
+        $titleGenerator = self::createStub(TitleGeneratorInterface::class);
         $titleGenerator->method('makeTitle')->willReturn('Titel');
         $titleGenerator->method('makeSubtitle')->willReturn('Untertitel');
 
@@ -180,11 +182,11 @@ final class HybridClustererTest extends TestCase
         };
 
         $scorer = new CompositeClusterScorer(
-            $this->createMock(EntityManagerInterface::class),
+            self::createStub(EntityManagerInterface::class),
             [],
         );
 
-        $titleGenerator = $this->createMock(TitleGeneratorInterface::class);
+        $titleGenerator = self::createStub(TitleGeneratorInterface::class);
         $titleGenerator->method('makeTitle')->willReturn('Titel');
         $titleGenerator->method('makeSubtitle')->willReturn('Untertitel');
 

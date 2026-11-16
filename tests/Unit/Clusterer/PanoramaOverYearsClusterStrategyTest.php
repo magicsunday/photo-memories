@@ -18,8 +18,10 @@ use MagicSunday\Memories\Clusterer\Context;
 use MagicSunday\Memories\Clusterer\PanoramaOverYearsClusterStrategy;
 use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Test\TestCase;
+use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\Test;
 
+#[CoversClass(PanoramaOverYearsClusterStrategy::class)]
 final class PanoramaOverYearsClusterStrategyTest extends TestCase
 {
     #[Test]

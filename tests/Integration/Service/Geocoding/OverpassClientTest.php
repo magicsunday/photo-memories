@@ -20,12 +20,14 @@ use MagicSunday\Memories\Service\Geocoding\OverpassPrimaryTagResolver;
 use MagicSunday\Memories\Service\Geocoding\OverpassTagConfiguration;
 use MagicSunday\Memories\Service\Geocoding\OverpassTagSelector;
 use MagicSunday\Memories\Service\Geocoding\PoiNameExtractor;
+use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 use Symfony\Contracts\HttpClient\HttpClientInterface;
 use Symfony\Contracts\HttpClient\ResponseInterface;
 use Symfony\Contracts\HttpClient\ResponseStreamInterface;
 
+#[CoversClass(OverpassClient::class)]
 final class OverpassClientTest extends TestCase
 {
     #[Test]

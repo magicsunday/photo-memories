@@ -13,6 +13,7 @@ namespace MagicSunday\Memories\Test\Unit\Service\Slideshow;
 
 use MagicSunday\Memories\Service\Slideshow\SlideshowJob;
 use MagicSunday\Memories\Service\Slideshow\TransitionSequenceGenerator;
+use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\TestCase;
 
 use function array_map;
@@ -28,6 +29,7 @@ use const JSON_THROW_ON_ERROR;
 /**
  * @covers \MagicSunday\Memories\Service\Slideshow\SlideshowJob
  */
+#[CoversClass(SlideshowJob::class)]
 final class SlideshowJobTest extends TestCase
 {
     public function testToArrayContainsStoryboardInformation(): void

@@ -29,6 +29,7 @@ use MagicSunday\Memories\Service\Metadata\BurstDetector;
 use MagicSunday\Memories\Service\Metadata\LivePairLinker;
 use MagicSunday\Memories\Test\TestCase;
 use Override;
+use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\Test;
 use Symfony\Component\Console\Output\NullOutput;
 
@@ -36,6 +37,7 @@ use function array_unique;
 use function array_values;
 use function iterator_to_array;
 
+#[CoversClass(PostFlushReprocessingStage::class)]
 final class PostFlushReprocessingIntegrationTest extends TestCase
 {
     #[Test]
@@ -45,7 +47,7 @@ final class PostFlushReprocessingIntegrationTest extends TestCase
         $tracker             = new PersistedMediaTracker();
         $duplicateRepository = new RecordingMediaDuplicateRepository();
 
-        $entityManager = $this->createMock(EntityManagerInterface::class);
+        $entityManager = self::createStub(EntityManagerInterface::class);
         $this->configureEntityManager($entityManager, $repository);
 
         $nearDuplicateStage = new NearDuplicateStage($entityManager, $repository, $duplicateRepository, 6);
@@ -99,7 +101,7 @@ final class PostFlushReprocessingIntegrationTest extends TestCase
         $tracker             = new PersistedMediaTracker();
         $duplicateRepository = new RecordingMediaDuplicateRepository();
 
-        $entityManager = $this->createMock(EntityManagerInterface::class);
+        $entityManager = self::createStub(EntityManagerInterface::class);
         $this->configureEntityManager($entityManager, $repository);
 
         $nearDuplicateStage = new NearDuplicateStage($entityManager, $repository, $duplicateRepository, 6);

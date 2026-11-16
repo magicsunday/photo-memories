@@ -13,6 +13,7 @@ namespace MagicSunday\Memories\Test\Unit\Service\Feed;
 
 use MagicSunday\Memories\Service\Feed\FeedUserPreferenceStorage;
 use MagicSunday\Memories\Test\TestCase;
+use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\Test;
 
 use function file_exists;
@@ -25,6 +26,7 @@ use function uniqid;
 use const JSON_PRETTY_PRINT;
 use const JSON_THROW_ON_ERROR;
 
+#[CoversClass(FeedUserPreferenceStorage::class)]
 final class FeedUserPreferenceStorageTest extends TestCase
 {
     #[Test]

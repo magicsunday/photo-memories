@@ -19,8 +19,10 @@ use MagicSunday\Memories\Clusterer\DefaultHomeLocator;
 use MagicSunday\Memories\Entity\Location;
 use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Test\TestCase;
+use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\Test;
 
+#[CoversClass(DefaultHomeLocator::class)]
 final class DefaultHomeLocatorTest extends TestCase
 {
     #[Test]

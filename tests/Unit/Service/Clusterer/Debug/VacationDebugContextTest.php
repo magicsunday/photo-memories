@@ -13,8 +13,10 @@ namespace MagicSunday\Memories\Test\Unit\Service\Clusterer\Debug;
 
 use MagicSunday\Memories\Service\Clusterer\Debug\VacationDebugContext;
 use MagicSunday\Memories\Test\TestCase;
+use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\Test;
 
+#[CoversClass(VacationDebugContext::class)]
 final class VacationDebugContextTest extends TestCase
 {
     #[Test]

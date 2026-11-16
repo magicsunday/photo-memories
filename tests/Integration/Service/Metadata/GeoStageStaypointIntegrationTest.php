@@ -20,12 +20,14 @@ use MagicSunday\Memories\Service\Metadata\StaypointPlaceHeuristic;
 use MagicSunday\Memories\Test\TestCase;
 use MagicSunday\Memories\Utility\S2CellId;
 use MagicSunday\Memories\Value\PlaceId;
+use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\Test;
 use Symfony\Component\Console\Output\BufferedOutput;
 
 /**
  * @internal
  */
+#[CoversClass(GeoStage::class)]
 final class GeoStageStaypointIntegrationTest extends TestCase
 {
     #[Test]

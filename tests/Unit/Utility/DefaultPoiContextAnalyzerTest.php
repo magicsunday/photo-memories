@@ -17,8 +17,10 @@ use MagicSunday\Memories\Utility\DefaultPoiContextAnalyzer;
 use MagicSunday\Memories\Utility\DefaultPoiLabelResolver;
 use MagicSunday\Memories\Utility\DefaultPoiNormalizer;
 use MagicSunday\Memories\Utility\DefaultPoiScorer;
+use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\Test;
 
+#[CoversClass(DefaultPoiContextAnalyzer::class)]
 final class DefaultPoiContextAnalyzerTest extends TestCase
 {
     #[Test]

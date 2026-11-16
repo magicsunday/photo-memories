@@ -20,11 +20,13 @@ use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Test\TestCase;
 use MagicSunday\Memories\Utility\GeoCell;
 use MagicSunday\Memories\Utility\LocationHelper;
+use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\Test;
 
 use function explode;
 use function sort;
 
+#[CoversClass(LocationSimilarityStrategy::class)]
 final class LocationSimilarityStrategyTest extends TestCase
 {
     #[Test]

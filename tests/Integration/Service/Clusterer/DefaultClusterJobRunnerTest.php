@@ -21,6 +21,7 @@ use Doctrine\ORM\QueryBuilder;
 use Doctrine\ORM\Tools\SchemaTool;
 use MagicSunday\Memories\Clusterer\ClusterDraft;
 use MagicSunday\Memories\Entity\Cluster;
+use MagicSunday\Memories\Entity\ClusterMember;
 use MagicSunday\Memories\Entity\Location;
 use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Service\Clusterer\ClusterJobOptions;
@@ -42,10 +43,12 @@ use MagicSunday\Memories\Service\Feed\CoverPickerInterface;
 use MagicSunday\Memories\Service\Metadata\MetadataFeatureVersion;
 use MagicSunday\Memories\Test\TestCase;
 use Override;
+use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\Test;
 use RuntimeException;
 use Symfony\Component\Yaml\Yaml;
 
+#[CoversClass(DefaultClusterJobRunner::class)]
 final class DefaultClusterJobRunnerTest extends TestCase
 {
     #[Test]
@@ -61,7 +64,7 @@ final class DefaultClusterJobRunnerTest extends TestCase
         $mediaTwo->setMime('image/jpeg');
         $mediaTwo->setIsVideo(false);
 
-        $countQb    = $this->createQueryBuilderMock(['select', 'from', 'andWhere', 'setParameter', 'getQuery']);
+        $countQb    = $this->createQueryBuilderStub(['select', 'from', 'andWhere', 'setParameter', 'getQuery']);
         $countQuery = $this->getMockBuilder(Query::class)
             ->disableOriginalConstructor()
             ->onlyMethods(['getSingleScalarResult'])
@@ -69,7 +72,7 @@ final class DefaultClusterJobRunnerTest extends TestCase
         $countQuery->expects(self::once())->method('getSingleScalarResult')->willReturn('2');
         $countQb->method('getQuery')->willReturn($countQuery);
 
-        $listQb    = $this->createQueryBuilderMock(['select', 'from', 'orderBy', 'addOrderBy', 'andWhere', 'setParameter', 'setMaxResults', 'getQuery']);
+        $listQb    = $this->createQueryBuilderStub(['select', 'from', 'orderBy', 'addOrderBy', 'andWhere', 'setParameter', 'setMaxResults', 'getQuery']);
         $listQuery = $this->getMockBuilder(Query::class)
             ->disableOriginalConstructor()
             ->onlyMethods(['toIterable'])
@@ -94,7 +97,7 @@ final class DefaultClusterJobRunnerTest extends TestCase
         $pendingClusters = [];
         $flushCalls      = 0;
 
-        $clusterEntityManager = $this->createMock(EntityManagerInterface::class);
+        $clusterEntityManager = self::createStub(EntityManagerInterface::class);
         $clusterEntityManager->method('persist')->willReturnCallback(
             static function (object $entity) use (&$pendingClusters): void {
                 if ($entity instanceof Cluster) {
@@ -108,7 +111,7 @@ final class DefaultClusterJobRunnerTest extends TestCase
             }
         );
         $clusterEntityManager->method('createQueryBuilder')->willReturnCallback(
-            static fn (): object => new EmptyClusterQueryBuilder()
+            fn (): QueryBuilder => $this->createEmptyResultQueryBuilder()
         );
         $clusterEntityManager->method('flush')->willReturnCallback(
             static function () use (&$pendingClusters, &$storedClusters, &$flushCalls): void {
@@ -187,7 +190,7 @@ final class DefaultClusterJobRunnerTest extends TestCase
         ]);
         $consolidator = new PassthroughClusterConsolidator();
 
-        $memberLookup = new InMemoryMemberMediaLookup([$mediaOne, $mediaTwo]);
+        $memberLookup = new EntityManagerMemberMediaLookup($entityManager);
         $memberSelect = new IdentityClusterMemberSelector();
         $coverPicker  = new NullCoverPicker();
         $persistence  = new ClusterPersistenceService(
@@ -212,9 +215,9 @@ final class DefaultClusterJobRunnerTest extends TestCase
         }
 
         $connection   = $entityManager->getConnection();
-        $clusterCount = (int) $connection->fetchOne('SELECT COUNT(*) FROM cluster');
+        $clusterCount = (int) $connection->fetchOne('SELECT COUNT(*) FROM memories_cluster');
         self::assertSame(1, $clusterCount, 'Original clusters should be restored after rollback.');
-        $algorithm = $connection->fetchOne('SELECT algorithm FROM cluster LIMIT 1');
+        $algorithm = $connection->fetchOne('SELECT strategy FROM memories_cluster LIMIT 1');
         self::assertSame('legacy', $algorithm);
     }
 
@@ -263,7 +266,7 @@ final class DefaultClusterJobRunnerTest extends TestCase
 
         $consolidator = new PassthroughClusterConsolidator();
 
-        $memberLookup = new InMemoryMemberMediaLookup([$mediaOne, $mediaTwo]);
+        $memberLookup = new EntityManagerMemberMediaLookup($entityManager);
         $memberSelect = new IdentityClusterMemberSelector();
         $coverPicker  = new NullCoverPicker();
 
@@ -399,13 +402,14 @@ final class DefaultClusterJobRunnerTest extends TestCase
             paths: [dirname(__DIR__, 4) . '/src/Entity'],
             isDevMode: true,
         );
+        $config->enableNativeLazyObjects(true);
 
         $connection = DriverManager::getConnection([
             'driver' => 'pdo_sqlite',
             'memory' => true,
         ]);
 
-        return EntityManager::create($connection, $config);
+        return new EntityManager($connection, $config);
     }
 
     private function createPolicyProvider(): SelectionPolicyProvider
@@ -429,18 +433,43 @@ final class DefaultClusterJobRunnerTest extends TestCase
             $entityManager->getClassMetadata(Media::class),
             $entityManager->getClassMetadata(Location::class),
             $entityManager->getClassMetadata(Cluster::class),
+            $entityManager->getClassMetadata(ClusterMember::class),
         ]);
     }
 
     /**
-     * @param list<string> $methods
+     * Builds a query builder stub of the real type whose query returns no rows.
+     *
+     * @return QueryBuilder The stub that answers every chained call and an empty result
      */
-    private function createQueryBuilderMock(array $methods): QueryBuilder
+    private function createEmptyResultQueryBuilder(): QueryBuilder
     {
-        $qb = $this->getMockBuilder(QueryBuilder::class)
+        $query = self::getStubBuilder(Query::class)
+            ->disableOriginalConstructor()
+            ->onlyMethods(['getResult'])
+            ->getStub();
+        $query->method('getResult')->willReturn([]);
+
+        $queryBuilder = self::createStub(QueryBuilder::class);
+
+        foreach (['select', 'from', 'where', 'andWhere', 'setParameter'] as $method) {
+            $queryBuilder->method($method)->willReturnSelf();
+        }
+
+        $queryBuilder->method('getQuery')->willReturn($query);
+
+        return $queryBuilder;
+    }
+
+    /**
+     * @param list<non-empty-string> $methods
+     */
+    private function createQueryBuilderStub(array $methods): QueryBuilder
+    {
+        $qb = self::getStubBuilder(QueryBuilder::class)
             ->disableOriginalConstructor()
             ->onlyMethods($methods)
-            ->getMock();
+            ->getStub();
 
         foreach ($methods as $method) {
             if ($method === 'getQuery') {
@@ -517,6 +546,46 @@ final class PassthroughClusterConsolidator implements ClusterConsolidatorInterfa
         }
 
         return $drafts;
+    }
+}
+
+/**
+ * Resolves members through the entity manager, because the persistence service clears
+ * the unit of work after each batch and detached media would otherwise be seen as new.
+ */
+final readonly class EntityManagerMemberMediaLookup implements MemberMediaLookupInterface
+{
+    public function __construct(private EntityManagerInterface $entityManager)
+    {
+    }
+
+    /**
+     * Loads each requested media from the entity manager and keeps the order of the ids.
+     *
+     * @param list<int> $ids        The ids of the media to load
+     * @param bool      $onlyVideos Whether media that are not videos are left out
+     *
+     * @return list<Media> The media that exist and match, ids without a match are skipped
+     */
+    public function findByIds(array $ids, bool $onlyVideos = false): array
+    {
+        $result = [];
+
+        foreach ($ids as $id) {
+            $media = $this->entityManager->find(Media::class, $id);
+
+            if (!$media instanceof Media) {
+                continue;
+            }
+
+            if ($onlyVideos && !$media->isVideo()) {
+                continue;
+            }
+
+            $result[] = $media;
+        }
+
+        return $result;
     }
 }
 
@@ -671,43 +740,5 @@ final class ThrowingProgressHandle extends NoOpProgressHandle
     public function createChildHandle(string $sectionTitle, string $headline, int $max): ProgressHandleInterface
     {
         return new NoOpProgressHandle();
-    }
-}
-
-final class EmptyClusterQueryBuilder
-{
-    public function select(): self
-    {
-        return $this;
-    }
-
-    public function from(): self
-    {
-        return $this;
-    }
-
-    public function where(): self
-    {
-        return $this;
-    }
-
-    public function andWhere(): self
-    {
-        return $this;
-    }
-
-    public function setParameter(): self
-    {
-        return $this;
-    }
-
-    public function getQuery(): object
-    {
-        return new class {
-            public function getResult(): array
-            {
-                return [];
-            }
-        };
     }
 }
