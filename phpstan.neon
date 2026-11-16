@@ -38,3 +38,11 @@ parameters:
             identifier: property.onlyRead
             message: '#^Property MagicSunday\\Memories\\Entity\\[A-Za-z]+::\$id is never written, only read\.$#'
             path: %currentWorkingDirectory%/src/Entity/
+
+        # The test feeds a non-scalar query value on purpose to prove that Request::create()
+        # drops it, so the call deliberately violates the declared parameter type.
+        -
+            identifier: argument.type
+            message: '#^Parameter \#3 \$query of static method MagicSunday\\Memories\\Http\\Request::create\(\) expects #'
+            path: %currentWorkingDirectory%/tests/Unit/Http/RequestTest.php
+            count: 1
