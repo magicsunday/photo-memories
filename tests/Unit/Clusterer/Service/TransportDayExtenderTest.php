@@ -12,10 +12,25 @@ declare(strict_types=1);
 namespace MagicSunday\Memories\Test\Unit\Clusterer\Service;
 
 use MagicSunday\Memories\Clusterer\Service\TransportDayExtender;
+use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Test\TestCase;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\Test;
 
+/**
+ * @phpstan-type TransportDay array{
+ *     hasAirportPoi: bool,
+ *     hasHighSpeedTransit: bool,
+ *     isSynthetic: bool,
+ *     dominantStaypoints?: list<array{key: string, lat: float, lon: float, start: int, end: int, dwellSeconds: int, memberCount: int}>,
+ *     transitRatio?: float,
+ *     avgSpeedKmh?: float,
+ *     maxSpeedKmh?: float,
+ *     photoCount?: int,
+ *     baseLocation?: array{lat: float|int, lon: float|int}|null,
+ *     gpsMembers?: list<Media>,
+ * }
+ */
 #[CoversClass(TransportDayExtender::class)]
 final class TransportDayExtenderTest extends TestCase
 {
@@ -143,6 +158,11 @@ final class TransportDayExtenderTest extends TestCase
         self::assertSame($run, $extended);
     }
 
+    /**
+     * @param array<string, mixed> $overrides
+     *
+     * @return TransportDay
+     */
     private function makeLeanSummary(float $lat, float $lon, array $overrides = []): array
     {
         $summary = [
@@ -161,16 +181,22 @@ final class TransportDayExtenderTest extends TestCase
             'isSynthetic' => false,
         ];
 
-        return array_replace_recursive($summary, $overrides);
+        /** @var TransportDay $merged */
+        $merged = array_replace_recursive($summary, $overrides);
+
+        return $merged;
     }
 
     /**
      * @param array<string, float> $overrides
+     *
+     * @return TransportDay
      */
     private function makeAnchorSummary(float $lat, float $lon, array $overrides = []): array
     {
         $summary = [
             'dominantStaypoints' => [[
+                'key'          => 'anchor',
                 'lat'          => $lat,
                 'lon'          => $lon,
                 'start'        => 0,
@@ -192,6 +218,9 @@ final class TransportDayExtenderTest extends TestCase
             'isSynthetic' => false,
         ];
 
-        return array_replace_recursive($summary, $overrides);
+        /** @var TransportDay $merged */
+        $merged = array_replace_recursive($summary, $overrides);
+
+        return $merged;
     }
 }
