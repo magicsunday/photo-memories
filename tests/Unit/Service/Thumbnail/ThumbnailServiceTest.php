@@ -1547,11 +1547,7 @@ namespace MagicSunday\Memories\Test\Unit\Service\Thumbnail {
                     $colorComponents = $this->hexToRgb($layout[$y][$x]);
                     $colorResource   = self::allocateGdColor($image, $colorComponents['r'], $colorComponents['g'], $colorComponents['b']);
 
-                    $setPixelResult = imagesetpixel($image, $x, $y, $colorResource);
-
-                    if ($setPixelResult === false) {
-                        self::fail('Unable to set GD pixel color for orientation layout.');
-                    }
+                    imagesetpixel($image, $x, $y, $colorResource);
                 }
             }
 

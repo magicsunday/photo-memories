@@ -401,11 +401,7 @@ class ThumbnailService implements ThumbnailServiceInterface
                 throw new RuntimeException('Unable to allocate background color for thumbnail.');
             }
 
-            $fillResult = imagefill($dst, 0, 0, $backgroundColor);
-
-            if ($fillResult === false) {
-                throw new RuntimeException('Unable to fill thumbnail background.');
-            }
+            imagefill($dst, 0, 0, $backgroundColor);
 
             $resampleResult = imagecopyresampled($dst, $src, 0, 0, 0, 0, $newWidth, $newHeight, $width, $height);
 
