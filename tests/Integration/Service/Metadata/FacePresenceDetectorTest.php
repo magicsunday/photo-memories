@@ -149,11 +149,9 @@ $color = imagecolorallocate($image, 255, 0, 0);
 imagefilledrectangle($image, 0, 0, 7, 7, $color);
 if (imagejpeg($image, $output) !== true) {
     fwrite(STDERR, "failed to write poster\n");
-    imagedestroy($image);
     exit(1);
 }
 
-imagedestroy($image);
 exit(0);
 PHP;
 

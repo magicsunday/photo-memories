@@ -19,9 +19,7 @@ imagefilledrectangle($image, 0, 0, 7, 7, $red);
 
 if (imagejpeg($image, $output) !== true) {
     fwrite(STDERR, "failed to write poster\n");
-    imagedestroy($image);
     exit(1);
 }
 
-imagedestroy($image);
 exit(0);

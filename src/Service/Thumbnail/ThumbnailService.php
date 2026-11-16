@@ -359,81 +359,73 @@ class ThumbnailService implements ThumbnailServiceInterface
 
         $maxSourceDimension = max($width, $height);
 
-        try {
-            $results       = [];
-            $generatedKeys = [];
+        $results       = [];
+        $generatedKeys = [];
 
-            foreach ($sizes as $size) {
-                $targetDimension = min($size, $maxSourceDimension);
+        foreach ($sizes as $size) {
+            $targetDimension = min($size, $maxSourceDimension);
 
-                if ($targetDimension <= 0) {
-                    continue;
-                }
-
-                if (isset($generatedKeys[$targetDimension])) {
-                    continue;
-                }
-
-                // Remember that this dimension was already generated to avoid duplicates.
-                $generatedKeys[$targetDimension] = true;
-
-                if ($width >= $height) {
-                    $newWidth  = $targetDimension;
-                    $newHeight = (int) round($targetDimension * $height / $width);
-                } else {
-                    $newHeight = $targetDimension;
-                    $newWidth  = (int) round($targetDimension * $width / $height);
-                }
-
-                $newWidth  = max(1, $newWidth);
-                $newHeight = max(1, $newHeight);
-
-                $dst = imagecreatetruecolor($newWidth, $newHeight);
-
-                if (!$dst instanceof GdImage) {
-                    throw new RuntimeException('Unable to create GD thumbnail resource.');
-                }
-
-                try {
-                    imagealphablending($dst, true);
-
-                    $backgroundColor = imagecolorallocate($dst, 255, 255, 255);
-
-                    if (!is_int($backgroundColor)) {
-                        throw new RuntimeException('Unable to allocate background color for thumbnail.');
-                    }
-
-                    $fillResult = imagefill($dst, 0, 0, $backgroundColor);
-
-                    if ($fillResult === false) {
-                        throw new RuntimeException('Unable to fill thumbnail background.');
-                    }
-
-                    $resampleResult = imagecopyresampled($dst, $src, 0, 0, 0, 0, $newWidth, $newHeight, $width, $height);
-
-                    if ($resampleResult === false) {
-                        throw new RuntimeException('Unable to resample image for thumbnail.');
-                    }
-
-                    $out         = $this->buildThumbnailPath($checksum, $targetDimension);
-                    $writeResult = @imagejpeg($dst, $out, self::JPEG_QUALITY);
-                } finally {
-                    imagedestroy($dst);
-                }
-
-                if ($writeResult === false) {
-                    throw new RuntimeException(
-                        sprintf('Unable to create thumbnail at path "%s".', $out)
-                    );
-                }
-
-                $results[$targetDimension] = $out;
+            if ($targetDimension <= 0) {
+                continue;
             }
 
-            return $results;
-        } finally {
-            imagedestroy($src);
+            if (isset($generatedKeys[$targetDimension])) {
+                continue;
+            }
+
+            // Remember that this dimension was already generated to avoid duplicates.
+            $generatedKeys[$targetDimension] = true;
+
+            if ($width >= $height) {
+                $newWidth  = $targetDimension;
+                $newHeight = (int) round($targetDimension * $height / $width);
+            } else {
+                $newHeight = $targetDimension;
+                $newWidth  = (int) round($targetDimension * $width / $height);
+            }
+
+            $newWidth  = max(1, $newWidth);
+            $newHeight = max(1, $newHeight);
+
+            $dst = imagecreatetruecolor($newWidth, $newHeight);
+
+            if (!$dst instanceof GdImage) {
+                throw new RuntimeException('Unable to create GD thumbnail resource.');
+            }
+
+            imagealphablending($dst, true);
+
+            $backgroundColor = imagecolorallocate($dst, 255, 255, 255);
+
+            if (!is_int($backgroundColor)) {
+                throw new RuntimeException('Unable to allocate background color for thumbnail.');
+            }
+
+            $fillResult = imagefill($dst, 0, 0, $backgroundColor);
+
+            if ($fillResult === false) {
+                throw new RuntimeException('Unable to fill thumbnail background.');
+            }
+
+            $resampleResult = imagecopyresampled($dst, $src, 0, 0, 0, 0, $newWidth, $newHeight, $width, $height);
+
+            if ($resampleResult === false) {
+                throw new RuntimeException('Unable to resample image for thumbnail.');
+            }
+
+            $out         = $this->buildThumbnailPath($checksum, $targetDimension);
+            $writeResult = @imagejpeg($dst, $out, self::JPEG_QUALITY);
+
+            if ($writeResult === false) {
+                throw new RuntimeException(
+                    sprintf('Unable to create thumbnail at path "%s".', $out)
+                );
+            }
+
+            $results[$targetDimension] = $out;
         }
+
+        return $results;
     }
 
     /**
@@ -592,8 +584,6 @@ class ThumbnailService implements ThumbnailServiceInterface
             return $image;
         }
 
-        imagedestroy($image);
-
         return $rotated;
     }
 
@@ -639,12 +629,8 @@ class ThumbnailService implements ThumbnailServiceInterface
 
                 break;
             default:
-                imagedestroy($flipped);
-
                 return $image;
         }
-
-        imagedestroy($image);
 
         return $flipped;
     }

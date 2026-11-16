@@ -23,7 +23,6 @@ use function array_key_last;
 use function file_put_contents;
 use function filesize;
 use function imagecreatetruecolor;
-use function imagedestroy;
 use function imagejpeg;
 use function imagesetpixel;
 use function ob_get_clean;
@@ -185,7 +184,6 @@ final class DeterministicImageQualityEstimatorTest extends TestCase
         ob_start();
         imagejpeg($image, null, 90);
         $data = ob_get_clean();
-        imagedestroy($image);
 
         if (!is_string($data)) {
             self::fail('Unable to capture frame bytes.');
