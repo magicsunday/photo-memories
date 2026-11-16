@@ -766,7 +766,7 @@ final class FeedControllerTest extends TestCase
         $mediaSeven->setPersons(['Alex']);
         $mediaSeven->setKeywords(['Frühling']);
         $mediaSeven->setSceneTags([
-            ['label' => 'Park'],
+            ['label' => 'Park', 'score' => 0.9],
         ]);
 
         $mediaRepo->expects(self::once())
