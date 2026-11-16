@@ -46,3 +46,19 @@ parameters:
             message: '#^Parameter \#3 \$query of static method MagicSunday\\Memories\\Http\\Request::create\(\) expects #'
             path: %currentWorkingDirectory%/tests/Unit/Http/RequestTest.php
             count: 1
+
+        # The keyword list of a media record comes from a JSON column that can hold non-string
+        # entries. The test stores one on purpose to prove the strategy normalises it.
+        -
+            identifier: argument.type
+            message: '#^Parameter \#1 \$v of method MagicSunday\\Memories\\Entity\\Media::setKeywords\(\) expects #'
+            path: %currentWorkingDirectory%/tests/Unit/Clusterer/DayAlbumClusterStrategyTest.php
+            count: 1
+
+        # External POI payloads can carry non-string labels and category values. The doubles
+        # return them on purpose to prove the resolver skips them.
+        -
+            identifier: return.type
+            message: '#^Method MagicSunday\\Memories\\Utility\\Contract\\PoiContextAnalyzerInterface@anonymous.+::majorityPoiContext\(\) should return #'
+            path: %currentWorkingDirectory%/tests/Unit/Utility/DefaultLocationLabelResolverTest.php
+            count: 2
