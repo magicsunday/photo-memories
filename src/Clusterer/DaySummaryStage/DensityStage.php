@@ -26,6 +26,10 @@ final class DensityStage implements DaySummaryStageInterface
 {
     private const float MIN_STD_EPSILON = 1.0e-6;
 
+    /**
+     * @param array<string, mixed>|list<mixed>                                                        $days
+     * @param array{lat:float,lon:float,radius_km:float,country:string|null,timezone_offset:int|null} $home
+     */
     public function process(array $days, array $home): array
     {
         if ($days === []) {
