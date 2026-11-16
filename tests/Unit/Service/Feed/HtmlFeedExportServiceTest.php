@@ -274,6 +274,7 @@ final class HtmlFeedExportServiceTest extends TestCase
         self::assertSame('m1_source-thumb.jpg', basename($imagePath));
         self::assertNotNull($result->getIndexFilePath());
         $indexHtml = file_get_contents($result->getIndexFilePath());
+        self::assertIsString($indexHtml);
         self::assertStringContainsString('Titel', $indexHtml);
         self::assertStringContainsString('Untertitel', $indexHtml);
         self::assertStringContainsString('Familie (0,92)', $indexHtml);
@@ -310,6 +311,7 @@ final class HtmlFeedExportServiceTest extends TestCase
 
         self::assertNotNull($resultRaw->getIndexFilePath());
         $indexHtmlRaw = file_get_contents($resultRaw->getIndexFilePath());
+        self::assertIsString($indexHtmlRaw);
         self::assertStringContainsString('stage-nav__item is-active"><a href="#stage-raw"', $indexHtmlRaw);
     }
 

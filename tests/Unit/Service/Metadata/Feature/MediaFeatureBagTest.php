@@ -43,6 +43,7 @@ final class MediaFeatureBagTest extends TestCase
 
         $calendar = $bag->namespaceValues('calendar');
         self::assertArrayHasKey('meta', $calendar);
+        self::assertIsArray($calendar['meta']);
         self::assertSame(['sunset', 'city'], $calendar['meta']['tags']);
     }
 

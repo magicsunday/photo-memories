@@ -68,8 +68,7 @@ final class FacePresenceDetectorTest extends TestCase
             self::assertSame(1, $media->getFacesCount());
 
             $posterPath = $backend->lastPath;
-            self::assertNotNull($posterPath);
-            self::assertTrue(is_string($posterPath));
+            self::assertIsString($posterPath);
             self::assertNotSame($videoPath, $posterPath);
             self::assertFalse(is_file($posterPath));
         } finally {

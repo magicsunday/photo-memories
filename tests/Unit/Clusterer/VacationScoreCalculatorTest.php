@@ -150,6 +150,7 @@ final class VacationScoreCalculatorTest extends TestCase
         self::assertSame(0, $params['bridged_away_days']);
         self::assertArrayHasKey('score_components', $params);
         $components = $params['score_components'];
+        self::assertIsArray($components);
         self::assertEqualsWithDelta(0.6, $components['away_days_norm'], 0.0001);
         self::assertGreaterThan(0.5, $components['quality']);
         self::assertGreaterThan(0.5, $components['max_distance_norm']);
@@ -182,11 +183,16 @@ final class VacationScoreCalculatorTest extends TestCase
 
         self::assertArrayHasKey('vacation_title', $params);
         self::assertArrayHasKey('vacation_subtitle', $params);
-        self::assertStringContainsString('Lisbon', (string) $params['vacation_title']);
-        self::assertStringContainsString('Personenanteil:', (string) $params['vacation_subtitle']);
+        self::assertIsString($params['vacation_title']);
+        self::assertIsString($params['vacation_subtitle']);
+        self::assertStringContainsString('Lisbon', $params['vacation_title']);
+        self::assertStringContainsString('Personenanteil:', $params['vacation_subtitle']);
 
         self::assertArrayHasKey('member_selection', $params);
         $memberSelection      = $params['member_selection'];
+        self::assertIsArray($memberSelection);
+        self::assertIsInt($params['min_items_per_day']);
+        self::assertIsInt($params['away_days']);
         $expectedMinimumFloor = (int) ceil($params['min_items_per_day'] * $params['away_days'] * 0.6);
         self::assertSame($expectedMinimumFloor, $params['minimum_member_floor']);
         self::assertSame($params['raw_member_count'], $memberSelection['counts']['raw']);
@@ -574,6 +580,7 @@ final class VacationScoreCalculatorTest extends TestCase
         $expectedFrom = $day1Members[0]->getTakenAt()?->getTimestamp();
         $expectedTo   = $bridgeEnd->getTimestamp();
 
+        self::assertIsArray($params['time_range']);
         self::assertSame($expectedFrom, $params['time_range']['from']);
         self::assertSame($expectedTo, $params['time_range']['to']);
         self::assertSame(1, $params['bridged_away_days']);
@@ -806,6 +813,7 @@ final class VacationScoreCalculatorTest extends TestCase
         self::assertSame(0, $params['weekend_gap_days']);
 
         $selection = $params['member_selection'];
+        self::assertIsArray($selection);
         self::assertSame('vacation_weekend_getaway', $selection['selection_profile']);
         self::assertSame('vacation_weekend_getaway', $selection['decision']['resolved']);
         self::assertSame('vacation_weekend_transit', $selection['decision']['base']);
@@ -1153,16 +1161,19 @@ final class VacationScoreCalculatorTest extends TestCase
         self::assertInstanceOf(ClusterDraft::class, $draft);
         $params    = $draft->getParams();
         $selection = $params['member_selection'];
-        $decision  = $selection['decision'];
+        self::assertIsArray($selection);
+        $decision = $selection['decision'];
 
         self::assertSame(8, $params['away_days']);
         self::assertSame('vacation_long_run', $params['selection_profile']);
         self::assertSame('vacation_long_run', $selection['selection_profile']);
         self::assertSame('vacation_long_run', $decision['resolved']);
         self::assertSame('vacation_weekend_transit', $decision['base']);
+        $memberQuality = $params['member_quality'];
+        self::assertIsArray($memberQuality);
         self::assertSame(
             'vacation_long_run',
-            $params['member_quality']['summary']['selection_profile_decision']['resolved'],
+            $memberQuality['summary']['selection_profile_decision']['resolved'],
         );
 
         self::assertNotEmpty($emitter->events);
@@ -1788,11 +1799,13 @@ final class VacationScoreCalculatorTest extends TestCase
         self::assertInstanceOf(ClusterDraft::class, $draft);
         $params          = $draft->getParams();
         $memberSelection = $params['member_selection'];
+        self::assertIsArray($memberSelection);
         self::assertSame('vacation.day_trip', $params['storyline']);
         self::assertSame('vacation.day_trip', $memberSelection['storyline']);
 
         $memberQuality = $params['member_quality'];
-        $runMetrics    = $memberQuality['summary']['selection_run_metrics'];
+        self::assertIsArray($memberQuality);
+        $runMetrics = $memberQuality['summary']['selection_run_metrics'];
         self::assertSame('vacation.day_trip', $runMetrics['storyline']);
         self::assertSame(1, $runMetrics['run_length_days']);
         self::assertSame(1, $runMetrics['run_length_effective_days']);
@@ -1964,8 +1977,10 @@ final class VacationScoreCalculatorTest extends TestCase
         $draft = $calculator->buildDraft([$dayKey], $days, $home);
 
         self::assertInstanceOf(ClusterDraft::class, $draft);
-        $params     = $draft->getParams();
-        $runMetrics = $params['member_quality']['summary']['selection_run_metrics'];
+        $params        = $draft->getParams();
+        $memberQuality = $params['member_quality'];
+        self::assertIsArray($memberQuality);
+        $runMetrics = $memberQuality['summary']['selection_run_metrics'];
 
         self::assertGreaterThan(0.0, $runMetrics['phash_distribution']['average']);
 
@@ -2124,9 +2139,11 @@ final class VacationScoreCalculatorTest extends TestCase
         }
 
         $memberQuality = $params['member_quality'];
+        self::assertIsArray($memberQuality);
         self::assertSame($expectedOrder, $memberQuality['ordered']);
 
         $selection = $params['member_selection'];
+        self::assertIsArray($selection);
         self::assertSame('vacation.extended', $selection['storyline']);
         self::assertSame(28, $selection['counts']['raw']);
         self::assertSame($selectionOptions->targetTotal, $selection['counts']['curated']);
