@@ -26,9 +26,6 @@ final class DensityStage implements DaySummaryStageInterface
 {
     private const float MIN_STD_EPSILON = 1.0e-6;
 
-    /**
-     * @param mixed[][] $days
-     */
     public function process(array $days, array $home): array
     {
         if ($days === []) {
