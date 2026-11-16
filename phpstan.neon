@@ -25,41 +25,6 @@ parameters:
         - %currentWorkingDirectory%/.build/
 
     ignoreErrors:
-        # PHP coerces the numeric S2 cell-token array keys to int, so the majority cell can be
-        # an int at runtime; the (string) cast is required for the ?string return under
-        # strict_types. PHPStan does not model array-key coercion and reports the cast as
-        # redundant. Scoped to the single call site.
-        -
-            identifier: cast.useless
-            message: '#^Casting to string something that''s already string\.$#'
-            path: %currentWorkingDirectory%/src/Clusterer/Context.php
-            count: 1
-
-        # is_string() guards that validate genuinely untyped runtime values PHPStan over-narrows:
-        # JSON DB columns (Media::getKeywords()), external POI label payloads, and PHP's coercion
-        # of numeric-string map keys to int (array_key_first). Each guard is load-bearing and
-        # pinned by a unit test; widening the shared accessors would cascade across many consumers.
-        -
-            identifier: function.alreadyNarrowedType
-            message: '#^Call to function is_string\(\) with string will always evaluate to true\.$#'
-            paths:
-                - %currentWorkingDirectory%/src/Clusterer/Support/ClusterBuildHelperTrait.php
-                - %currentWorkingDirectory%/src/Service/Feed/StoryboardTextGenerator.php
-                - %currentWorkingDirectory%/src/Utility/DefaultLocationLabelResolver.php
-
-        # DateTimeImmutable::getTimezone() is always a DateTimeZone, so the media-timezone home
-        # offset fallback is currently unreachable. The fallback is intentional (photos lacking
-        # timezone info should adopt the home offset) but needs an upstream "timezone unknown"
-        # signal to fire; keep the code and scope the two findings until that design decision.
-        -
-            identifier: instanceof.alwaysTrue
-            message: '#^Instanceof between DateTimeZone and DateTimeZone will always evaluate to true\.$#'
-            path: %currentWorkingDirectory%/src/Clusterer/Support/VacationTimezoneTrait.php
-        -
-            identifier: deadCode.unreachable
-            message: '#^Unreachable statement - code above always terminates\.$#'
-            path: %currentWorkingDirectory%/src/Clusterer/Support/VacationTimezoneTrait.php
-
         # Doctrine assigns the auto-generated entity identifier via ORM reflection
         # after persist, which PHPStan does not model. The $id properties are
         # genuinely written by the ORM (not by application code) and are int|null
@@ -73,3 +38,27 @@ parameters:
             identifier: property.onlyRead
             message: '#^Property MagicSunday\\Memories\\Entity\\[A-Za-z]+::\$id is never written, only read\.$#'
             path: %currentWorkingDirectory%/src/Entity/
+
+        # The test feeds a non-scalar query value on purpose to prove that Request::create()
+        # drops it, so the call deliberately violates the declared parameter type.
+        -
+            identifier: argument.type
+            message: '#^Parameter \#3 \$query of static method MagicSunday\\Memories\\Http\\Request::create\(\) expects #'
+            path: %currentWorkingDirectory%/tests/Unit/Http/RequestTest.php
+            count: 1
+
+        # The keyword list of a media record comes from a JSON column that can hold non-string
+        # entries. The test stores one on purpose to prove the strategy normalises it.
+        -
+            identifier: argument.type
+            message: '#^Parameter \#1 \$v of method MagicSunday\\Memories\\Entity\\Media::setKeywords\(\) expects #'
+            path: %currentWorkingDirectory%/tests/Unit/Clusterer/DayAlbumClusterStrategyTest.php
+            count: 1
+
+        # External POI payloads can carry non-string labels and category values. The doubles
+        # return them on purpose to prove the resolver skips them.
+        -
+            identifier: return.type
+            message: '#^Method MagicSunday\\Memories\\Utility\\Contract\\PoiContextAnalyzerInterface@anonymous.+::majorityPoiContext\(\) should return #'
+            path: %currentWorkingDirectory%/tests/Unit/Utility/DefaultLocationLabelResolverTest.php
+            count: 2

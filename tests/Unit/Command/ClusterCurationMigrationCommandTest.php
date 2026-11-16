@@ -139,6 +139,8 @@ readonly class TestClusterRepository extends ClusterRepository
     }
 
     /**
+     * @param list<string>|null $algorithms
+     *
      * @return list<Cluster>
      */
     private function filter(?array $algorithms): array

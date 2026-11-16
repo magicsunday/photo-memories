@@ -55,7 +55,7 @@ final class FileJobMonitoringEmitterTest extends TestCase
 
         $contents = file_get_contents($path);
         self::assertIsString($contents);
-        $lines = array_filter(explode("\n", trim($contents)));
+        $lines = array_filter(explode("\n", trim($contents)), static fn (string $line): bool => $line !== '');
         self::assertCount(1, $lines);
 
         try {
@@ -100,7 +100,7 @@ final class FileJobMonitoringEmitterTest extends TestCase
 
         $contents = file_get_contents($path);
         self::assertIsString($contents);
-        $lines = array_filter(explode("\n", trim($contents)));
+        $lines = array_filter(explode("\n", trim($contents)), static fn (string $line): bool => $line !== '');
         self::assertCount(1, $lines);
 
         try {
@@ -139,7 +139,7 @@ final class FileJobMonitoringEmitterTest extends TestCase
         $contents = file_get_contents($path);
         self::assertIsString($contents);
 
-        $lines = array_filter(explode("\n", trim($contents)));
+        $lines = array_filter(explode("\n", trim($contents)), static fn (string $line): bool => $line !== '');
         self::assertCount(1, $lines);
 
         try {

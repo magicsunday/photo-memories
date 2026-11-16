@@ -460,6 +460,7 @@ final class FeedControllerTest extends TestCase
                 static function (array $ids, bool $onlyVideos = false) use ($mediaMap): array {
                     $result = [];
 
+                    /** @var list<int> $ids */
                     foreach ($ids as $id) {
                         if (isset($mediaMap[$id])) {
                             $result[] = $mediaMap[$id];
@@ -561,6 +562,7 @@ final class FeedControllerTest extends TestCase
                 static function (array $ids, bool $onlyVideos = false) use ($mediaMap): array {
                     $result = [];
 
+                    /** @var list<int> $ids */
                     foreach ($ids as $id) {
                         if (isset($mediaMap[$id])) {
                             $result[] = $mediaMap[$id];
@@ -766,7 +768,7 @@ final class FeedControllerTest extends TestCase
         $mediaSeven->setPersons(['Alex']);
         $mediaSeven->setKeywords(['Frühling']);
         $mediaSeven->setSceneTags([
-            ['label' => 'Park'],
+            ['label' => 'Park', 'score' => 0.9],
         ]);
 
         $mediaRepo->expects(self::once())
@@ -1363,6 +1365,7 @@ final class FeedControllerTest extends TestCase
             ->willReturnCallback(static function (array $ids) use ($mediaById): array {
                 $result = [];
 
+                /** @var list<int> $ids */
                 foreach ($ids as $id) {
                     if (isset($mediaById[$id])) {
                         $result[] = $mediaById[$id];
@@ -1783,6 +1786,10 @@ final class FeedControllerTest extends TestCase
     }
 
     /**
+     * @param array<string, mixed> $spaGestures
+     * @param array<string, mixed> $spaOffline
+     * @param array<string, mixed> $spaAnimations
+     *
      * @return array{0: FeedController, 1: string}
      */
     private function createControllerWithDependencies(

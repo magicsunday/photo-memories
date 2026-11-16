@@ -31,6 +31,7 @@ use function file_put_contents;
 use function fmod;
 use function preg_match;
 use function preg_match_all;
+use function preg_quote;
 use function round;
 use function sprintf;
 use function strpos;
@@ -1222,7 +1223,7 @@ final class SlideshowVideoGeneratorTest extends TestCase
         $generator = new SlideshowVideoGenerator();
 
         $this->expectException(RuntimeException::class);
-        $this->expectExceptionMessage(sprintf('Slideshow image file "%s" is not readable.', $missingImage));
+        $this->expectExceptionMessageMatches('/' . preg_quote(sprintf('Slideshow image file "%s" is not readable.', $missingImage), '/') . '/');
 
         $generator->generate($job);
     }
@@ -1450,9 +1451,6 @@ final class SlideshowVideoGeneratorTest extends TestCase
             $slides,
             [0.75],
             0.75,
-            null,
-            null,
-            null,
             null,
         );
 
@@ -1782,7 +1780,7 @@ BASH;
             $job->transitionDurations(),
         );
 
-        self::assertSame(3, count($parsed['durations']));
+        self::assertCount(3, $parsed['durations']);
 
         self::assertCount(3, $resolvedTransitions);
 
@@ -1794,7 +1792,7 @@ BASH;
         self::assertEqualsWithDelta(0.6, $parsed['durations'][1], 0.0001);
         self::assertEqualsWithDelta(0.65, $parsed['durations'][2], 0.0001);
 
-        self::assertSame(3, count($parsed['offsets']));
+        self::assertCount(3, $parsed['offsets']);
         self::assertEqualsWithDelta(2.0, $parsed['offsets'][0], 0.0001);
         self::assertEqualsWithDelta(4.4, $parsed['offsets'][1], 0.0001);
         self::assertEqualsWithDelta(4.4, $parsed['offsets'][2], 0.0001);
@@ -1964,7 +1962,7 @@ BASH;
 
             $parsed = $this->parseTransitionsFromCommand($command);
 
-            self::assertSame(2, count($parsed['transitions']));
+            self::assertCount(2, $parsed['transitions']);
             self::assertSame(['fade', 'fade'], $parsed['transitions']);
         } finally {
             $this->resetTransitionCache();
@@ -2145,7 +2143,6 @@ BASH;
         $matches = [];
         preg_match_all('/xfade=transition=([^:]+):duration=([0-9.]+):offset=([0-9.]+)/', $filterComplex, $matches);
 
-        /** @var list<string> $transitions */
         $transitions = $matches[1] ?? [];
         /** @var list<float> $durations */
         $durations = array_map(static fn (string $value): float => (float) $value, $matches[2] ?? []);

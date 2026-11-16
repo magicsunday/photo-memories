@@ -15,6 +15,7 @@ use DateInterval;
 use DateTimeImmutable;
 use DateTimeZone;
 use Doctrine\ORM\EntityManagerInterface;
+use LogicException;
 use MagicSunday\Memories\Clusterer\ClusterDraft;
 use MagicSunday\Memories\Clusterer\Context;
 use MagicSunday\Memories\Clusterer\Contract\DaySummaryBuilderInterface;
@@ -54,15 +55,15 @@ use MagicSunday\Memories\Service\Clusterer\Title\LocalizedDateFormatter;
 use MagicSunday\Memories\Service\Clusterer\Title\RouteSummarizer;
 use MagicSunday\Memories\Service\Clusterer\Title\StoryTitleBuilder;
 use MagicSunday\Memories\Service\Feed\CoverPickerInterface;
-use MagicSunday\Memories\Service\Monitoring\Contract\JobMonitoringEmitterInterface;
 use MagicSunday\Memories\Test\TestCase;
+use MagicSunday\Memories\Test\Unit\Clusterer\Fixtures\FixedDaySummaryBuilder;
+use MagicSunday\Memories\Test\Unit\Clusterer\Fixtures\RecordingMonitoringEmitter;
 use MagicSunday\Memories\Test\Unit\Clusterer\Fixtures\VacationTestMemberSelector;
 use MagicSunday\Memories\Utility\LocationHelper;
 use MagicSunday\Memories\Utility\MediaMath;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\Test;
 use ReflectionClass;
-use Stringable;
 use Symfony\Component\Yaml\Yaml;
 
 #[CoversClass(VacationClusterStrategy::class)]
@@ -108,9 +109,6 @@ final class VacationClusterStrategyTest extends TestCase
             'timezone_offset' => 60,
         ];
 
-        $capturedOrder   = [];
-        $receivedMembers = [];
-
         $homeLocator = new class($home) implements HomeLocatorInterface {
             /**
              * @param array{lat:float,lon:float,radius_km:float,country:string|null,timezone_offset:int|null} $home
@@ -134,20 +132,20 @@ final class VacationClusterStrategyTest extends TestCase
             }
         };
 
-        $daySummaryBuilder = new class($capturedOrder) implements DaySummaryBuilderInterface {
+        $daySummaryBuilder = new class implements DaySummaryBuilderInterface {
             /**
-             * @param list<int> $capturedOrder
+             * @var list<int|null>
              */
-            public function __construct(private array &$capturedOrder)
-            {
-            }
+            public array $capturedOrder = [];
 
             /**
-             * @param Media[] $items
+             * {@inheritDoc}
+             *
+             * @param list<Media> $items
              */
             public function buildDaySummaries(array $items, array $home): array
             {
-                $this->capturedOrder = array_map(static fn (Media $media): int => $media->getId(), $items);
+                $this->capturedOrder = array_map(static fn (Media $media): ?int => $media->getId(), $items);
 
                 return [
                     '2024-01-05' => [
@@ -190,34 +188,40 @@ final class VacationClusterStrategyTest extends TestCase
                         'firstGpsMedia'           => null,
                         'lastGpsMedia'            => null,
                         'isSynthetic'             => false,
+                        'distanceSum'             => 0.0,
+                        'distanceCount'           => 0,
+                        'spotDensity'             => 0.0,
+                        'staypointCount'          => 0,
+                        'staypointDwellSeconds'   => 0,
+                        'primaryStaypointKey'     => null,
+                        'cohortPresenceRatio'     => 0.0,
+                        'cohortMembers'           => [],
                     ],
                 ];
             }
         };
 
-        $segmentAssembler = new class($receivedMembers) implements VacationSegmentAssemblerInterface {
+        $segmentAssembler = new class implements VacationSegmentAssemblerInterface {
             /**
-             * @param list<int> $receivedMembers
+             * @var list<int|null>
              */
-            public function __construct(private array &$receivedMembers)
-            {
-            }
+            public array $receivedMembers = [];
 
             /**
-             * @return ClusterDraft[]
+             * @return list<ClusterDraft>
              */
             public function detectSegments(array $days, array $home): array
             {
                 $day = $days['2024-01-05'];
 
-                $this->receivedMembers = array_map(static fn (Media $media): int => $media->getId(), $day['members']);
+                $this->receivedMembers = array_map(static fn (Media $media): ?int => $media->getId(), $day['members']);
 
                 return [
                     new ClusterDraft(
                         'vacation',
                         ['stub' => true],
                         ['lat' => 0.0, 'lon' => 0.0],
-                        $this->receivedMembers,
+                        array_map(static fn (Media $media): int => $media->getId() ?? throw new LogicException('Fixture media must have an identifier.'), $day['members']),
                     ),
                 ];
             }
@@ -229,10 +233,10 @@ final class VacationClusterStrategyTest extends TestCase
 
         $expected = [2003, 2002, 2001];
 
-        self::assertSame($expected, $capturedOrder);
+        self::assertSame($expected, $daySummaryBuilder->capturedOrder);
         self::assertNotEmpty($clusters);
         self::assertSame($expected, $clusters[0]->getMembers());
-        self::assertSame($expected, $receivedMembers);
+        self::assertSame($expected, $segmentAssembler->receivedMembers);
     }
 
     #[Test]
@@ -247,6 +251,9 @@ final class VacationClusterStrategyTest extends TestCase
         ];
 
         $homeLocator = new class($home) implements HomeLocatorInterface {
+            /**
+             * @param array{lat: float, lon: float, radius_km: float, country: string|null, timezone_offset: int|null} $home
+             */
             public function __construct(private array $home)
             {
             }
@@ -280,28 +287,7 @@ final class VacationClusterStrategyTest extends TestCase
             }
         };
 
-        $events  = [];
-        $emitter = new class($events) implements JobMonitoringEmitterInterface {
-            /**
-             * @param list<array{
-             *     job: Stringable|string|int|float|bool,
-             *     status: Stringable|string|int|float|bool,
-             *     context: array<string, mixed>
-             * }> $events
-             */
-            public function __construct(private array &$events)
-            {
-            }
-
-            public function emit(Stringable|string|int|float|bool $job, Stringable|string|int|float|bool $status, array $context = []): void
-            {
-                $this->events[] = [
-                    'job'     => $job,
-                    'status'  => $status,
-                    'context' => $context,
-                ];
-            }
-        };
+        $emitter = new RecordingMonitoringEmitter();
 
         $debugContext = new VacationDebugContext();
 
@@ -336,7 +322,7 @@ final class VacationClusterStrategyTest extends TestCase
             $warnings[0],
         );
 
-        self::assertContains('home_warning', array_column($events, 'status'));
+        self::assertContains('home_warning', array_column($emitter->events, 'status'));
     }
 
     #[Test]
@@ -405,6 +391,14 @@ final class VacationClusterStrategyTest extends TestCase
                 'firstGpsMedia'           => $mediaA,
                 'lastGpsMedia'            => $mediaA,
                 'isSynthetic'             => false,
+                'distanceSum'             => 0.0,
+                'distanceCount'           => 0,
+                'spotDensity'             => 0.0,
+                'staypointCount'          => 0,
+                'staypointDwellSeconds'   => 0,
+                'primaryStaypointKey'     => null,
+                'cohortPresenceRatio'     => 0.0,
+                'cohortMembers'           => [],
             ],
             '2024-08-02' => [
                 'date'                    => '2024-08-02',
@@ -446,6 +440,14 @@ final class VacationClusterStrategyTest extends TestCase
                 'firstGpsMedia'           => $mediaB,
                 'lastGpsMedia'            => $mediaB,
                 'isSynthetic'             => false,
+                'distanceSum'             => 0.0,
+                'distanceCount'           => 0,
+                'spotDensity'             => 0.0,
+                'staypointCount'          => 0,
+                'staypointDwellSeconds'   => 0,
+                'primaryStaypointKey'     => null,
+                'cohortPresenceRatio'     => 0.0,
+                'cohortMembers'           => [],
             ],
         ];
 
@@ -454,11 +456,9 @@ final class VacationClusterStrategyTest extends TestCase
                 'vacation',
                 ['classification' => 'vacation'],
                 ['lat' => 40.7128, 'lon' => -74.0060],
-                [$mediaA->getId(), $mediaB->getId()],
+                [self::mediaId($mediaA), self::mediaId($mediaB)],
             ),
         ];
-
-        $events = [];
 
         $homeLocator = new class($home) implements HomeLocatorInterface {
             /**
@@ -483,19 +483,7 @@ final class VacationClusterStrategyTest extends TestCase
             }
         };
 
-        $daySummaryBuilder = new readonly class($days) implements DaySummaryBuilderInterface {
-            /**
-             * @param array<string, array<string, mixed>> $days
-             */
-            public function __construct(private array $days)
-            {
-            }
-
-            public function buildDaySummaries(array $items, array $home): array
-            {
-                return $this->days;
-            }
-        };
+        $daySummaryBuilder = new FixedDaySummaryBuilder($days);
 
         $segmentAssembler = new readonly class($segments) implements VacationSegmentAssemblerInterface {
             /**
@@ -511,27 +499,7 @@ final class VacationClusterStrategyTest extends TestCase
             }
         };
 
-        $emitter = new class($events) implements JobMonitoringEmitterInterface {
-            /**
-             * @param list<array{
-             *     job: Stringable|string|int|float|bool,
-             *     status: Stringable|string|int|float|bool,
-             *     context: array<string, mixed>
-             * }> $events
-             */
-            public function __construct(private array &$events)
-            {
-            }
-
-            public function emit(Stringable|string|int|float|bool $job, Stringable|string|int|float|bool $status, array $context = []): void
-            {
-                $this->events[] = [
-                    'job'     => $job,
-                    'status'  => $status,
-                    'context' => $context,
-                ];
-            }
-        };
+        $emitter = new RecordingMonitoringEmitter();
 
         $strategy = new VacationClusterStrategy($homeLocator, $daySummaryBuilder, $segmentAssembler, $emitter);
 
@@ -539,26 +507,26 @@ final class VacationClusterStrategyTest extends TestCase
 
         self::assertSame($segments, $clusters);
 
-        self::assertCount(5, $events);
+        self::assertCount(5, $emitter->events);
 
-        self::assertSame('cluster.vacation', $events[0]['job']);
-        self::assertSame('start', $events[0]['status']);
-        self::assertSame(2, $events[0]['context']['total_count']);
+        self::assertSame('cluster.vacation', $emitter->events[0]['job']);
+        self::assertSame('start', $emitter->events[0]['status']);
+        self::assertSame(2, $emitter->events[0]['context']['total_count']);
 
-        self::assertSame('filtered', $events[1]['status']);
-        self::assertSame(2, $events[1]['context']['timestamped_count']);
+        self::assertSame('filtered', $emitter->events[1]['status']);
+        self::assertSame(2, $emitter->events[1]['context']['timestamped_count']);
 
-        self::assertSame('home_determined', $events[2]['status']);
-        self::assertSame($home['radius_km'], $events[2]['context']['home_radius_km']);
+        self::assertSame('home_determined', $emitter->events[2]['status']);
+        self::assertSame($home['radius_km'], $emitter->events[2]['context']['home_radius_km']);
 
-        self::assertSame('days_aggregated', $events[3]['status']);
-        self::assertSame(2, $events[3]['context']['day_count']);
-        self::assertSame(1, $events[3]['context']['away_day_count']);
-        self::assertGreaterThan(0.0, $events[3]['context']['total_travel_km']);
+        self::assertSame('days_aggregated', $emitter->events[3]['status']);
+        self::assertSame(2, $emitter->events[3]['context']['day_count']);
+        self::assertSame(1, $emitter->events[3]['context']['away_day_count']);
+        self::assertGreaterThan(0.0, $emitter->events[3]['context']['total_travel_km']);
 
-        self::assertSame('completed', $events[4]['status']);
-        self::assertSame(1, $events[4]['context']['segment_count']);
-        self::assertSame(2, $events[4]['context']['timestamped_count']);
+        self::assertSame('completed', $emitter->events[4]['status']);
+        self::assertSame(1, $emitter->events[4]['context']['segment_count']);
+        self::assertSame(2, $emitter->events[4]['context']['timestamped_count']);
     }
 
     #[Test]
@@ -682,8 +650,8 @@ final class VacationClusterStrategyTest extends TestCase
                     ++$id,
                     sprintf('vacation-%d-%d.jpg', $dayIndex, $pointIndex),
                     $timestamp->format('Y-m-d H:i:s'),
-                    (float) $data['lat'],
-                    (float) $data['lon'],
+                    $data['lat'],
+                    $data['lon'],
                     $data['location'],
                     static function (Media $media): void {
                         $media->setTimezoneOffsetMin(120);
@@ -714,7 +682,6 @@ final class VacationClusterStrategyTest extends TestCase
         self::assertCount(1, $clusters);
         $cluster = $clusters[0];
 
-        self::assertInstanceOf(ClusterDraft::class, $cluster);
         self::assertSame('vacation', $cluster->getAlgorithm());
 
         $params = $cluster->getParams();
@@ -868,7 +835,7 @@ final class VacationClusterStrategyTest extends TestCase
             }
 
             /**
-             * @return Media[]
+             * @return list<Media>
              */
             public function findByIds(array $ids, bool $onlyVideos = false): array
             {
@@ -1689,8 +1656,8 @@ final class VacationClusterStrategyTest extends TestCase
                         ++$id,
                         sprintf('trip-%d-%d-%d.jpg', $dayIndex, $clusterIndex, $pointIndex),
                         $timestamp->format('Y-m-d H:i:s'),
-                        (float) $coordinates['lat'],
-                        (float) $coordinates['lon'],
+                        $coordinates['lat'],
+                        $coordinates['lon'],
                         $clusterData['location'],
                         static function (Media $media): void {
                             $media->setTimezoneOffsetMin(120);
@@ -1706,8 +1673,8 @@ final class VacationClusterStrategyTest extends TestCase
                 ++$id,
                 sprintf('trip-night-%d.jpg', $dayIndex),
                 $nightTimestamp->format('Y-m-d H:i:s'),
-                (float) $nightPoint['lat'],
-                (float) $nightPoint['lon'],
+                $nightPoint['lat'],
+                $nightPoint['lon'],
                 $nightLocation,
                 static function (Media $media): void {
                     $media->setTimezoneOffsetMin(120);
@@ -2068,7 +2035,7 @@ final class VacationClusterStrategyTest extends TestCase
      */
     private function createHolidayResolver(array $holidayDates = []): HolidayResolverInterface
     {
-        $resolver = $this->createStub(HolidayResolverInterface::class);
+        $resolver = self::createStub(HolidayResolverInterface::class);
         $resolver
             ->method('isHoliday')
             ->willReturnCallback(static fn (DateTimeImmutable $day): bool => in_array($day->format('Y-m-d'), $holidayDates, true));
@@ -2093,11 +2060,11 @@ final class VacationClusterStrategyTest extends TestCase
         };
 
         return new ClusterPersistenceService(
-            $this->createStub(EntityManagerInterface::class),
+            self::createStub(EntityManagerInterface::class),
             $lookup,
             $selector,
             $this->createPolicyProvider(),
-            $this->createStub(CoverPickerInterface::class),
+            self::createStub(CoverPickerInterface::class),
             250,
             $maxMembers,
         );

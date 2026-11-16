@@ -21,11 +21,11 @@ use MagicSunday\Memories\Test\TestCase;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\Test;
 use Psr\Log\AbstractLogger;
+use Stringable;
 use Symfony\Component\Console\Output\NullOutput;
 
 use function array_filter;
 use function array_key_first;
-use function count;
 use function str_ends_with;
 use function str_repeat;
 use function sys_get_temp_dir;
@@ -64,12 +64,12 @@ final class MediaIngestionTelemetryIntegrationTest extends TestCase
             static fn (array $record): bool => ($record['message'] ?? '') === 'media_ingestion.finalize'
         );
 
-        self::assertSame(1, count($records));
+        self::assertCount(1, $records);
 
         $entry   = $records[array_key_first($records)];
         $context = $entry['context'] ?? [];
 
-        self::assertSame(false, $context['dryRun'] ?? null);
+        self::assertFalse($context['dryRun'] ?? null);
 
         $metrics = $context['metrics'] ?? [];
         self::assertSame(1, $metrics['images_total'] ?? null);
@@ -183,10 +183,10 @@ final class MissingFfprobeStage implements MediaIngestionStageInterface
 
 final class ArrayLogger extends AbstractLogger
 {
-    /** @var array<int, array{level:string,message:string,context:array}> */
+    /** @var list<array{level: string, message: string, context: array<string, mixed>}> */
     public array $records = [];
 
-    public function log($level, $message, array $context = []): void
+    public function log($level, string|Stringable $message, array $context = []): void
     {
         $this->records[] = [
             'level'   => (string) $level,

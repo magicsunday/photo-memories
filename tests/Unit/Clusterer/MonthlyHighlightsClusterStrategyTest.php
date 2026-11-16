@@ -72,10 +72,12 @@ final class MonthlyHighlightsClusterStrategyTest extends TestCase
         self::assertSame('März 2023', $params['label']);
         self::assertSame(4, $params['members_count']);
         self::assertArrayHasKey('time_range', $params);
+        self::assertIsArray($params['time_range']);
         self::assertSame(strtotime('2023-03-05 17:15:00 UTC'), $params['time_range']['from']);
         self::assertSame(strtotime('2023-03-05 18:45:00 UTC'), $params['time_range']['to']);
 
         self::assertArrayHasKey('score_mix', $params);
+        self::assertIsArray($params['score_mix']);
         self::assertSame(['quantity', 'quality', 'people', 'recency'], array_keys($params['score_mix']));
         self::assertArrayHasKey('score_total', $params);
         self::assertEqualsWithDelta($params['score_total'], array_sum($params['score_mix']), 0.01);

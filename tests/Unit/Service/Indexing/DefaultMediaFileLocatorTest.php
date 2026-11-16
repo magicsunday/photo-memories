@@ -21,7 +21,6 @@ use RuntimeException;
 use SplFileInfo;
 
 use function array_values;
-use function count;
 use function file_put_contents;
 use function is_dir;
 use function iterator_to_array;
@@ -92,7 +91,7 @@ final class DefaultMediaFileLocatorTest extends TestCase
 
         $limited = iterator_to_array($locator->locate($baseDir, 2));
 
-        self::assertSame(2, count($limited));
+        self::assertCount(2, $limited);
     }
 
     private function createTempDir(): string

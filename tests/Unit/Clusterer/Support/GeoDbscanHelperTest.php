@@ -36,12 +36,12 @@ final class GeoDbscanHelperTest extends TestCase
 
         self::assertCount(1, $result['clusters']);
 
-        $clusterIds = array_map(static fn (Media $item): int => $item->getId(), $result['clusters'][0]);
+        $clusterIds = array_map(static fn (Media $item): ?int => $item->getId(), $result['clusters'][0]);
         sort($clusterIds);
 
         self::assertSame([1, 2, 3], $clusterIds);
 
-        $noiseIds = array_map(static fn (Media $item): int => $item->getId(), $result['noise']);
+        $noiseIds = array_map(static fn (Media $item): ?int => $item->getId(), $result['noise']);
         sort($noiseIds);
 
         self::assertSame([10, 11], $noiseIds);
@@ -71,7 +71,7 @@ final class GeoDbscanHelperTest extends TestCase
 
         self::assertSame([], $result['clusters']);
 
-        $noiseIds = array_map(static fn (Media $item): int => $item->getId(), $result['noise']);
+        $noiseIds = array_map(static fn (Media $item): ?int => $item->getId(), $result['noise']);
         sort($noiseIds);
 
         self::assertSame([20, 21], $noiseIds);

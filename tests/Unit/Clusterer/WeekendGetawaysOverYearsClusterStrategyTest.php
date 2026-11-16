@@ -172,6 +172,9 @@ final class WeekendGetawaysOverYearsClusterStrategyTest extends TestCase
         self::assertSame([], $strategy->draft($items, Context::fromScope($items)));
     }
 
+    /**
+     * @return iterable<string, array{int}>
+     */
     public static function provideNightLengths(): iterable
     {
         yield 'one-night-run' => [1];
@@ -225,7 +228,7 @@ final class WeekendGetawaysOverYearsClusterStrategyTest extends TestCase
     /**
      * @param list<ClusterDraft> $clusters
      *
-     * @return list<array{algorithm: string, params: array, centroid: array, members: list<int>}>
+     * @return list<array{algorithm: string, params: array<string, int|float|string|bool|array<mixed>|null>, centroid: array{lat: float, lon: float}, members: list<int>}>
      */
     private function normaliseClusters(array $clusters): array
     {

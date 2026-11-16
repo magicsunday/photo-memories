@@ -58,10 +58,13 @@ final class MediaIngestionTelemetryCollectorTest extends TestCase
         self::assertSame(1, $metrics['videos_total']);
         self::assertSame(1, $metrics['faces_detected']);
         self::assertSame(2, $metrics['exif_tz_hits']);
+        self::assertArrayHasKey('quicktime_timezone_hits', $metrics);
+        self::assertArrayHasKey('xmp_timezone_hits', $metrics);
         self::assertSame(1, $metrics['quicktime_timezone_hits']);
         self::assertSame(1, $metrics['xmp_timezone_hits']);
         self::assertSame(1, $metrics['ffprobe_ok']);
         self::assertSame(0, $metrics['ffprobe_missing']);
+        self::assertArrayHasKey('ffprobe_binary_missing', $metrics);
         self::assertFalse($metrics['ffprobe_binary_missing']);
 
         $collector->reset();
@@ -71,10 +74,13 @@ final class MediaIngestionTelemetryCollectorTest extends TestCase
         self::assertSame(0, $cleared['videos_total']);
         self::assertSame(0, $cleared['faces_detected']);
         self::assertSame(0, $cleared['exif_tz_hits']);
+        self::assertArrayHasKey('quicktime_timezone_hits', $cleared);
+        self::assertArrayHasKey('xmp_timezone_hits', $cleared);
         self::assertSame(0, $cleared['quicktime_timezone_hits']);
         self::assertSame(0, $cleared['xmp_timezone_hits']);
         self::assertSame(0, $cleared['ffprobe_ok']);
         self::assertSame(0, $cleared['ffprobe_missing']);
+        self::assertArrayHasKey('ffprobe_binary_missing', $cleared);
         self::assertFalse($cleared['ffprobe_binary_missing']);
     }
 }

@@ -262,7 +262,7 @@ final class TimeNormalizerTest extends TestCase
     }
 
     /**
-     * @param string[] $priority
+     * @param list<string> $priority
      */
     private function createNormalizer(
         ?DateTimeZone $resolvedTimezone = null,

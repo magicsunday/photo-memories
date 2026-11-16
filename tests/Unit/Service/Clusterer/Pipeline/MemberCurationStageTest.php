@@ -185,7 +185,7 @@ final class MemberCurationStageTest extends TestCase
             }
 
             /**
-             * @return Media[]
+             * @return list<Media>
              */
             public function findByIds(array $ids, bool $onlyVideos = false): array
             {
@@ -276,10 +276,12 @@ final class MemberCurationStageTest extends TestCase
 
         $params    = $processed->getParams();
         $selection = $params['member_selection'];
+        self::assertIsArray($selection);
         self::assertSame(['raw' => 3, 'curated' => 2, 'dropped' => 1], $selection['counts']);
         self::assertSame(1, $selection['rejection_counts'][SelectionTelemetry::REASON_PHASH]);
 
         $quality = $params['member_quality'];
+        self::assertIsArray($quality);
         self::assertSame([1, 3], $quality['ordered']);
         $summary = $quality['summary'];
         self::assertSame(['raw' => 3, 'curated' => 2, 'dropped' => 1], $summary['selection_counts']);
@@ -306,7 +308,7 @@ final class MemberCurationStageTest extends TestCase
             }
 
             /**
-             * @return Media[]
+             * @return list<Media>
              */
             public function findByIds(array $ids, bool $onlyVideos = false): array
             {
@@ -426,6 +428,9 @@ final class MemberCurationStageTest extends TestCase
         }
     }
 
+    /**
+     * @param array<string, array{score:float,category:string,duration:int|null,metrics:array<string,float>}> $daySegments
+     */
     private function invokeApplyDayContext(
         MemberCurationStage $stage,
         SelectionPolicy $policy,
@@ -471,9 +476,9 @@ final class MemberCurationStageTest extends TestCase
         $policyProvider = new SelectionPolicyProvider($profiles, 'default');
 
         return new MemberCurationStage(
-            mediaLookup: $this->createStub(MemberMediaLookupInterface::class),
+            mediaLookup: self::createStub(MemberMediaLookupInterface::class),
             policyProvider: $policyProvider,
-            selector: $this->createStub(ClusterMemberSelectorInterface::class),
+            selector: self::createStub(ClusterMemberSelectorInterface::class),
         );
     }
 }

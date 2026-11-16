@@ -568,6 +568,9 @@ final class MemoryFeedBuilderTest extends TestCase
         self::assertSame('familienfreundlich', $result[0]->getParams()['personalisierungsProfil']);
     }
 
+    /**
+     * @param array<string, mixed> $params
+     */
     #[Test]
     #[DataProvider('hiddenClusterProvider')]
     public function skipsClustersMatchingVisibilityFilter(array $params, FeedVisibilityFilter $visibility): void

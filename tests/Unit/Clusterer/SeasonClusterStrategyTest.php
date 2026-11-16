@@ -73,6 +73,7 @@ final class SeasonClusterStrategyTest extends TestCase
         self::assertArrayHasKey('keywords', $params);
         self::assertArrayHasKey('quality_avg', $params);
         $sceneTags = $params['scene_tags'];
+        self::assertIsArray($sceneTags);
         self::assertCount(3, $sceneTags);
         self::assertSame('Schnee', $sceneTags[0]['label']);
         self::assertEqualsWithDelta(0.9, $sceneTags[0]['score'], 0.0001);
@@ -153,7 +154,7 @@ final class SeasonClusterStrategyTest extends TestCase
 
         $groupingUpdates = array_values(array_filter(
             $updates,
-            static fn (array $update): bool => str_starts_with((string) $update['stage'], 'Gruppiere'),
+            static fn (array $update): bool => str_starts_with($update['stage'], 'Gruppiere'),
         ));
 
         self::assertNotEmpty($groupingUpdates);
@@ -197,7 +198,7 @@ final class SeasonClusterStrategyTest extends TestCase
     /**
      * @param list<ClusterDraft> $clusters
      *
-     * @return list<array{algorithm: string, params: array, centroid: array, members: list<int>}>
+     * @return list<array{algorithm: string, params: array<string, int|float|string|bool|array<mixed>|null>, centroid: array{lat: float, lon: float}, members: list<int>}>
      */
     private function normaliseClusters(array $clusters): array
     {

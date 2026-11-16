@@ -15,7 +15,7 @@ final readonly class MemoryDataset
 {
     /**
      * @param array<int, string>               $themes
-     * @param array<int, string>               $storyboardTransitions
+     * @param list<string>                     $storyboardTransitions
      * @param array<int, array<string, mixed>> $clusters
      * @param array<string, mixed>             $expected
      */
@@ -55,7 +55,7 @@ final readonly class MemoryDataset
     }
 
     /**
-     * @return array<int, string>
+     * @return list<string>
      */
     public function getStoryboardTransitions(): array
     {

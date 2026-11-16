@@ -50,7 +50,9 @@ use MagicSunday\Memories\Service\Thumbnail\ThumbnailServiceInterface;
 use MagicSunday\Memories\Test\TestCase;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\Test;
+use PHPUnit\Framework\MockObject\MockObject;
 use Psr\Log\AbstractLogger;
+use Stringable;
 use Symfony\Component\Console\Output\BufferedOutput;
 use Symfony\Component\Console\Output\OutputInterface;
 
@@ -339,7 +341,7 @@ final class DefaultMediaIngestionPipelineTest extends TestCase
     }
 
     /**
-     * @param array<string, array<string, SingleMetadataExtractorInterface>> $extractors
+     * @param array<string, array<string, SingleMetadataExtractorInterface&MockObject>> $extractors
      */
     private function expectNoExtractorInteractions(array $extractors): void
     {
@@ -352,8 +354,8 @@ final class DefaultMediaIngestionPipelineTest extends TestCase
     }
 
     /**
-     * @param array<string, array<string, SingleMetadataExtractorInterface>> $extractors
-     * @param list<string>                                                   $callLog
+     * @param array<string, array<string, SingleMetadataExtractorInterface&MockObject>> $extractors
+     * @param list<string>                                                              $callLog
      */
     private function configureExtractorOrderExpectations(array $extractors, array &$callLog): void
     {
@@ -416,7 +418,7 @@ final class DefaultMediaIngestionPipelineTest extends TestCase
     }
 
     /**
-     * @return array<string, array<string, SingleMetadataExtractorInterface>>
+     * @return array<string, array<string, SingleMetadataExtractorInterface&MockObject>>
      */
     private function createExtractorMap(): array
     {
@@ -551,10 +553,10 @@ final class DefaultMediaIngestionPipelineTest extends TestCase
     public function itLogsWarningWhenVideoExtensionsConfigurationIsEmpty(): void
     {
         $logger = new class extends AbstractLogger {
-            /** @var array<int, array{level:string,message:string,context:array}> */
+            /** @var list<array{level: string, message: string, context: array<string, mixed>}> */
             public array $records = [];
 
-            public function log($level, $message, array $context = []): void
+            public function log($level, string|Stringable $message, array $context = []): void
             {
                 $this->records[] = [
                     'level'   => (string) $level,

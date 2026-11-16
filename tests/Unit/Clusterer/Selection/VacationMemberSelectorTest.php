@@ -12,6 +12,8 @@ declare(strict_types=1);
 namespace MagicSunday\Memories\Test\Unit\Clusterer\Selection;
 
 use DateTimeImmutable;
+use MagicSunday\Memories\Clusterer\DaySummaryStage\InitializationStage;
+use MagicSunday\Memories\Clusterer\Selection\MemberSelectorInterface;
 use MagicSunday\Memories\Clusterer\Selection\SimilarityMetrics;
 use MagicSunday\Memories\Clusterer\Selection\VacationMemberSelector;
 use MagicSunday\Memories\Clusterer\Selection\VacationSelectionOptions;
@@ -33,6 +35,9 @@ use function substr;
 
 /**
  * @covers \MagicSunday\Memories\Clusterer\Selection\VacationMemberSelector
+ *
+ * @phpstan-import-type DaySummary from InitializationStage
+ * @phpstan-import-type HomeDescriptor from MemberSelectorInterface
  */
 #[CoversClass(VacationMemberSelector::class)]
 final class VacationMemberSelectorTest extends TestCase
@@ -317,7 +322,10 @@ final class VacationMemberSelectorTest extends TestCase
         $second = $this->createMedia('staypoint-two.jpg', '2024-05-05T08:10:00+00:00', 0.75);
         $third  = $this->createMedia('staypoint-three.jpg', '2024-05-05T08:20:00+00:00', 0.65);
 
-        $timestamp = $first->getTakenAt()?->getTimestamp();
+        $firstTakenAt = $first->getTakenAt();
+        self::assertNotNull($firstTakenAt);
+
+        $timestamp = $firstTakenAt->getTimestamp();
         $staypoint = [
             'lat'   => 0.0,
             'lon'   => 0.0,
@@ -856,7 +864,7 @@ final class VacationMemberSelectorTest extends TestCase
      * @param list<Media>          $members
      * @param array<string, mixed> $overrides
      *
-     * @return array<string, mixed>
+     * @return DaySummary
      */
     private function createDaySummary(string $date, array $members, array $overrides = []): array
     {
@@ -889,10 +897,14 @@ final class VacationMemberSelectorTest extends TestCase
             'spotNoise'               => [],
             'spotCount'               => 0,
             'spotNoiseSamples'        => 0,
+            'spotDensity'             => 0.0,
             'spotDwellSeconds'        => 0,
             'staypoints'              => [],
             'staypointIndex'          => StaypointIndex::empty(),
             'staypointCounts'         => [],
+            'staypointCount'          => 0,
+            'staypointDwellSeconds'   => 0,
+            'primaryStaypointKey'     => null,
             'dominantStaypoints'      => [],
             'transitRatio'            => 0.0,
             'poiDensity'              => 0.0,
@@ -908,6 +920,7 @@ final class VacationMemberSelectorTest extends TestCase
             'selectionContext'        => ['category' => 'core', 'score' => 0.0, 'duration' => null, 'metrics' => []],
         ];
 
+        /** @var DaySummary $summary */
         $summary = array_replace($base, $overrides);
 
         if (($summary['staypoints'] ?? []) === []) {
@@ -1000,7 +1013,7 @@ final class VacationMemberSelectorTest extends TestCase
     }
 
     /**
-     * @return array<string, float|int|null>
+     * @return HomeDescriptor
      */
     private function createHome(): array
     {
@@ -1043,11 +1056,11 @@ final class InMemoryLogger extends AbstractLogger
      */
     private array $records = [];
 
-    public function log($level, $message, array $context = []): void
+    public function log($level, string|Stringable $message, array $context = []): void
     {
         $this->records[] = [
             'level'   => (string) $level,
-            'message' => $message instanceof Stringable ? (string) $message : (string) $message,
+            'message' => (string) $message,
             'context' => $context,
         ];
     }

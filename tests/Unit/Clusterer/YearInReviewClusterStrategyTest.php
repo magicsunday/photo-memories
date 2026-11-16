@@ -13,7 +13,6 @@ namespace MagicSunday\Memories\Test\Unit\Clusterer;
 
 use DateTimeImmutable;
 use DateTimeZone;
-use MagicSunday\Memories\Clusterer\ClusterDraft;
 use MagicSunday\Memories\Clusterer\Context;
 use MagicSunday\Memories\Clusterer\YearInReviewClusterStrategy;
 use MagicSunday\Memories\Entity\Media;
@@ -58,7 +57,6 @@ final class YearInReviewClusterStrategyTest extends TestCase
         self::assertCount(1, $clusters);
         $cluster = $clusters[0];
 
-        self::assertInstanceOf(ClusterDraft::class, $cluster);
         self::assertSame('year_in_review', $cluster->getAlgorithm());
         self::assertSame([501, 502, 503, 504], $cluster->getMembers());
 
@@ -73,6 +71,7 @@ final class YearInReviewClusterStrategyTest extends TestCase
         self::assertArrayHasKey('scene_tags', $params);
         self::assertArrayHasKey('keywords', $params);
         $sceneTags = $params['scene_tags'];
+        self::assertIsArray($sceneTags);
         self::assertCount(2, $sceneTags);
         self::assertSame('Reise', $sceneTags[0]['label']);
         self::assertEqualsWithDelta(0.85, $sceneTags[0]['score'], 0.0001);

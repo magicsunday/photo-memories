@@ -14,6 +14,7 @@ namespace MagicSunday\Memories\Test\Unit\Service\Metadata;
 use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Service\Metadata\Quality\MediaQualityAggregator;
 use MagicSunday\Memories\Service\Metadata\VisionSignatureExtractor;
+use MagicSunday\Memories\Test\Support\GdColorAllocationTrait;
 use MagicSunday\Memories\Test\TestCase;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\Test;
@@ -23,7 +24,6 @@ use Throwable;
 
 use function file_put_contents;
 use function filesize;
-use function imagecolorallocate;
 use function imagecreatetruecolor;
 use function imagedestroy;
 use function imagefilledrectangle;
@@ -37,6 +37,8 @@ use function unlink;
 #[CoversClass(VisionSignatureExtractor::class)]
 final class VisionSignatureExtractorTest extends TestCase
 {
+    use GdColorAllocationTrait;
+
     #[Test]
     public function motionBlurScorePrefersSharpPatterns(): void
     {
@@ -134,7 +136,7 @@ final class VisionSignatureExtractorTest extends TestCase
             $extractor->extract($imagePath, $media);
 
             self::assertNotNull($media->getQualityClipping());
-            self::assertEqualsWithDelta(1.0, $media->getQualityClipping() ?? 0.0, 0.0005);
+            self::assertEqualsWithDelta(1.0, $media->getQualityClipping(), 0.0005);
             self::assertTrue($media->isLowQuality());
 
             $entries = $this->decodeIndexLog($media->getIndexLog());
@@ -188,7 +190,7 @@ final class VisionSignatureExtractorTest extends TestCase
             $extractor->extract($videoPath, $media);
 
             self::assertNotNull($media->getQualityClipping());
-            self::assertEqualsWithDelta(1.0, $media->getQualityClipping() ?? 0.0, 0.0005);
+            self::assertEqualsWithDelta(1.0, $media->getQualityClipping(), 0.0005);
             self::assertTrue($media->isLowQuality());
 
             $entries = $this->decodeIndexLog($media->getIndexLog());
@@ -200,6 +202,10 @@ final class VisionSignatureExtractorTest extends TestCase
         }
     }
 
+    /**
+     * @param positive-int $width
+     * @param positive-int $height
+     */
     private function createImageWithDimensions(int $width, int $height): string
     {
         $base = tempnam(sys_get_temp_dir(), 'img_');
@@ -212,7 +218,7 @@ final class VisionSignatureExtractorTest extends TestCase
         unlink($base);
 
         $image = imagecreatetruecolor($width, $height);
-        $color = imagecolorallocate($image, 64, 128, 192);
+        $color = self::allocateGdColor($image, 64, 128, 192);
         imagefilledrectangle($image, 0, 0, $width - 1, $height - 1, $color);
 
         if (!imagepng($image, $path)) {
@@ -237,7 +243,7 @@ final class VisionSignatureExtractorTest extends TestCase
         unlink($base);
 
         $image = imagecreatetruecolor(8, 8);
-        $red   = imagecolorallocate($image, 255, 0, 0);
+        $red   = self::allocateGdColor($image, 255, 0, 0);
         imagefilledrectangle($image, 0, 0, 7, 7, $red);
 
         if (!imagepng($image, $path)) {

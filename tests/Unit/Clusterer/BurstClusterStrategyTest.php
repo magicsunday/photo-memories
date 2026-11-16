@@ -14,7 +14,6 @@ namespace MagicSunday\Memories\Test\Unit\Clusterer;
 use DateTimeImmutable;
 use DateTimeZone;
 use MagicSunday\Memories\Clusterer\BurstClusterStrategy;
-use MagicSunday\Memories\Clusterer\ClusterDraft;
 use MagicSunday\Memories\Clusterer\Context;
 use MagicSunday\Memories\Entity\Location;
 use MagicSunday\Memories\Entity\Media;
@@ -80,7 +79,6 @@ final class BurstClusterStrategyTest extends TestCase
         self::assertCount(1, $clusters);
         $cluster = $clusters[0];
 
-        self::assertInstanceOf(ClusterDraft::class, $cluster);
         self::assertSame('burst', $cluster->getAlgorithm());
         self::assertSame([3003, 3002, 3001, 3004], $cluster->getMembers());
 

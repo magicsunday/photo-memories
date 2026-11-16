@@ -12,6 +12,7 @@ declare(strict_types=1);
 namespace MagicSunday\Memories\Test\Unit\Service\Clusterer;
 
 use Doctrine\ORM\EntityManagerInterface;
+use MagicSunday\Memories\Clusterer\ClusterDraft;
 use MagicSunday\Memories\Clusterer\Context;
 use MagicSunday\Memories\Clusterer\Contract\ProgressAwareClusterStrategyInterface;
 use MagicSunday\Memories\Clusterer\Support\ContextualClusterBridgeTrait;
@@ -41,6 +42,11 @@ final class HybridClustererTest extends TestCase
                 return 'progress-aware';
             }
 
+            /**
+             * @param list<Media> $items
+             *
+             * @return list<ClusterDraft>
+             */
             public function cluster(array $items): array
             {
                 return [];
@@ -76,7 +82,7 @@ final class HybridClustererTest extends TestCase
             null,
             function (string $strategy, int $index, int $total) use (&$handles): ProgressHandleInterface {
                 $handle = new class implements ProgressHandleInterface {
-                    /** @var list<array{string, mixed}> */
+                    /** @var list<array{0: string, 1?: mixed}> */
                     public array $events = [];
 
                     public function advance(int $step = 1): void
@@ -164,6 +170,11 @@ final class HybridClustererTest extends TestCase
                 return 'dynamic-progress';
             }
 
+            /**
+             * @param list<Media> $items
+             *
+             * @return list<ClusterDraft>
+             */
             public function cluster(array $items): array
             {
                 return [];
@@ -200,7 +211,7 @@ final class HybridClustererTest extends TestCase
             null,
             static function () use (&$handles): ProgressHandleInterface {
                 $handle = new class implements ProgressHandleInterface {
-                    /** @var list<array{string, mixed}> */
+                    /** @var list<array{0: string, 1?: mixed}> */
                     public array $events = [];
 
                     public function advance(int $step = 1): void

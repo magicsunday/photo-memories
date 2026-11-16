@@ -17,6 +17,8 @@ use MagicSunday\Memories\Test\TestCase;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\Test;
 
+use function preg_quote;
+
 #[CoversClass(FeedPersonalizationProfileProvider::class)]
 final class FeedPersonalizationProfileProviderTest extends TestCase
 {
@@ -64,7 +66,7 @@ final class FeedPersonalizationProfileProviderTest extends TestCase
     public function throwsWhenDefaultMissing(): void
     {
         $this->expectException(InvalidArgumentException::class);
-        $this->expectExceptionMessage('Missing default personalisation profile');
+        $this->expectExceptionMessageMatches('/' . preg_quote('Missing default personalisation profile', '/') . '/');
 
         new FeedPersonalizationProfileProvider([
             'familie' => [

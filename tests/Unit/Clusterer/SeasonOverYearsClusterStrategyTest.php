@@ -63,10 +63,12 @@ final class SeasonOverYearsClusterStrategyTest extends TestCase
         $params = $cluster->getParams();
         self::assertSame('Sommer im Laufe der Jahre', $params['label']);
         self::assertSame([1, 2, 3, 4, 5, 6], $cluster->getMembers());
+        self::assertIsArray($params['years']);
         self::assertContains(2021, $params['years']);
         self::assertArrayHasKey('scene_tags', $params);
         self::assertArrayHasKey('keywords', $params);
         $sceneTags = $params['scene_tags'];
+        self::assertIsArray($sceneTags);
         self::assertCount(2, $sceneTags);
         self::assertSame('Sommer', $sceneTags[0]['label']);
         self::assertEqualsWithDelta(0.88, $sceneTags[0]['score'], 0.0001);
@@ -150,7 +152,7 @@ final class SeasonOverYearsClusterStrategyTest extends TestCase
 
         $groupingUpdates = array_values(array_filter(
             $updates,
-            static fn (array $update): bool => str_starts_with((string) $update['stage'], 'Gruppiere'),
+            static fn (array $update): bool => str_starts_with($update['stage'], 'Gruppiere'),
         ));
 
         self::assertNotEmpty($groupingUpdates);
@@ -184,7 +186,7 @@ final class SeasonOverYearsClusterStrategyTest extends TestCase
     /**
      * @param list<ClusterDraft> $clusters
      *
-     * @return list<array{algorithm: string, params: array, centroid: array, members: list<int>}>
+     * @return list<array{algorithm: string, params: array<string, int|float|string|bool|array<mixed>|null>, centroid: array{lat: float, lon: float}, members: list<int>}>
      */
     private function normaliseClusters(array $clusters): array
     {

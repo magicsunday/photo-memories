@@ -13,7 +13,7 @@ namespace MagicSunday\Memories\Service\Thumbnail {
     use MagicSunday\Memories\Test\Unit\Service\Thumbnail\ThumbnailServiceTest;
 
     if (!function_exists(__NAMESPACE__ . '\\imagecopyresampled')) {
-        function imagecopyresampled($dstImage, $srcImage, int $dstX, int $dstY, int $srcX, int $srcY, int $dstWidth, int $dstHeight, int $srcWidth, int $srcHeight): bool
+        function imagecopyresampled(\GdImage $dstImage, \GdImage $srcImage, int $dstX, int $dstY, int $srcX, int $srcY, int $dstWidth, int $dstHeight, int $srcWidth, int $srcHeight): bool
         {
             if (ThumbnailServiceTest::isGdResampleFailureForced()) {
                 return false;
@@ -93,6 +93,7 @@ namespace MagicSunday\Memories\Test\Unit\Service\Thumbnail {
     use ImagickPixel;
     use MagicSunday\Memories\Entity\Media;
     use MagicSunday\Memories\Service\Thumbnail\ThumbnailService;
+    use MagicSunday\Memories\Test\Support\GdColorAllocationTrait;
     use MagicSunday\Memories\Test\TestCase;
     use PHPUnit\Framework\Attributes\CoversClass;
     use PHPUnit\Framework\Attributes\DataProvider;
@@ -100,12 +101,28 @@ namespace MagicSunday\Memories\Test\Unit\Service\Thumbnail {
     use ReflectionMethod;
     use RuntimeException;
 
+    use function preg_quote;
+
     #[CoversClass(ThumbnailService::class)]
     final class ThumbnailServiceTest extends TestCase
     {
+        use GdColorAllocationTrait;
+
         private static bool $forceGdResampleFailure = false;
 
         private static ?string $lastGdLoader = null;
+
+        /**
+         * Lists the files matching a glob pattern, treating a failed glob as no match.
+         *
+         * @return list<string>
+         */
+        private function globFiles(string $pattern): array
+        {
+            $files = glob($pattern);
+
+            return $files === false ? [] : $files;
+        }
 
         public static function isGdResampleFailureForced(): bool
         {
@@ -139,7 +156,7 @@ namespace MagicSunday\Memories\Test\Unit\Service\Thumbnail {
 
             try {
                 $this->expectException(RuntimeException::class);
-                $this->expectExceptionMessage(sprintf('Failed to create thumbnail directory "%s".', $thumbnailDir));
+                $this->expectExceptionMessageMatches('/' . preg_quote(sprintf('Failed to create thumbnail directory "%s".', $thumbnailDir), '/') . '/');
 
                 if (file_put_contents($thumbnailDir, '') === false) {
                     self::fail('Unable to create thumbnail directory placeholder file.');
@@ -182,7 +199,7 @@ namespace MagicSunday\Memories\Test\Unit\Service\Thumbnail {
 
             $sourcePath = $sourceDir . DIRECTORY_SEPARATOR . 'source.jpg';
             $image      = imagecreatetruecolor(400, 300);
-            $color      = imagecolorallocate($image, 120, 130, 140);
+            $color      = self::allocateGdColor($image, 120, 130, 140);
             imagefilledrectangle($image, 0, 0, 399, 299, $color);
             imagejpeg($image, $sourcePath);
             imagedestroy($image);
@@ -261,7 +278,7 @@ namespace MagicSunday\Memories\Test\Unit\Service\Thumbnail {
                 }
 
                 if (is_dir($thumbnailDir)) {
-                    foreach (glob($thumbnailDir . DIRECTORY_SEPARATOR . '*') ?: [] as $file) {
+                    foreach ($this->globFiles($thumbnailDir . DIRECTORY_SEPARATOR . '*') as $file) {
                         @unlink($file);
                     }
 
@@ -295,7 +312,7 @@ namespace MagicSunday\Memories\Test\Unit\Service\Thumbnail {
 
             $sourcePath = $sourceDir . DIRECTORY_SEPARATOR . 'source.jpg';
             $image      = imagecreatetruecolor(120, 80);
-            $color      = imagecolorallocate($image, 30, 40, 50);
+            $color      = self::allocateGdColor($image, 30, 40, 50);
             imagefilledrectangle($image, 0, 0, 119, 79, $color);
             imagejpeg($image, $sourcePath);
             imagedestroy($image);
@@ -344,7 +361,7 @@ namespace MagicSunday\Memories\Test\Unit\Service\Thumbnail {
                 }
 
                 if (is_dir($thumbnailDir)) {
-                    foreach (glob($thumbnailDir . DIRECTORY_SEPARATOR . '*') ?: [] as $file) {
+                    foreach ($this->globFiles($thumbnailDir . DIRECTORY_SEPARATOR . '*') as $file) {
                         @unlink($file);
                     }
 
@@ -378,7 +395,7 @@ namespace MagicSunday\Memories\Test\Unit\Service\Thumbnail {
 
             $sourcePath = $sourceDir . DIRECTORY_SEPARATOR . 'source.heic';
             $image      = imagecreatetruecolor(160, 120);
-            $color      = imagecolorallocate($image, 120, 130, 140);
+            $color      = self::allocateGdColor($image, 120, 130, 140);
             imagefilledrectangle($image, 0, 0, 159, 119, $color);
             imagejpeg($image, $sourcePath);
             imagedestroy($image);
@@ -416,7 +433,7 @@ namespace MagicSunday\Memories\Test\Unit\Service\Thumbnail {
             self::resetLastGdLoader();
 
             $this->expectException(RuntimeException::class);
-            $this->expectExceptionMessage('Imagick is required to create thumbnails for RAW/HEIC media');
+            $this->expectExceptionMessageMatches('/' . preg_quote('Imagick is required to create thumbnails for RAW/HEIC media', '/') . '/');
 
             try {
                 $service->generateAll($sourcePath, $media);
@@ -433,7 +450,7 @@ namespace MagicSunday\Memories\Test\Unit\Service\Thumbnail {
                 }
 
                 if (is_dir($sourceDir)) {
-                    foreach (glob($sourceDir . DIRECTORY_SEPARATOR . '*') ?: [] as $file) {
+                    foreach ($this->globFiles($sourceDir . DIRECTORY_SEPARATOR . '*') as $file) {
                         @unlink($file);
                     }
 
@@ -441,7 +458,7 @@ namespace MagicSunday\Memories\Test\Unit\Service\Thumbnail {
                 }
 
                 if (is_dir($thumbnailDir)) {
-                    foreach (glob($thumbnailDir . DIRECTORY_SEPARATOR . '*') ?: [] as $file) {
+                    foreach ($this->globFiles($thumbnailDir . DIRECTORY_SEPARATOR . '*') as $file) {
                         @unlink($file);
                     }
 
@@ -471,7 +488,7 @@ namespace MagicSunday\Memories\Test\Unit\Service\Thumbnail {
 
             $sourcePath = $sourceDir . DIRECTORY_SEPARATOR . 'no-upscale.jpg';
             $image      = imagecreatetruecolor(150, 100);
-            $color      = imagecolorallocate($image, 120, 130, 140);
+            $color      = self::allocateGdColor($image, 120, 130, 140);
             imagefilledrectangle($image, 0, 0, 149, 99, $color);
             imagejpeg($image, $sourcePath);
             imagedestroy($image);
@@ -538,7 +555,7 @@ namespace MagicSunday\Memories\Test\Unit\Service\Thumbnail {
 
             $sourcePath = $sourceDir . DIRECTORY_SEPARATOR . 'source.jpg';
             $image      = imagecreatetruecolor(400, 200);
-            $color      = imagecolorallocate($image, 50, 60, 70);
+            $color      = self::allocateGdColor($image, 50, 60, 70);
             imagefilledrectangle($image, 0, 0, 399, 199, $color);
             imagejpeg($image, $sourcePath);
             imagedestroy($image);
@@ -550,7 +567,7 @@ namespace MagicSunday\Memories\Test\Unit\Service\Thumbnail {
             $method = new ReflectionMethod(ThumbnailService::class, 'generateThumbnailsWithGd');
 
             $this->expectException(RuntimeException::class);
-            $this->expectExceptionMessage('Unable to resample image for thumbnail.');
+            $this->expectExceptionMessageMatches('/' . preg_quote('Unable to resample image for thumbnail.', '/') . '/');
 
             self::$forceGdResampleFailure = true;
 
@@ -568,7 +585,7 @@ namespace MagicSunday\Memories\Test\Unit\Service\Thumbnail {
                 }
 
                 if (is_dir($thumbnailDir)) {
-                    foreach (glob($thumbnailDir . DIRECTORY_SEPARATOR . '*') ?: [] as $file) {
+                    foreach ($this->globFiles($thumbnailDir . DIRECTORY_SEPARATOR . '*') as $file) {
                         @unlink($file);
                     }
 
@@ -598,7 +615,7 @@ namespace MagicSunday\Memories\Test\Unit\Service\Thumbnail {
 
             $sourcePath = $sourceDir . DIRECTORY_SEPARATOR . 'source.jpg';
             $image      = imagecreatetruecolor(80, 60);
-            $color      = imagecolorallocate($image, 10, 20, 30);
+            $color      = self::allocateGdColor($image, 10, 20, 30);
             imagefilledrectangle($image, 0, 0, 79, 59, $color);
             imagejpeg($image, $sourcePath);
             imagedestroy($image);
@@ -666,7 +683,7 @@ namespace MagicSunday\Memories\Test\Unit\Service\Thumbnail {
 
             $sourcePath = $sourceDir . DIRECTORY_SEPARATOR . 'source.jpg';
             $image      = imagecreatetruecolor(80, 60);
-            $color      = imagecolorallocate($image, 90, 100, 110);
+            $color      = self::allocateGdColor($image, 90, 100, 110);
             imagefilledrectangle($image, 0, 0, 79, 59, $color);
             imagejpeg($image, $sourcePath);
             imagedestroy($image);
@@ -743,7 +760,7 @@ namespace MagicSunday\Memories\Test\Unit\Service\Thumbnail {
                 $image->destroy();
             } else {
                 $image = imagecreatetruecolor(400, 200);
-                $color = imagecolorallocate($image, 100, 150, 200);
+                $color = self::allocateGdColor($image, 100, 150, 200);
                 imagefilledrectangle($image, 0, 0, 399, 199, $color);
                 imagejpeg($image, $sourcePath);
                 imagedestroy($image);
@@ -767,7 +784,9 @@ namespace MagicSunday\Memories\Test\Unit\Service\Thumbnail {
                     $thumbnailPath = $thumbnails[$size];
                     self::assertFileExists($thumbnailPath);
 
-                    [$width] = getimagesize($thumbnailPath);
+                    $imageSize = getimagesize($thumbnailPath);
+                    self::assertIsArray($imageSize);
+                    [$width] = $imageSize;
                     self::assertSame($size, $width);
                 }
             } finally {
@@ -912,13 +931,13 @@ namespace MagicSunday\Memories\Test\Unit\Service\Thumbnail {
                 $image->destroy();
             } else {
                 $image = imagecreatetruecolor(300, 200);
-                $color = imagecolorallocate($image, 80, 120, 160);
+                $color = self::allocateGdColor($image, 80, 120, 160);
                 imagefilledrectangle($image, 0, 0, 299, 199, $color);
                 imagejpeg($image, $firstSource);
                 imagedestroy($image);
 
                 $image = imagecreatetruecolor(200, 300);
-                $color = imagecolorallocate($image, 60, 180, 90);
+                $color = self::allocateGdColor($image, 60, 180, 90);
                 imagefilledrectangle($image, 0, 0, 199, 299, $color);
                 imagejpeg($image, $secondSource);
                 imagedestroy($image);
@@ -987,7 +1006,7 @@ namespace MagicSunday\Memories\Test\Unit\Service\Thumbnail {
             $method = new ReflectionMethod(ThumbnailService::class, 'generateThumbnailsWithGd');
 
             $this->expectException(RuntimeException::class);
-            $this->expectExceptionMessage(sprintf('Unable to read image data from "%s" for thumbnail generation.', $missingPath));
+            $this->expectExceptionMessageMatches('/' . preg_quote(sprintf('Unable to read image data from "%s" for thumbnail generation.', $missingPath), '/') . '/');
 
             try {
                 $method->invoke($service, $missingPath, null, [200], hash('sha256', 'missing'), null);
@@ -1022,7 +1041,7 @@ namespace MagicSunday\Memories\Test\Unit\Service\Thumbnail {
             $method = new ReflectionMethod(ThumbnailService::class, 'generateThumbnailsWithGd');
 
             $this->expectException(RuntimeException::class);
-            $this->expectExceptionMessage(sprintf('Unable to create GD image from "%s".', $sourcePath));
+            $this->expectExceptionMessageMatches('/' . preg_quote(sprintf('Unable to create GD image from "%s".', $sourcePath), '/') . '/');
 
             try {
                 $method->invoke($service, $sourcePath, null, [200], hash('sha256', 'invalid'), null);
@@ -1058,7 +1077,7 @@ namespace MagicSunday\Memories\Test\Unit\Service\Thumbnail {
 
             $sourcePath = $sourceDir . DIRECTORY_SEPARATOR . 'source.jpg';
             $image      = imagecreatetruecolor(400, 200);
-            $color      = imagecolorallocate($image, 200, 100, 50);
+            $color      = self::allocateGdColor($image, 200, 100, 50);
             imagefilledrectangle($image, 0, 0, 399, 199, $color);
             imagejpeg($image, $sourcePath);
             imagedestroy($image);
@@ -1076,7 +1095,9 @@ namespace MagicSunday\Memories\Test\Unit\Service\Thumbnail {
                 $thumbnailPath = $thumbnails[200];
                 self::assertFileExists($thumbnailPath);
 
-                [$width, $height] = getimagesize($thumbnailPath);
+                $imageSize = getimagesize($thumbnailPath);
+                self::assertIsArray($imageSize);
+                [$width, $height] = $imageSize;
 
                 self::assertGreaterThan($width, $height);
             } finally {
@@ -1119,7 +1140,7 @@ namespace MagicSunday\Memories\Test\Unit\Service\Thumbnail {
 
             $sourcePath = $sourceDir . DIRECTORY_SEPARATOR . 'source.jpg';
             $image      = imagecreatetruecolor(200, 200);
-            $color      = imagecolorallocate($image, 50, 150, 200);
+            $color      = self::allocateGdColor($image, 50, 150, 200);
             imagefilledrectangle($image, 0, 0, 199, 199, $color);
             imagejpeg($image, $sourcePath);
             imagedestroy($image);
@@ -1150,7 +1171,7 @@ namespace MagicSunday\Memories\Test\Unit\Service\Thumbnail {
                     @rmdir($sourceDir);
                 }
 
-                foreach (glob($thumbnailDir . DIRECTORY_SEPARATOR . '*.jpg') ?: [] as $file) {
+                foreach ($this->globFiles($thumbnailDir . DIRECTORY_SEPARATOR . '*.jpg') as $file) {
                     @unlink($file);
                 }
 
@@ -1158,7 +1179,7 @@ namespace MagicSunday\Memories\Test\Unit\Service\Thumbnail {
                     @rmdir($thumbnailDir);
                 }
 
-                foreach (glob($relocatedDir . DIRECTORY_SEPARATOR . '*.jpg') ?: [] as $file) {
+                foreach ($this->globFiles($relocatedDir . DIRECTORY_SEPARATOR . '*.jpg') as $file) {
                     @unlink($file);
                 }
 
@@ -1192,9 +1213,9 @@ namespace MagicSunday\Memories\Test\Unit\Service\Thumbnail {
             $image = imagecreatetruecolor(60, 60);
             imagealphablending($image, false);
             imagesavealpha($image, true);
-            $transparent = imagecolorallocatealpha($image, 0, 0, 0, 127);
+            $transparent = self::allocateGdColorAlpha($image, 0, 0, 0, 127);
             imagefill($image, 0, 0, $transparent);
-            $opaque = imagecolorallocatealpha($image, 0, 0, 255, 0);
+            $opaque = self::allocateGdColorAlpha($image, 0, 0, 255, 0);
             imagefilledellipse($image, 30, 30, 20, 20, $opaque);
 
             $webpResult = imagewebp($image, $sourcePath, 100);
@@ -1247,13 +1268,15 @@ namespace MagicSunday\Memories\Test\Unit\Service\Thumbnail {
                     }
 
                     $cornerColorIndex = imagecolorat($thumbnailImage, 0, 0);
-                    $cornerColor      = imagecolorsforindex($thumbnailImage, $cornerColorIndex);
+                    self::assertNotFalse($cornerColorIndex);
+                    $cornerColor = imagecolorsforindex($thumbnailImage, $cornerColorIndex);
                     self::assertGreaterThanOrEqual(250, $cornerColor['red']);
                     self::assertGreaterThanOrEqual(250, $cornerColor['green']);
                     self::assertGreaterThanOrEqual(250, $cornerColor['blue']);
 
                     $centerColorIndex = imagecolorat($thumbnailImage, 25, 25);
-                    $centerColor      = imagecolorsforindex($thumbnailImage, $centerColorIndex);
+                    self::assertNotFalse($centerColorIndex);
+                    $centerColor = imagecolorsforindex($thumbnailImage, $centerColorIndex);
                     self::assertLessThanOrEqual(80, $centerColor['red']);
 
                     imagedestroy($thumbnailImage);
@@ -1279,6 +1302,9 @@ namespace MagicSunday\Memories\Test\Unit\Service\Thumbnail {
             }
         }
 
+        /**
+         * @param list<string> $operations
+         */
         #[Test]
         #[DataProvider('exifOrientationDataProvider')]
         public function appliesExifOrientationForAllSupportedValues(int $orientation, array $operations): void
@@ -1298,6 +1324,9 @@ namespace MagicSunday\Memories\Test\Unit\Service\Thumbnail {
             }
         }
 
+        /**
+         * @return iterable<string, array{int, list<string>}>
+         */
         public static function exifOrientationDataProvider(): iterable
         {
             yield 'mirror-horizontal' => [2, ['flip-horizontal']];
@@ -1324,8 +1353,8 @@ namespace MagicSunday\Memories\Test\Unit\Service\Thumbnail {
         }
 
         /**
-         * @param array<int, list<string>> $storedLayout
-         * @param array<int, list<string>> $expectedLayout
+         * @param list<list<string>> $storedLayout
+         * @param list<list<string>> $expectedLayout
          */
         private function assertOrientationWithGd(OrientationThumbnailServiceStub $service, int $orientation, array $storedLayout, array $expectedLayout): void
         {
@@ -1343,8 +1372,8 @@ namespace MagicSunday\Memories\Test\Unit\Service\Thumbnail {
         }
 
         /**
-         * @param array<int, list<string>> $storedLayout
-         * @param array<int, list<string>> $expectedLayout
+         * @param list<list<string>> $storedLayout
+         * @param list<list<string>> $expectedLayout
          */
         private function assertOrientationWithImagick(OrientationThumbnailServiceStub $service, int $orientation, array $storedLayout, array $expectedLayout): void
         {
@@ -1528,18 +1557,16 @@ namespace MagicSunday\Memories\Test\Unit\Service\Thumbnail {
             $height = count($layout);
             $width  = count($layout[0]);
 
+            if ($height < 1 || $width < 1) {
+                self::fail('The orientation layout must not be empty.');
+            }
+
             $image = imagecreatetruecolor($width, $height);
 
             for ($y = 0; $y < $height; ++$y) {
                 for ($x = 0; $x < $width; ++$x) {
                     $colorComponents = $this->hexToRgb($layout[$y][$x]);
-                    $colorResource   = imagecolorallocate($image, $colorComponents['r'], $colorComponents['g'], $colorComponents['b']);
-
-                    if (!is_int($colorResource)) {
-                        imagedestroy($image);
-
-                        self::fail('Unable to allocate GD color for orientation layout.');
-                    }
+                    $colorResource   = self::allocateGdColor($image, $colorComponents['r'], $colorComponents['g'], $colorComponents['b']);
 
                     $setPixelResult = imagesetpixel($image, $x, $y, $colorResource);
 
@@ -1568,7 +1595,8 @@ namespace MagicSunday\Memories\Test\Unit\Service\Thumbnail {
 
                 for ($x = 0; $x < $width; ++$x) {
                     $colorIndex = imagecolorat($image, $x, $y);
-                    $color      = imagecolorsforindex($image, $colorIndex);
+                    self::assertNotFalse($colorIndex);
+                    $color = imagecolorsforindex($image, $colorIndex);
 
                     $row[] = $this->rgbToHex($color['red'], $color['green'], $color['blue']);
                 }
@@ -1595,7 +1623,7 @@ namespace MagicSunday\Memories\Test\Unit\Service\Thumbnail {
 
             foreach ($iterator as $y => $row) {
                 foreach ($row as $x => $pixel) {
-                    $pixel->setColor($layout[$y][$x]);
+                    $pixel->setColor($layout[(int) $y][(int) $x]);
                 }
 
                 $iterator->syncIterator();
@@ -1633,8 +1661,8 @@ namespace MagicSunday\Memories\Test\Unit\Service\Thumbnail {
         }
 
         /**
-         * @param array<int, list<string>> $actual
-         * @param array<int, list<string>> $expected
+         * @param list<list<string>> $actual
+         * @param list<list<string>> $expected
          */
         private function assertLayoutEquals(array $expected, array $actual, string $context): void
         {
@@ -1654,7 +1682,7 @@ namespace MagicSunday\Memories\Test\Unit\Service\Thumbnail {
         }
 
         /**
-         * @return array{r:int, g:int, b:int}
+         * @return array{r:int<0, 255>, g:int<0, 255>, b:int<0, 255>}
          */
         private function hexToRgb(string $hex): array
         {
@@ -1665,10 +1693,20 @@ namespace MagicSunday\Memories\Test\Unit\Service\Thumbnail {
             }
 
             return [
-                'r' => (int) hexdec(substr($normalized, 0, 2)),
-                'g' => (int) hexdec(substr($normalized, 2, 2)),
-                'b' => (int) hexdec(substr($normalized, 4, 2)),
+                'r' => $this->hexChannel($normalized, 0),
+                'g' => $this->hexChannel($normalized, 2),
+                'b' => $this->hexChannel($normalized, 4),
             ];
+        }
+
+        /**
+         * Reads one two-digit colour channel, which lies within 0 to 255 by construction.
+         *
+         * @return int<0, 255>
+         */
+        private function hexChannel(string $normalized, int $offset): int
+        {
+            return max(0, min(255, (int) hexdec(substr($normalized, $offset, 2))));
         }
 
         private function rgbToHex(int $red, int $green, int $blue): string

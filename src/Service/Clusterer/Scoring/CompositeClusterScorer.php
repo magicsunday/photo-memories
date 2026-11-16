@@ -52,11 +52,11 @@ final class CompositeClusterScorer
     private array $algorithmWeightOverrides;
 
     /**
-     * @param iterable<ClusterScoreHeuristicInterface> $heuristics
-     * @param array<string,float>                      $weights
-     * @param array<string,float>                      $algorithmBoosts
-     * @param array<string,mixed>                      $algorithmGroups
-     * @param array<string,array<string,float|int>>    $algorithmWeightOverrides
+     * @param iterable<ClusterScoreHeuristicInterface>                      $heuristics
+     * @param array<string,float>                                           $weights
+     * @param array<string,float>                                           $algorithmBoosts
+     * @param array<string,mixed>                                           $algorithmGroups
+     * @param array<string,array<string,float|int|array<string,float|int>>> $algorithmWeightOverrides
      */
     public function __construct(
         private readonly EntityManagerInterface $em,
@@ -400,7 +400,7 @@ final class CompositeClusterScorer
     }
 
     /**
-     * @param array<string,array<string,float|int>> $overrides
+     * @param array<string,array<string,float|int|array<string,float|int>>> $overrides
      *
      * @return array<string,array<string,array<string,float>>>
      */

@@ -13,7 +13,6 @@ namespace MagicSunday\Memories\Test\Unit\Clusterer;
 
 use DateTimeImmutable;
 use DateTimeZone;
-use MagicSunday\Memories\Clusterer\ClusterDraft;
 use MagicSunday\Memories\Clusterer\Context;
 use MagicSunday\Memories\Clusterer\PhashSimilarityStrategy;
 use MagicSunday\Memories\Entity\Location;
@@ -59,7 +58,6 @@ final class PhashSimilarityStrategyTest extends TestCase
         self::assertCount(1, $clusters);
         $cluster = $clusters[0];
 
-        self::assertInstanceOf(ClusterDraft::class, $cluster);
         self::assertSame('phash_similarity', $cluster->getAlgorithm());
         self::assertSame([1501, 1502, 1503, 1504], $cluster->getMembers());
 

@@ -14,9 +14,9 @@ namespace MagicSunday\Memories\Test\Unit\Support;
 use MagicSunday\Memories\Support\FeatureFlagProvider;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\TestCase;
+use Symfony\Component\DependencyInjection\Exception\ParameterNotFoundException;
 use Symfony\Component\DependencyInjection\ParameterBag\ParameterBag;
 use Symfony\Component\DependencyInjection\ParameterBag\ParameterBagInterface;
-use Symfony\Component\DependencyInjection\ParameterBag\ParameterNotFoundException;
 use UnitEnum;
 
 use function array_key_exists;
@@ -49,8 +49,7 @@ final class FeatureFlagProviderTest extends TestCase
 
     public function testItCachesResolvedValuesPerFlag(): void
     {
-        /** @var ParameterBagInterface&object{getCallCount(): int} $bag */
-        $bag = $this->createCountingParameterBag([
+        $bag = new CountingParameterBag([
             'memories.features.saliency_cropping.enabled' => true,
         ]);
 
@@ -60,85 +59,96 @@ final class FeatureFlagProviderTest extends TestCase
         self::assertTrue($provider->isEnabled('saliency_cropping'));
         self::assertSame(1, $bag->getCallCount());
     }
+}
+
+/**
+ * Parameter bag that counts how often a parameter is read.
+ */
+final class CountingParameterBag implements ParameterBagInterface
+{
+    private int $getCalls = 0;
 
     /**
      * @param array<string, mixed> $parameters
-     *
-     * @return ParameterBagInterface&object{getCallCount(): int}
      */
-    private function createCountingParameterBag(array $parameters): ParameterBagInterface
+    public function __construct(private array $parameters)
     {
-        return new class($parameters) implements ParameterBagInterface {
-            private int $getCalls = 0;
+    }
 
-            public function __construct(private array $parameters)
-            {
-            }
+    public function clear(): void
+    {
+        $this->parameters = [];
+    }
 
-            public function clear(): void
-            {
-                $this->parameters = [];
-            }
+    /**
+     * @param array<mixed> $parameters
+     */
+    public function add(array $parameters): void
+    {
+        $this->parameters = $parameters + $this->parameters;
+    }
 
-            public function add(array $parameters): void
-            {
-                $this->parameters = $parameters + $this->parameters;
-            }
+    /**
+     * @return array<string, mixed>
+     */
+    public function all(): array
+    {
+        return $this->parameters;
+    }
 
-            public function all(): array
-            {
-                return $this->parameters;
-            }
+    /**
+     * @return array<mixed>|bool|string|int|float|UnitEnum|null
+     */
+    public function get(string $name): array|bool|string|int|float|UnitEnum|null
+    {
+        ++$this->getCalls;
 
-            public function get(string $name): array|bool|string|int|float|UnitEnum|null
-            {
-                ++$this->getCalls;
+        if (!array_key_exists($name, $this->parameters)) {
+            throw new ParameterNotFoundException($name);
+        }
 
-                if (!array_key_exists($name, $this->parameters)) {
-                    throw new ParameterNotFoundException($name);
-                }
+        return $this->parameters[$name];
+    }
 
-                return $this->parameters[$name];
-            }
+    public function remove(string $name): void
+    {
+        unset($this->parameters[$name]);
+    }
 
-            public function remove(string $name): void
-            {
-                unset($this->parameters[$name]);
-            }
+    /**
+     * @param array<mixed>|bool|string|int|float|UnitEnum|null $value
+     */
+    public function set(string $name, array|bool|string|int|float|UnitEnum|null $value): void
+    {
+        $this->parameters[$name] = $value;
+    }
 
-            public function set(string $name, array|bool|string|int|float|UnitEnum|null $value): void
-            {
-                $this->parameters[$name] = $value;
-            }
+    public function has(string $name): bool
+    {
+        return array_key_exists($name, $this->parameters);
+    }
 
-            public function has(string $name): bool
-            {
-                return array_key_exists($name, $this->parameters);
-            }
+    public function resolve(): void
+    {
+    }
 
-            public function resolve(): void
-            {
-            }
+    public function resolveValue(mixed $value): mixed
+    {
+        return $value;
+    }
 
-            public function resolveValue(mixed $value): mixed
-            {
-                return $value;
-            }
+    public function escapeValue(mixed $value): mixed
+    {
+        return $value;
+    }
 
-            public function escapeValue(mixed $value): mixed
-            {
-                return $value;
-            }
+    public function unescapeValue(mixed $value): mixed
+    {
+        return $value;
+    }
 
-            public function unescapeValue(mixed $value): mixed
-            {
-                return $value;
-            }
-
-            public function getCallCount(): int
-            {
-                return $this->getCalls;
-            }
-        };
+    public function getCallCount(): int
+    {
+        return $this->getCalls;
     }
 }

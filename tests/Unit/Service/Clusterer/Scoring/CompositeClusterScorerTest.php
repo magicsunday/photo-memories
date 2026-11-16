@@ -37,6 +37,7 @@ use MagicSunday\Memories\Test\TestCase;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\Test;
 
+use function is_float;
 use function sprintf;
 
 #[CoversClass(CompositeClusterScorer::class)]
@@ -47,7 +48,7 @@ final class CompositeClusterScorerTest extends TestCase
     {
         $mediaMap = $this->createMediaFixtures();
 
-        $entityManager = $this->createStub(EntityManagerInterface::class);
+        $entityManager = self::createStub(EntityManagerInterface::class);
         $queryBuilder  = self::getStubBuilder(QueryBuilder::class)
             ->disableOriginalConstructor()
             ->getStub();
@@ -137,8 +138,11 @@ final class CompositeClusterScorerTest extends TestCase
             $values[$heuristic->weightKey()] = $heuristic->score($scoredCluster);
         }
 
+        $aesthetics = $params['aesthetics_score'] ?? $values['quality'];
+        self::assertIsFloat($aesthetics);
+
         $expectedRaw = 0.22 * $values['quality'] +
-            0.08 * ($params['aesthetics_score'] ?? $values['quality']) +
+            0.08 * $aesthetics +
             0.16 * $values['people'] +
             0.09 * $values['content'] +
             0.10 * $values['density'] +
@@ -163,7 +167,7 @@ final class CompositeClusterScorerTest extends TestCase
     #[Test]
     public function scoreRespectsPersistedHeuristicMetrics(): void
     {
-        $entityManager = $this->createStub(EntityManagerInterface::class);
+        $entityManager = self::createStub(EntityManagerInterface::class);
 
         $heuristics = [
             new QualityClusterScoreHeuristic(new ClusterQualityAggregator(12.0)),
@@ -233,7 +237,7 @@ final class CompositeClusterScorerTest extends TestCase
     {
         $mediaMap = $this->createMediaFixtures();
 
-        $entityManager = $this->createStub(EntityManagerInterface::class);
+        $entityManager = self::createStub(EntityManagerInterface::class);
         $queryBuilder  = self::getStubBuilder(QueryBuilder::class)
             ->disableOriginalConstructor()
             ->getStub();
@@ -325,7 +329,7 @@ final class CompositeClusterScorerTest extends TestCase
     #[Test]
     public function appliesAlgorithmAndClusterWeightOverrides(): void
     {
-        $entityManager = $this->createStub(EntityManagerInterface::class);
+        $entityManager = self::createStub(EntityManagerInterface::class);
 
         $heuristics = [
             new QualityClusterScoreHeuristic(new ClusterQualityAggregator(12.0)),
@@ -373,7 +377,7 @@ final class CompositeClusterScorerTest extends TestCase
     #[Test]
     public function appliesStorylineWeightOverrides(): void
     {
-        $entityManager = $this->createStub(EntityManagerInterface::class);
+        $entityManager = self::createStub(EntityManagerInterface::class);
 
         $heuristics = [
             new QualityClusterScoreHeuristic(new ClusterQualityAggregator(12.0)),
@@ -420,7 +424,7 @@ final class CompositeClusterScorerTest extends TestCase
     #[Test]
     public function normalisesScoresPerAlgorithm(): void
     {
-        $entityManager = $this->createStub(EntityManagerInterface::class);
+        $entityManager = self::createStub(EntityManagerInterface::class);
 
         $heuristics = [
             new class implements ClusterScoreHeuristicInterface {
@@ -439,7 +443,9 @@ final class CompositeClusterScorerTest extends TestCase
 
                 public function score(ClusterDraft $cluster): float
                 {
-                    return $cluster->getParams()['seed_score'] ?? 0.0;
+                    $seed = $cluster->getParams()['seed_score'] ?? 0.0;
+
+                    return is_float($seed) ? $seed : 0.0;
                 }
 
                 public function weightKey(): string
@@ -477,6 +483,9 @@ final class CompositeClusterScorerTest extends TestCase
             $algorithm = $cluster->getAlgorithm();
             $seed      = $cluster->getParams()['seed_score'];
             $postNorm  = $cluster->getParams()['post_norm_score'];
+
+            self::assertIsFloat($seed);
+            self::assertIsFloat($postNorm);
 
             self::assertEqualsWithDelta($seed, $cluster->getParams()['pre_norm_score'], 1e-9);
             $seedKey = sprintf('%.1f', $seed);

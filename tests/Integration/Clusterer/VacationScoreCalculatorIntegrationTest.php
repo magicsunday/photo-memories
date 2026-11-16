@@ -11,6 +11,7 @@ declare(strict_types=1);
 
 namespace MagicSunday\Memories\Test\Integration\Clusterer;
 
+use Closure;
 use DateInterval;
 use DateTimeImmutable;
 use DateTimeZone;
@@ -210,10 +211,13 @@ final class VacationScoreCalculatorIntegrationTest extends TestCase
         self::assertSame($runMetrics['min_items_per_day'], $metricsEvent['context']['min_items_per_day']);
     }
 
+    /**
+     * @param array<string, mixed> $telemetryOverrides
+     */
     private function createCalculator(
         LocationHelper $locationHelper,
         ?VacationSelectionOptions $options = null,
-        ?callable $curationFilter = null,
+        ?Closure $curationFilter = null,
         array $telemetryOverrides = [],
         ?RecordingMonitoringEmitter $emitter = null,
         string $timezone = 'Europe/Berlin',

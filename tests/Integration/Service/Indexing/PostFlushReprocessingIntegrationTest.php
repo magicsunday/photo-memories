@@ -31,6 +31,7 @@ use MagicSunday\Memories\Test\TestCase;
 use Override;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\Test;
+use PHPUnit\Framework\MockObject\Stub;
 use Symfony\Component\Console\Output\NullOutput;
 
 use function array_unique;
@@ -43,9 +44,9 @@ final class PostFlushReprocessingIntegrationTest extends TestCase
     #[Test]
     public function itLinksBurstMembersAfterSingleRun(): void
     {
-        $repository          = new InMemoryMediaRepository($this->createStub(EntityManagerInterface::class));
+        $repository          = new InMemoryMediaRepository(self::createStub(EntityManagerInterface::class));
         $tracker             = new PersistedMediaTracker();
-        $duplicateRepository = new RecordingMediaDuplicateRepository();
+        $duplicateRepository = new RecordingMediaDuplicateRepository(self::createStub(EntityManagerInterface::class));
 
         $entityManager = self::createStub(EntityManagerInterface::class);
         $this->configureEntityManager($entityManager, $repository);
@@ -97,9 +98,9 @@ final class PostFlushReprocessingIntegrationTest extends TestCase
     #[Test]
     public function itLinksLivePairsAfterSingleRun(): void
     {
-        $repository          = new InMemoryMediaRepository($this->createStub(EntityManagerInterface::class));
+        $repository          = new InMemoryMediaRepository(self::createStub(EntityManagerInterface::class));
         $tracker             = new PersistedMediaTracker();
-        $duplicateRepository = new RecordingMediaDuplicateRepository();
+        $duplicateRepository = new RecordingMediaDuplicateRepository(self::createStub(EntityManagerInterface::class));
 
         $entityManager = self::createStub(EntityManagerInterface::class);
         $this->configureEntityManager($entityManager, $repository);
@@ -154,7 +155,7 @@ final class PostFlushReprocessingIntegrationTest extends TestCase
         $pipeline->finalize(false);
     }
 
-    private function configureEntityManager(EntityManagerInterface $entityManager, InMemoryMediaRepository $repository): void
+    private function configureEntityManager(EntityManagerInterface&Stub $entityManager, InMemoryMediaRepository $repository): void
     {
         $pending  = [];
         $nextId   = 1;
@@ -242,9 +243,6 @@ final class PostFlushReprocessingIntegrationTest extends TestCase
     }
 }
 
-/**
- * @extends MediaRepository
- */
 final readonly class InMemoryMediaRepository extends MediaRepository
 {
     /**
@@ -255,7 +253,10 @@ final readonly class InMemoryMediaRepository extends MediaRepository
     public function __construct(EntityManagerInterface $entityManager)
     {
         parent::__construct($entityManager);
-        $this->storage = new ArrayObject();
+
+        /** @var ArrayObject<int, Media> $storage */
+        $storage       = new ArrayObject();
+        $this->storage = $storage;
     }
 
     public function store(Media $media): void
@@ -496,9 +497,13 @@ final readonly class RecordingMediaDuplicateRepository extends MediaDuplicateRep
      */
     public ArrayObject $records;
 
-    public function __construct()
+    public function __construct(EntityManagerInterface $entityManager)
     {
-        $this->records = new ArrayObject();
+        parent::__construct($entityManager);
+
+        /** @var ArrayObject<int, array{Media, Media, int}> $records */
+        $records       = new ArrayObject();
+        $this->records = $records;
     }
 
     #[Override]

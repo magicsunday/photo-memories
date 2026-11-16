@@ -20,7 +20,6 @@ use MagicSunday\Memories\Repository\MediaRepository;
 use MagicSunday\Memories\Service\Clusterer\Contract\ClusterConsolidatorInterface;
 use MagicSunday\Memories\Service\Feed\FeedBuilderInterface;
 use MagicSunday\Memories\Service\Feed\FeedExportRequest;
-use MagicSunday\Memories\Service\Feed\FeedExportResult;
 use MagicSunday\Memories\Service\Feed\FeedExportStage;
 use MagicSunday\Memories\Service\Feed\FeedPersonalizationProfile;
 use MagicSunday\Memories\Service\Feed\FeedVisibilityFilter;
@@ -124,7 +123,6 @@ final class HtmlFeedExportServiceTest extends TestCase
 
         $result = $service->export($request, $io);
 
-        self::assertInstanceOf(FeedExportResult::class, $result);
         self::assertFalse($result->hasIndexFile());
         self::assertSame($request->resolveOutputDirectory(), $result->getOutputDirectory());
         self::assertSame($request->resolveImageDirectory(), $result->getImageDirectory());
@@ -276,6 +274,7 @@ final class HtmlFeedExportServiceTest extends TestCase
         self::assertSame('m1_source-thumb.jpg', basename($imagePath));
         self::assertNotNull($result->getIndexFilePath());
         $indexHtml = file_get_contents($result->getIndexFilePath());
+        self::assertIsString($indexHtml);
         self::assertStringContainsString('Titel', $indexHtml);
         self::assertStringContainsString('Untertitel', $indexHtml);
         self::assertStringContainsString('Familie (0,92)', $indexHtml);
@@ -312,6 +311,7 @@ final class HtmlFeedExportServiceTest extends TestCase
 
         self::assertNotNull($resultRaw->getIndexFilePath());
         $indexHtmlRaw = file_get_contents($resultRaw->getIndexFilePath());
+        self::assertIsString($indexHtmlRaw);
         self::assertStringContainsString('stage-nav__item is-active"><a href="#stage-raw"', $indexHtmlRaw);
     }
 

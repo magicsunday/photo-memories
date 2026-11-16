@@ -111,7 +111,7 @@ final class CompositeMetadataExtractorClusterFieldsTest extends TestCase
         try {
             $processed = $composite->extract($imagePath, $media);
 
-            $this->assertSame($media, $processed);
+            self::assertSame($media, $processed);
 
             $distanceKm = MediaMath::haversineDistanceInMeters(
                 $homeLat,

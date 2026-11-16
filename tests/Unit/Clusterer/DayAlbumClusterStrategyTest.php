@@ -13,7 +13,6 @@ namespace MagicSunday\Memories\Test\Unit\Clusterer;
 
 use DateTimeImmutable;
 use DateTimeZone;
-use MagicSunday\Memories\Clusterer\ClusterDraft;
 use MagicSunday\Memories\Clusterer\Context;
 use MagicSunday\Memories\Clusterer\DayAlbumClusterStrategy;
 use MagicSunday\Memories\Clusterer\Support\ClusterQualityAggregator;
@@ -62,7 +61,6 @@ final class DayAlbumClusterStrategyTest extends TestCase
         self::assertCount(1, $clusters);
         $cluster = $clusters[0];
 
-        self::assertInstanceOf(ClusterDraft::class, $cluster);
         self::assertSame('day_album', $cluster->getAlgorithm());
         self::assertSame([101, 102], $cluster->getMembers());
 
@@ -77,6 +75,7 @@ final class DayAlbumClusterStrategyTest extends TestCase
         self::assertArrayHasKey('scene_tags', $params);
         self::assertArrayHasKey('keywords', $params);
         $sceneTags = $params['scene_tags'];
+        self::assertIsArray($sceneTags);
         self::assertCount(3, $sceneTags);
         self::assertSame('Strand', $sceneTags[0]['label']);
         self::assertEqualsWithDelta(0.9, $sceneTags[0]['score'], 0.0001);

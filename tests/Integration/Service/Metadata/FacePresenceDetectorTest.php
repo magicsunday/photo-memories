@@ -22,7 +22,6 @@ use PHPUnit\Framework\Attributes\Test;
 use function chmod;
 use function file_put_contents;
 use function is_file;
-use function is_string;
 use function sys_get_temp_dir;
 use function tempnam;
 use function unlink;
@@ -68,8 +67,7 @@ final class FacePresenceDetectorTest extends TestCase
             self::assertSame(1, $media->getFacesCount());
 
             $posterPath = $backend->lastPath;
-            self::assertNotNull($posterPath);
-            self::assertTrue(is_string($posterPath));
+            self::assertIsString($posterPath);
             self::assertNotSame($videoPath, $posterPath);
             self::assertFalse(is_file($posterPath));
         } finally {

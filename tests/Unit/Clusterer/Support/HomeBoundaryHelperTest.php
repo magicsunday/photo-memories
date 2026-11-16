@@ -47,6 +47,8 @@ final class HomeBoundaryHelperTest extends TestCase
         $active = HomeBoundaryHelper::centers($home, 150);
 
         self::assertCount(1, $active);
+        self::assertArrayHasKey('valid_from', $active[0]);
+        self::assertArrayHasKey('valid_until', $active[0]);
         self::assertSame(100, $active[0]['valid_from']);
         self::assertSame(200, $active[0]['valid_until']);
 

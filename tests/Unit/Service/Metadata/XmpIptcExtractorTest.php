@@ -32,7 +32,6 @@ final class XmpIptcExtractorTest extends TestCase
         $path = tempnam(sys_get_temp_dir(), 'mem-xmp-');
         self::assertIsString($path);
 
-        /** @var string $path */
         file_put_contents($path, 'fake-image');
         file_put_contents(
             $path . '.xmp',
@@ -95,7 +94,6 @@ XML
         $path = tempnam(sys_get_temp_dir(), 'mem-xmp-');
         self::assertIsString($path);
 
-        /** @var string $path */
         file_put_contents($path, 'fake-image');
         file_put_contents(
             $path . '.xmp',

@@ -104,7 +104,6 @@ final class IndexCommandTest extends TestCase
                 self::assertFalse($dryRun);
                 self::assertFalse($withThumbnails);
                 self::assertFalse($strictMime);
-                self::assertInstanceOf(OutputInterface::class, $output);
 
                 if ($callCount === 1) {
                     self::assertSame($fileOne, $file);

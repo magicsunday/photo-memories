@@ -13,7 +13,6 @@ namespace MagicSunday\Memories\Test\Unit\Clusterer;
 
 use DateTimeImmutable;
 use DateTimeZone;
-use MagicSunday\Memories\Clusterer\ClusterDraft;
 use MagicSunday\Memories\Clusterer\Context;
 use MagicSunday\Memories\Clusterer\DeviceSimilarityStrategy;
 use MagicSunday\Memories\Clusterer\Support\ClusterQualityAggregator;
@@ -58,7 +57,6 @@ final class DeviceSimilarityStrategyTest extends TestCase
         self::assertCount(1, $clusters);
         $cluster = $clusters[0];
 
-        self::assertInstanceOf(ClusterDraft::class, $cluster);
         self::assertSame('device_similarity', $cluster->getAlgorithm());
         self::assertSame([301, 302, 303], $cluster->getMembers());
 
@@ -229,8 +227,9 @@ final class DeviceSimilarityStrategyTest extends TestCase
         $serialByDevice  = [];
 
         foreach ($clusters as $cluster) {
-            $params                        = $cluster->getParams();
-            $deviceLabel                   = $params['device'];
+            $params      = $cluster->getParams();
+            $deviceLabel = $params['device'];
+            self::assertIsString($deviceLabel);
             $membersByDevice[$deviceLabel] = $cluster->getMembers();
             $ownersByDevice[$deviceLabel]  = $params['device_owner'] ?? null;
             $serialByDevice[$deviceLabel]  = $params['device_serial'] ?? null;

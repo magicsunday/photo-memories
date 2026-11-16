@@ -216,7 +216,9 @@ final class SlideshowVideoManagerTest extends TestCase
             $storyboardPath = $baseDir . '/storyboards/memory-dry/storyboard.json';
             self::assertFileExists($storyboardPath);
 
-            $payload = json_decode(file_get_contents($storyboardPath), true, 512, JSON_THROW_ON_ERROR);
+            $storyboardJson = file_get_contents($storyboardPath);
+            self::assertIsString($storyboardJson);
+            $payload = json_decode($storyboardJson, true, 512, JSON_THROW_ON_ERROR);
 
             self::assertSame('memory-dry', $payload['id']);
             self::assertSame('Titel', $payload['title']);

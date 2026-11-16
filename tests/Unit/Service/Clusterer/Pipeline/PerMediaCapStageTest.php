@@ -19,6 +19,8 @@ use MagicSunday\Memories\Test\Unit\Clusterer\Fixtures\RecordingMonitoringEmitter
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\Test;
 
+use function preg_quote;
+
 #[CoversClass(PerMediaCapStage::class)]
 final class PerMediaCapStageTest extends TestCase
 {
@@ -211,7 +213,7 @@ final class PerMediaCapStageTest extends TestCase
         self::assertSame(1, $stage->getPerMediaCap());
 
         $this->expectException(InvalidArgumentException::class);
-        $this->expectExceptionMessage('Per-media cap must be greater than or equal to 0.');
+        $this->expectExceptionMessageMatches('/' . preg_quote('Per-media cap must be greater than or equal to 0.', '/') . '/');
         $stage->setPerMediaCapOverride(-1);
     }
 

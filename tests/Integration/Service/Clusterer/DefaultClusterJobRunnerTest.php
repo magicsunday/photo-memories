@@ -19,6 +19,7 @@ use Doctrine\ORM\ORMSetup;
 use Doctrine\ORM\Query;
 use Doctrine\ORM\QueryBuilder;
 use Doctrine\ORM\Tools\SchemaTool;
+use LogicException;
 use MagicSunday\Memories\Clusterer\ClusterDraft;
 use MagicSunday\Memories\Entity\Cluster;
 use MagicSunday\Memories\Entity\ClusterMember;
@@ -45,6 +46,7 @@ use MagicSunday\Memories\Test\TestCase;
 use Override;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\Test;
+use PHPUnit\Framework\MockObject\Stub;
 use RuntimeException;
 use Symfony\Component\Yaml\Yaml;
 
@@ -181,12 +183,12 @@ final class DefaultClusterJobRunnerTest extends TestCase
         $entityManager->persist($mediaTwo);
         $entityManager->flush();
 
-        $existingCluster = new Cluster('story', 'legacy', [], ['lat' => 0.0, 'lon' => 0.0], [$mediaOne->getId()]);
+        $existingCluster = new Cluster('story', 'legacy', [], ['lat' => 0.0, 'lon' => 0.0], [self::mediaId($mediaOne)]);
         $entityManager->persist($existingCluster);
         $entityManager->flush();
 
         $clusterer = new SequenceHybridClusterer([
-            new ClusterDraft('replacement', [], ['lat' => 1.0, 'lon' => 1.0], [$mediaOne->getId(), $mediaTwo->getId()]),
+            new ClusterDraft('replacement', [], ['lat' => 1.0, 'lon' => 1.0], [self::mediaId($mediaOne), self::mediaId($mediaTwo)]),
         ]);
         $consolidator = new PassthroughClusterConsolidator();
 
@@ -259,7 +261,7 @@ final class DefaultClusterJobRunnerTest extends TestCase
                     ],
                 ],
                 ['lat' => 10.0, 'lon' => 20.0],
-                [$mediaOne->getId(), $mediaTwo->getId()],
+                [self::mediaId($mediaOne), self::mediaId($mediaTwo)],
                 'sunny-days',
             ),
         ]);
@@ -299,8 +301,8 @@ final class DefaultClusterJobRunnerTest extends TestCase
         self::assertSame(2, $summary->getMemberCount());
         self::assertSame(0.95, $summary->getScore());
         self::assertNotNull($summary->getTimeRange());
-        self::assertSame($start->getTimestamp(), $summary->getTimeRange()?->getFrom()->getTimestamp());
-        self::assertSame($end->getTimestamp(), $summary->getTimeRange()?->getTo()->getTimestamp());
+        self::assertSame($start->getTimestamp(), $summary->getTimeRange()->getFrom()->getTimestamp());
+        self::assertSame($end->getTimestamp(), $summary->getTimeRange()->getTo()->getTimestamp());
     }
 
     #[Test]
@@ -341,7 +343,7 @@ final class DefaultClusterJobRunnerTest extends TestCase
                     ],
                 ],
                 ['lat' => 0.0, 'lon' => 0.0],
-                [$mediaA->getId()],
+                [self::mediaId($mediaA)],
                 'top-story',
             ),
             new ClusterDraft(
@@ -354,7 +356,7 @@ final class DefaultClusterJobRunnerTest extends TestCase
                     ],
                 ],
                 ['lat' => 1.0, 'lon' => 1.0],
-                [$mediaB->getId()],
+                [self::mediaId($mediaB)],
                 'backup-story',
             ),
         ]);
@@ -464,7 +466,7 @@ final class DefaultClusterJobRunnerTest extends TestCase
     /**
      * @param list<non-empty-string> $methods
      */
-    private function createQueryBuilderStub(array $methods): QueryBuilder
+    private function createQueryBuilderStub(array $methods): QueryBuilder&Stub
     {
         $qb = self::getStubBuilder(QueryBuilder::class)
             ->disableOriginalConstructor()
@@ -483,9 +485,6 @@ final class DefaultClusterJobRunnerTest extends TestCase
     }
 }
 
-/**
- * @implements HybridClustererInterface
- */
 final readonly class SequenceHybridClusterer implements HybridClustererInterface
 {
     /**
@@ -602,12 +601,18 @@ final class InMemoryMemberMediaLookup implements MemberMediaLookupInterface
     public function __construct(array $media)
     {
         foreach ($media as $item) {
-            $this->mediaById[$item->getId()] = $item;
+            $id = $item->getId();
+
+            if ($id === null) {
+                throw new LogicException('The media fixture has no identifier.');
+            }
+
+            $this->mediaById[$id] = $item;
         }
     }
 
     /**
-     * @return Media[]
+     * @return list<Media>
      */
     public function findByIds(array $ids, bool $onlyVideos = false): array
     {

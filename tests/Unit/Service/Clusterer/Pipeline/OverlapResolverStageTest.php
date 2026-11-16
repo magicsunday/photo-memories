@@ -131,9 +131,11 @@ final class OverlapResolverStageTest extends TestCase
         self::assertSame([10, 11, 12, 13], $merged->getMembers());
 
         $params = $merged->getParams();
+        self::assertIsArray($params['time_range']);
         self::assertSame(1_000, $params['time_range']['from']);
         self::assertSame(3_800, $params['time_range']['to']);
         self::assertArrayHasKey('member_selection', $params);
+        self::assertIsArray($params['member_selection']);
         self::assertCount(3, $params['member_selection']['hash_samples']);
 
         $merges = $params['meta']['merges'] ?? [];
@@ -287,6 +289,10 @@ final class OverlapResolverStageTest extends TestCase
         );
     }
 
+    /**
+     * @param list<string> $winnerCore
+     * @param list<string> $loserCore
+     */
     #[Test]
     #[DataProvider('coreSimilarityBoundaryProvider')]
     public function resolvesBasedOnCoreSimilarityBoundaries(
@@ -623,6 +629,9 @@ final class OverlapResolverStageTest extends TestCase
         $this->assertTelemetryForBoundary($emitter);
     }
 
+    /**
+     * @return array<string, mixed>
+     */
     private function extractLatestMergeEntry(ClusterDraft $draft): array
     {
         $params = $draft->getParams();
@@ -640,8 +649,10 @@ final class OverlapResolverStageTest extends TestCase
     }
 
     /**
-     * @param int[] $primaryMembers
-     * @param int[] $secondaryMembers
+     * @param list<int> $primaryMembers
+     * @param list<int> $secondaryMembers
+     *
+     * @return list<int>
      */
     private function expectedMergedMembers(array $primaryMembers, array $secondaryMembers): array
     {
@@ -728,7 +739,8 @@ final class OverlapResolverStageTest extends TestCase
     }
 
     /**
-     * @param list<int> $members
+     * @param list<int>                                              $members
+     * @param array<string, int|float|string|bool|array<mixed>|null> $extraParams
      */
     private function createDraft(
         string $algorithm,
