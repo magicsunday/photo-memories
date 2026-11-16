@@ -113,13 +113,13 @@ final readonly class MemoryDatasetLoader
             throw new InvalidArgumentException(sprintf('Dataset "%s" storyboard transitions must be an array.', $dataset));
         }
 
-        $transitions = array_map(static function ($value): string {
+        $transitions = array_values(array_map(static function ($value): string {
             if (!is_string($value) || $value === '') {
                 throw new InvalidArgumentException('Storyboard transitions must be non-empty strings.');
             }
 
             return $value;
-        }, $transitions);
+        }, $transitions));
 
         $clusters = $metadata['clusters'] ?? [];
 

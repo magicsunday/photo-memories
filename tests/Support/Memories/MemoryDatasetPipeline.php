@@ -186,7 +186,7 @@ final class MemoryDatasetPipeline
 
             $missingDates = array_values(array_diff($expectedDays, $daysPresent));
 
-            $clusterKeyPhotos[$clusterId] = $keyCandidate['filename'] ?? ($highlights[0] ?? $items[0]['filename']);
+            $clusterKeyPhotos[$clusterId] = $keyCandidate['filename'];
 
             $clusters[] = [
                 'id'           => $clusterId,
