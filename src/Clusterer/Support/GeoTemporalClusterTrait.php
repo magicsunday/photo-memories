@@ -151,7 +151,7 @@ trait GeoTemporalClusterTrait
 
                 foreach ($windows as $windowMembers) {
                     foreach ($windowMembers as $member) {
-                        $clusteredIds[$member->getId()] = true;
+                        $clusteredIds[(int) $member->getId()] = true;
                     }
 
                     $buckets[] = $windowMembers;
@@ -163,7 +163,7 @@ trait GeoTemporalClusterTrait
         $leftoverGps = [];
 
         foreach ($timestamped as $media) {
-            if (isset($clusteredIds[$media->getId()])) {
+            if (isset($clusteredIds[(int) $media->getId()])) {
                 continue;
             }
 
@@ -189,7 +189,7 @@ trait GeoTemporalClusterTrait
 
             foreach ($fallback as $windowMembers) {
                 foreach ($windowMembers as $member) {
-                    $clusteredIds[$member->getId()] = true;
+                    $clusteredIds[(int) $member->getId()] = true;
                 }
 
                 $buckets[] = $windowMembers;
@@ -204,7 +204,7 @@ trait GeoTemporalClusterTrait
                 continue;
             }
 
-            if (isset($clusteredIds[$media->getId()])) {
+            if (isset($clusteredIds[(int) $media->getId()])) {
                 continue;
             }
 

@@ -19,7 +19,6 @@ use function function_exists;
 use function imagecolorat;
 use function imagecolorsforindex;
 use function imagecreatefromstring;
-use function imagedestroy;
 use function imageistruecolor;
 use function imagescale;
 use function imagesx;
@@ -197,7 +196,6 @@ final readonly class DeterministicImageQualityEstimator implements ImageQualityE
             );
 
             if ($scaled !== false) {
-                imagedestroy($resource);
                 $resource = $scaled;
                 $width    = imagesx($resource);
                 $height   = imagesy($resource);
@@ -234,8 +232,6 @@ final readonly class DeterministicImageQualityEstimator implements ImageQualityE
 
             $matrix[] = $row;
         }
-
-        imagedestroy($resource);
 
         return [$matrix, $width, $height];
     }

@@ -657,8 +657,8 @@ final class VacationClusterStrategyTest extends TestCase
                         $media->setTimezoneOffsetMin(120);
                     }
                 );
-                $vacationDayById[$media->getId()] = $dayIndex;
-                $items[]                          = $media;
+                $vacationDayById[(int) $media->getId()] = $dayIndex;
+                $items[]                                = $media;
             }
 
             $nightTimestamp = $dayStart->setTime(23, 30, 0);
@@ -673,8 +673,8 @@ final class VacationClusterStrategyTest extends TestCase
                     $media->setTimezoneOffsetMin(120);
                 }
             );
-            $vacationDayById[$nightMedia->getId()] = $dayIndex;
-            $items[]                               = $nightMedia;
+            $vacationDayById[(int) $nightMedia->getId()] = $dayIndex;
+            $items[]                                     = $nightMedia;
         }
 
         $clusters = $strategy->draft($items, Context::fromScope($items));

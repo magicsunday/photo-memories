@@ -22,7 +22,7 @@ use MagicSunday\Memories\Entity\Location;
 use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Entity\MediaDuplicate;
 use MagicSunday\Memories\Entity\Memory;
-use PDO;
+use Pdo\Mysql;
 use Throwable;
 
 use function class_exists;
@@ -55,7 +55,7 @@ final class EntityManagerFactory
             'dbname'        => $dbname === false ? 'memories' : $dbname,
             'charset'       => 'utf8mb4',
             'driverOptions' => [
-                PDO::MYSQL_ATTR_INIT_COMMAND => "SET NAMES utf8mb4 COLLATE utf8mb4_unicode_ci, time_zone = '+00:00'",
+                Mysql::ATTR_INIT_COMMAND => "SET NAMES utf8mb4 COLLATE utf8mb4_unicode_ci, time_zone = '+00:00'",
             ],
         ];
 

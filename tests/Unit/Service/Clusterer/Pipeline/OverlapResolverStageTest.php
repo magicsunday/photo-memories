@@ -643,7 +643,7 @@ final class OverlapResolverStageTest extends TestCase
         self::assertNotSame([], $merges);
 
         /** @var array<string, mixed> $entry */
-        $entry = $merges[array_key_last($merges)];
+        $entry = array_last($merges);
 
         return $entry;
     }

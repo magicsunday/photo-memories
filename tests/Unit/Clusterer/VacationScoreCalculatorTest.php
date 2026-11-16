@@ -2088,7 +2088,7 @@ final class VacationScoreCalculatorTest extends TestCase
             $dayKeys[] = $dayKey;
 
             foreach ($members as $member) {
-                $mediaIndex[$member->getId()] = $member;
+                $mediaIndex[(int) $member->getId()] = $member;
             }
 
             $days[$dayKey] = $this->makeDaySummary(

@@ -21,7 +21,6 @@ use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\Test;
 
 use function array_filter;
-use function array_key_last;
 use function array_values;
 use function str_starts_with;
 
@@ -159,7 +158,7 @@ final class SeasonOverYearsClusterStrategyTest extends TestCase
         self::assertGreaterThan(0, $groupingUpdates[0]['done']);
         self::assertGreaterThan($groupingUpdates[0]['done'], $groupingUpdates[0]['max']);
 
-        $finalUpdate = $updates[array_key_last($updates)];
+        $finalUpdate = array_last($updates);
         self::assertTrue(str_starts_with($finalUpdate['stage'], 'Abgeschlossen'));
         self::assertSame($finalUpdate['max'], $finalUpdate['done']);
     }

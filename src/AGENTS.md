@@ -5,7 +5,7 @@
 - Keep services cohesive; prefer composition. Update the matching YAML definitions when adding new classes.
 
 ## Setup & env
-- Ensure PHP ≥8.4 with required extensions is available. Run `composer install` before executing or testing code.
+- Ensure PHP ≥8.5 with required extensions is available. Run `composer install` before executing or testing code.
 - Runtime parameters resolve from `%env()%` placeholders configured in `config/parameters.yaml`. Update defaults there and document new env vars in `docs/`.
 - If DI updates do not take effect, delete `var/cache/DependencyContainer.php` to rebuild the container.
 

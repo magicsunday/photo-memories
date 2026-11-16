@@ -475,7 +475,7 @@ final class DefaultCoverPicker implements CoverPickerInterface
      */
     private function qualityScore(Media $media, array $meta, float $areaMp): float
     {
-        $detail = $meta['members'][$media->getId()] ?? null;
+        $detail = $meta['members'][(int) $media->getId()] ?? null;
 
         $score = $media->getQualityScore();
 
@@ -511,7 +511,7 @@ final class DefaultCoverPicker implements CoverPickerInterface
      */
     private function aestheticScore(Media $media, array $meta): float
     {
-        $detail = $meta['members'][$media->getId()] ?? null;
+        $detail = $meta['members'][(int) $media->getId()] ?? null;
         $score  = null;
 
         if ($detail !== null && isset($detail['aesthetics'])) {
@@ -771,7 +771,7 @@ final class DefaultCoverPicker implements CoverPickerInterface
     {
         $penalty = 0.0;
 
-        $detail = $meta['members'][$media->getId()] ?? null;
+        $detail = $meta['members'][(int) $media->getId()] ?? null;
 
         if ($detail !== null && isset($detail['penalty'])) {
             $penalty = max($penalty, $detail['penalty']);

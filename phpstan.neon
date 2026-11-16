@@ -11,9 +11,9 @@ parameters:
     level: 8
 
     # Analyse against the project's supported PHP version (composer requires
-    # ">=8.4.0 <8.5.0"), not the newer runtime the buildbox happens to ship, so
+    # ">=8.5.0 <8.6.0"), not whatever newer runtime the buildbox happens to ship, so
     # deprecations that only apply to a later PHP release are not reported.
-    phpVersion: 80400
+    phpVersion: 80500
 
     tmpDir: %currentWorkingDirectory%/.build/cache/.phpstan.cache
 

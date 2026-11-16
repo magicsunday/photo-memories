@@ -25,7 +25,6 @@ use Throwable;
 use function file_put_contents;
 use function filesize;
 use function imagecreatetruecolor;
-use function imagedestroy;
 use function imagefilledrectangle;
 use function imagepng;
 use function is_file;
@@ -222,11 +221,8 @@ final class VisionSignatureExtractorTest extends TestCase
         imagefilledrectangle($image, 0, 0, $width - 1, $height - 1, $color);
 
         if (!imagepng($image, $path)) {
-            imagedestroy($image);
             self::fail('Unable to write image fixture.');
         }
-
-        imagedestroy($image);
 
         return $path;
     }
@@ -247,11 +243,8 @@ final class VisionSignatureExtractorTest extends TestCase
         imagefilledrectangle($image, 0, 0, 7, 7, $red);
 
         if (!imagepng($image, $path)) {
-            imagedestroy($image);
             self::fail('Unable to write saturated image fixture.');
         }
-
-        imagedestroy($image);
 
         return $path;
     }

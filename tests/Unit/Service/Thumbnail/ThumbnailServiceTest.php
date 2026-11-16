@@ -202,7 +202,6 @@ namespace MagicSunday\Memories\Test\Unit\Service\Thumbnail {
             $color      = self::allocateGdColor($image, 120, 130, 140);
             imagefilledrectangle($image, 0, 0, 399, 299, $color);
             imagejpeg($image, $sourcePath);
-            imagedestroy($image);
 
             $media = new Media($sourcePath, hash('sha256', 'source'), 1024);
             $media->setMime('image/jpeg');
@@ -315,7 +314,6 @@ namespace MagicSunday\Memories\Test\Unit\Service\Thumbnail {
             $color      = self::allocateGdColor($image, 30, 40, 50);
             imagefilledrectangle($image, 0, 0, 119, 79, $color);
             imagejpeg($image, $sourcePath);
-            imagedestroy($image);
 
             $media = new Media($sourcePath, hash('sha256', 'imagick-fallback'), 1024);
             $media->setMime('image/jpeg');
@@ -398,7 +396,6 @@ namespace MagicSunday\Memories\Test\Unit\Service\Thumbnail {
             $color      = self::allocateGdColor($image, 120, 130, 140);
             imagefilledrectangle($image, 0, 0, 159, 119, $color);
             imagejpeg($image, $sourcePath);
-            imagedestroy($image);
 
             $media = new Media($sourcePath, hash('sha256', 'heic-source'), 2048);
             $media->setMime('image/heic');
@@ -491,7 +488,6 @@ namespace MagicSunday\Memories\Test\Unit\Service\Thumbnail {
             $color      = self::allocateGdColor($image, 120, 130, 140);
             imagefilledrectangle($image, 0, 0, 149, 99, $color);
             imagejpeg($image, $sourcePath);
-            imagedestroy($image);
 
             $media = new Media($sourcePath, hash('sha256', 'no-upscale'), 1024);
             $media->setMime('image/jpeg');
@@ -558,7 +554,6 @@ namespace MagicSunday\Memories\Test\Unit\Service\Thumbnail {
             $color      = self::allocateGdColor($image, 50, 60, 70);
             imagefilledrectangle($image, 0, 0, 399, 199, $color);
             imagejpeg($image, $sourcePath);
-            imagedestroy($image);
 
             $media    = new Media($sourcePath, hash('sha256', 'source'), 1024);
             $service  = new ThumbnailService($thumbnailDir, [200]);
@@ -618,7 +613,6 @@ namespace MagicSunday\Memories\Test\Unit\Service\Thumbnail {
             $color      = self::allocateGdColor($image, 10, 20, 30);
             imagefilledrectangle($image, 0, 0, 79, 59, $color);
             imagejpeg($image, $sourcePath);
-            imagedestroy($image);
 
             $media   = new Media($sourcePath, hash('sha256', 'gd-loader-source'), 2048);
             $service = new ThumbnailService($thumbnailDir, [60]);
@@ -686,7 +680,6 @@ namespace MagicSunday\Memories\Test\Unit\Service\Thumbnail {
             $color      = self::allocateGdColor($image, 90, 100, 110);
             imagefilledrectangle($image, 0, 0, 79, 59, $color);
             imagejpeg($image, $sourcePath);
-            imagedestroy($image);
 
             $media   = new Media($sourcePath, hash('sha256', 'gd-loader-fallback'), 4096);
             $service = new ThumbnailService($thumbnailDir, [60]);
@@ -763,7 +756,6 @@ namespace MagicSunday\Memories\Test\Unit\Service\Thumbnail {
                 $color = self::allocateGdColor($image, 100, 150, 200);
                 imagefilledrectangle($image, 0, 0, 399, 199, $color);
                 imagejpeg($image, $sourcePath);
-                imagedestroy($image);
             }
 
             $sizes = [120, 240];
@@ -934,13 +926,11 @@ namespace MagicSunday\Memories\Test\Unit\Service\Thumbnail {
                 $color = self::allocateGdColor($image, 80, 120, 160);
                 imagefilledrectangle($image, 0, 0, 299, 199, $color);
                 imagejpeg($image, $firstSource);
-                imagedestroy($image);
 
                 $image = imagecreatetruecolor(200, 300);
                 $color = self::allocateGdColor($image, 60, 180, 90);
                 imagefilledrectangle($image, 0, 0, 199, 299, $color);
                 imagejpeg($image, $secondSource);
-                imagedestroy($image);
             }
 
             $service = new ThumbnailService($thumbnailDir, [200]);
@@ -1080,7 +1070,6 @@ namespace MagicSunday\Memories\Test\Unit\Service\Thumbnail {
             $color      = self::allocateGdColor($image, 200, 100, 50);
             imagefilledrectangle($image, 0, 0, 399, 199, $color);
             imagejpeg($image, $sourcePath);
-            imagedestroy($image);
 
             $media = new Media($sourcePath, hash('sha256', 'source'), 1024);
             $media->setOrientation(6);
@@ -1143,7 +1132,6 @@ namespace MagicSunday\Memories\Test\Unit\Service\Thumbnail {
             $color      = self::allocateGdColor($image, 50, 150, 200);
             imagefilledrectangle($image, 0, 0, 199, 199, $color);
             imagejpeg($image, $sourcePath);
-            imagedestroy($image);
 
             $media = new Media($sourcePath, hash('sha256', 'source'), 1024);
 
@@ -1219,7 +1207,6 @@ namespace MagicSunday\Memories\Test\Unit\Service\Thumbnail {
             imagefilledellipse($image, 30, 30, 20, 20, $opaque);
 
             $webpResult = imagewebp($image, $sourcePath, 100);
-            imagedestroy($image);
 
             if ($webpResult === false) {
                 self::fail('Unable to create WebP source image.');
@@ -1278,8 +1265,6 @@ namespace MagicSunday\Memories\Test\Unit\Service\Thumbnail {
                     self::assertNotFalse($centerColorIndex);
                     $centerColor = imagecolorsforindex($thumbnailImage, $centerColorIndex);
                     self::assertLessThanOrEqual(80, $centerColor['red']);
-
-                    imagedestroy($thumbnailImage);
                 }
             } finally {
                 foreach ($thumbnails as $file) {
@@ -1359,16 +1344,10 @@ namespace MagicSunday\Memories\Test\Unit\Service\Thumbnail {
         private function assertOrientationWithGd(OrientationThumbnailServiceStub $service, int $orientation, array $storedLayout, array $expectedLayout): void
         {
             $image    = $this->createGdImageFromLayout($storedLayout);
-            $oriented = $image;
+            $oriented = $service->orientGdImage($image, $orientation);
+            $actual   = $this->extractLayoutFromGdImage($oriented);
 
-            try {
-                $oriented = $service->orientGdImage($image, $orientation);
-                $actual   = $this->extractLayoutFromGdImage($oriented);
-
-                $this->assertLayoutEquals($expectedLayout, $actual, 'GD');
-            } finally {
-                imagedestroy($oriented);
-            }
+            $this->assertLayoutEquals($expectedLayout, $actual, 'GD');
         }
 
         /**
@@ -1568,13 +1547,7 @@ namespace MagicSunday\Memories\Test\Unit\Service\Thumbnail {
                     $colorComponents = $this->hexToRgb($layout[$y][$x]);
                     $colorResource   = self::allocateGdColor($image, $colorComponents['r'], $colorComponents['g'], $colorComponents['b']);
 
-                    $setPixelResult = imagesetpixel($image, $x, $y, $colorResource);
-
-                    if ($setPixelResult === false) {
-                        imagedestroy($image);
-
-                        self::fail('Unable to set GD pixel color for orientation layout.');
-                    }
+                    imagesetpixel($image, $x, $y, $colorResource);
                 }
             }
 

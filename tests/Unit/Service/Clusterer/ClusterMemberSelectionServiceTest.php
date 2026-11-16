@@ -251,7 +251,7 @@ final class ClusterMemberSelectionServiceTest extends TestCase
                 $map = [];
 
                 foreach ($this->media as $item) {
-                    $map[$item->getId()] = $item;
+                    $map[(int) $item->getId()] = $item;
                 }
 
                 $result = [];
@@ -289,7 +289,7 @@ final class ClusterMemberSelectionServiceTest extends TestCase
         $service->curate($draft);
 
         self::assertNotEmpty($emitter->events);
-        $event = $emitter->events[array_key_last($emitter->events)];
+        $event = array_last($emitter->events);
         self::assertSame('cluster_member_selection', $event['job']);
         self::assertSame('completed', $event['status']);
 

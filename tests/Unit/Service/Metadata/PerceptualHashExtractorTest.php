@@ -26,7 +26,6 @@ use function file_get_contents;
 use function file_put_contents;
 use function imagecreatefromjpeg;
 use function imagecreatetruecolor;
-use function imagedestroy;
 use function imagefilledrectangle;
 use function imagejpeg;
 use function imagerotate;
@@ -233,11 +232,8 @@ final class PerceptualHashExtractorTest extends TestCase
         }
 
         if (!imagejpeg($image, $path, 90)) {
-            imagedestroy($image);
             self::fail('Unable to write gradient image.');
         }
-
-        imagedestroy($image);
 
         return $path;
     }
@@ -266,7 +262,6 @@ final class PerceptualHashExtractorTest extends TestCase
         }
 
         $rotated = @imagerotate($image, $degrees, 0);
-        imagedestroy($image);
 
         if ($rotated === false) {
             self::fail('Unable to rotate image.');
@@ -275,7 +270,6 @@ final class PerceptualHashExtractorTest extends TestCase
         $base = tempnam(sys_get_temp_dir(), 'rot_');
 
         if ($base === false) {
-            imagedestroy($rotated);
             self::fail('Unable to create temporary rotated image.');
         }
 
@@ -283,11 +277,8 @@ final class PerceptualHashExtractorTest extends TestCase
         unlink($base);
 
         if (!imagejpeg($rotated, $path, 90)) {
-            imagedestroy($rotated);
             self::fail('Unable to write rotated image.');
         }
-
-        imagedestroy($rotated);
 
         $this->embedExifOrientation($path, $orientation);
 

@@ -770,7 +770,7 @@ final readonly class ClusterPersistenceService implements ClusterPersistenceInte
         $map = [];
 
         foreach ($loaded as $media) {
-            $map[$media->getId()] = $media;
+            $map[(int) $media->getId()] = $media;
         }
 
         $ordered = [];

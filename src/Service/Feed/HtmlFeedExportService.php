@@ -386,8 +386,8 @@ final readonly class HtmlFeedExportService implements FeedExportServiceInterface
         ));
 
         usort($members, static function (Media $a, Media $b) use ($order): int {
-            $posA = $order[$a->getId()] ?? PHP_INT_MAX;
-            $posB = $order[$b->getId()] ?? PHP_INT_MAX;
+            $posA = $order[(int) $a->getId()] ?? PHP_INT_MAX;
+            $posB = $order[(int) $b->getId()] ?? PHP_INT_MAX;
 
             if ($posA === $posB) {
                 return $a->getId() <=> $b->getId();

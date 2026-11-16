@@ -19,9 +19,26 @@ use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\Attributes\Test;
 use ReflectionMethod;
 
+use function str_repeat;
+
 #[CoversClass(DefaultCoverPicker::class)]
 final class DefaultCoverPickerTest extends TestCase
 {
+    #[Test]
+    public function picksCoverFromMembersThatAreNotPersistedYet(): void
+    {
+        $picker = new DefaultCoverPicker();
+
+        $unsaved = new Media(
+            path: '/fixtures/feed/unsaved.jpg',
+            checksum: str_repeat('a', 64),
+            size: 1024,
+        );
+
+        self::assertNull($unsaved->getId());
+        self::assertSame($unsaved, $picker->pickCover([$unsaved], []));
+    }
+
     #[Test]
     public function rotatedPortraitMatchesUprightPortraitScore(): void
     {

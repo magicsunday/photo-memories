@@ -23,7 +23,6 @@ use function imagecreatefrompng;
 use function imagecreatefromstring;
 use function imagecreatefromwebp;
 use function imagecreatetruecolor;
-use function imagedestroy;
 use function imagesx;
 use function imagesy;
 use function is_file;
@@ -121,7 +120,7 @@ final readonly class GdImageAdapter implements ImageAdapterInterface
 
     public function destroy(): void
     {
-        imagedestroy($this->image);
+        // A GdImage object frees its memory when it goes out of scope, so there is nothing to release.
     }
 
     public function getNative(): GdImage

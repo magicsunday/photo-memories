@@ -192,7 +192,7 @@ final class MemberCurationStageTest extends TestCase
                 $map = [];
 
                 foreach ($this->media as $item) {
-                    $map[$item->getId()] = $item;
+                    $map[(int) $item->getId()] = $item;
                 }
 
                 $result = [];
@@ -315,7 +315,7 @@ final class MemberCurationStageTest extends TestCase
                 $map = [];
 
                 foreach ($this->media as $item) {
-                    $map[$item->getId()] = $item;
+                    $map[(int) $item->getId()] = $item;
                 }
 
                 $result = [];
