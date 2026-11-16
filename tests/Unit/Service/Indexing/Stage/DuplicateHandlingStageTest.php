@@ -206,8 +206,8 @@ final class DuplicateHandlingStageTest extends TestCase
         self::assertNotNull($result->getChecksum());
         self::assertInstanceOf(Media::class, $result->getMedia());
         self::assertSame($checksum, $result->getChecksum());
-        self::assertSame($fastHash, $result->getMedia()?->getFastChecksumXxhash64());
-        self::assertSame('image/jpeg', $result->getMedia()?->getMime());
+        self::assertSame($fastHash, $result->getMedia()->getFastChecksumXxhash64());
+        self::assertSame('image/jpeg', $result->getMedia()->getMime());
     }
 
     #[Test]

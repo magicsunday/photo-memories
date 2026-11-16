@@ -301,8 +301,8 @@ final class DefaultClusterJobRunnerTest extends TestCase
         self::assertSame(2, $summary->getMemberCount());
         self::assertSame(0.95, $summary->getScore());
         self::assertNotNull($summary->getTimeRange());
-        self::assertSame($start->getTimestamp(), $summary->getTimeRange()?->getFrom()->getTimestamp());
-        self::assertSame($end->getTimestamp(), $summary->getTimeRange()?->getTo()->getTimestamp());
+        self::assertSame($start->getTimestamp(), $summary->getTimeRange()->getFrom()->getTimestamp());
+        self::assertSame($end->getTimestamp(), $summary->getTimeRange()->getTo()->getTimestamp());
     }
 
     #[Test]
