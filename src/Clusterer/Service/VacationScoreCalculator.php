@@ -663,15 +663,15 @@ final class VacationScoreCalculator implements VacationScoreCalculatorInterface
         $acceptedSummaries = array_intersect_key($days, array_flip($dayKeys));
 
         if ($dayContext !== []) {
-            foreach ($acceptedSummaries as $dayKey => &$summary) {
+            foreach ($acceptedSummaries as $dayKey => &$acceptedSummary) {
                 $context = $dayContext[$dayKey] ?? null;
 
-                if (is_array($summary) && is_array($context)) {
-                    $summary['selectionContext'] = $context;
+                if (is_array($acceptedSummary) && is_array($context)) {
+                    $acceptedSummary['selectionContext'] = $context;
                 }
             }
 
-            unset($summary);
+            unset($acceptedSummary);
         }
 
         $preSelectionCount = $rawMemberCount;

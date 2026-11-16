@@ -934,11 +934,11 @@ final class PolicyDrivenMemberSelector implements ClusterMemberSelectorInterface
                 break;
             }
 
-            foreach ($evaluations as &$evaluation) {
-                $evaluation['selected'] = $evaluation['id'] === $bestEvaluation['id'];
+            foreach ($evaluations as &$stepEvaluation) {
+                $stepEvaluation['selected'] = $stepEvaluation['id'] === $bestEvaluation['id'];
             }
 
-            unset($evaluation);
+            unset($stepEvaluation);
 
             $iterations[] = [
                 'step'        => $step,
