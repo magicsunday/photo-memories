@@ -1155,19 +1155,19 @@ final class VacationScoreCalculator implements VacationScoreCalculatorInterface
             $params['staypoints'] = $staypointMetadata;
         }
 
-        $placeCityMissing = !isset($params['place_city']) || $params['place_city'] === '';
+        $placeCityMissing = !isset($params['place_city']);
 
         if ($placeCityMissing && $primaryStaypointCity !== null) {
             $params['place_city'] = $primaryStaypointCity;
         }
 
-        $placeRegionMissing = !isset($params['place_region']) || $params['place_region'] === '';
+        $placeRegionMissing = !isset($params['place_region']);
 
         if ($placeRegionMissing && $primaryStaypointRegion !== null) {
             $params['place_region'] = $primaryStaypointRegion;
         }
 
-        $placeCountryMissing = !isset($params['place_country']) || $params['place_country'] === '';
+        $placeCountryMissing = !isset($params['place_country']);
 
         if ($placeCountryMissing && $primaryStaypointCountry !== null) {
             $params['place_country'] = $primaryStaypointCountry;
@@ -1178,19 +1178,19 @@ final class VacationScoreCalculator implements VacationScoreCalculatorInterface
         $resolvedLocationParts = [];
         $resolvedCity          = $params['place_city'] ?? null;
 
-        if (is_string($resolvedCity) && $resolvedCity !== '') {
+        if (is_string($resolvedCity)) {
             $resolvedLocationParts[] = $resolvedCity;
         }
 
         $resolvedRegion = $params['place_region'] ?? null;
 
-        if (is_string($resolvedRegion) && $resolvedRegion !== '' && !in_array($resolvedRegion, $resolvedLocationParts, true)) {
+        if (is_string($resolvedRegion) && !in_array($resolvedRegion, $resolvedLocationParts, true)) {
             $resolvedLocationParts[] = $resolvedRegion;
         }
 
         $resolvedCountry = $params['place_country'] ?? null;
 
-        if (is_string($resolvedCountry) && $resolvedCountry !== '' && !in_array($resolvedCountry, $resolvedLocationParts, true)) {
+        if (is_string($resolvedCountry) && !in_array($resolvedCountry, $resolvedLocationParts, true)) {
             $resolvedLocationParts[] = $resolvedCountry;
         }
 
