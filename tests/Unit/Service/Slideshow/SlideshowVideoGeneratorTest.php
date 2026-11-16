@@ -1454,7 +1454,6 @@ final class SlideshowVideoGeneratorTest extends TestCase
             null,
             null,
             null,
-            null,
         );
 
         $generator = new SlideshowVideoGenerator(
