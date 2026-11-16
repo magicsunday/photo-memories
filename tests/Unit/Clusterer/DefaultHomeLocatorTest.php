@@ -22,6 +22,8 @@ use MagicSunday\Memories\Test\TestCase;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\Test;
 
+use function preg_quote;
+
 #[CoversClass(DefaultHomeLocator::class)]
 final class DefaultHomeLocatorTest extends TestCase
 {
@@ -53,7 +55,7 @@ final class DefaultHomeLocatorTest extends TestCase
         self::assertSame(8.0, $home['radius_km']);
         self::assertSame('de', $home['country']);
         self::assertIsInt($home['timezone_offset']);
-        self::assertSame(1, count($home['centers']));
+        self::assertCount(1, $home['centers']);
         self::assertEqualsWithDelta(8.0, $home['centers'][0]['radius_km'], 0.0001);
         self::assertArrayHasKey('valid_from', $home['centers'][0]);
         self::assertArrayHasKey('valid_until', $home['centers'][0]);
@@ -333,7 +335,7 @@ final class DefaultHomeLocatorTest extends TestCase
     public function throwsWhenHomeCoordinatesAreIncomplete(): void
     {
         $this->expectException(InvalidArgumentException::class);
-        $this->expectExceptionMessage('homeLat and homeLon must either both be provided or both be null.');
+        $this->expectExceptionMessageMatches('/' . preg_quote('homeLat and homeLon must either both be provided or both be null.', '/') . '/');
 
         new DefaultHomeLocator(
             timezone: 'Europe/Berlin',

@@ -20,7 +20,6 @@ use MagicSunday\Memories\Repository\MediaRepository;
 use MagicSunday\Memories\Service\Clusterer\Contract\ClusterConsolidatorInterface;
 use MagicSunday\Memories\Service\Feed\FeedBuilderInterface;
 use MagicSunday\Memories\Service\Feed\FeedExportRequest;
-use MagicSunday\Memories\Service\Feed\FeedExportResult;
 use MagicSunday\Memories\Service\Feed\FeedExportStage;
 use MagicSunday\Memories\Service\Feed\FeedPersonalizationProfile;
 use MagicSunday\Memories\Service\Feed\FeedVisibilityFilter;
@@ -124,7 +123,6 @@ final class HtmlFeedExportServiceTest extends TestCase
 
         $result = $service->export($request, $io);
 
-        self::assertInstanceOf(FeedExportResult::class, $result);
         self::assertFalse($result->hasIndexFile());
         self::assertSame($request->resolveOutputDirectory(), $result->getOutputDirectory());
         self::assertSame($request->resolveImageDirectory(), $result->getImageDirectory());

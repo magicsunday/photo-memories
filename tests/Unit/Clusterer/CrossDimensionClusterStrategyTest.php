@@ -13,7 +13,6 @@ namespace MagicSunday\Memories\Test\Unit\Clusterer;
 
 use DateTimeImmutable;
 use DateTimeZone;
-use MagicSunday\Memories\Clusterer\ClusterDraft;
 use MagicSunday\Memories\Clusterer\Context;
 use MagicSunday\Memories\Clusterer\CrossDimensionClusterStrategy;
 use MagicSunday\Memories\Entity\Media;
@@ -47,7 +46,6 @@ final class CrossDimensionClusterStrategyTest extends TestCase
         self::assertCount(1, $clusters);
         $cluster = $clusters[0];
 
-        self::assertInstanceOf(ClusterDraft::class, $cluster);
         self::assertSame('cross_dimension', $cluster->getAlgorithm());
         self::assertSame([1201, 1202, 1203, 1204], $cluster->getMembers());
 

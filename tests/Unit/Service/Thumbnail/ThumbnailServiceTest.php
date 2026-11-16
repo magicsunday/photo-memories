@@ -100,6 +100,8 @@ namespace MagicSunday\Memories\Test\Unit\Service\Thumbnail {
     use ReflectionMethod;
     use RuntimeException;
 
+    use function preg_quote;
+
     #[CoversClass(ThumbnailService::class)]
     final class ThumbnailServiceTest extends TestCase
     {
@@ -139,7 +141,7 @@ namespace MagicSunday\Memories\Test\Unit\Service\Thumbnail {
 
             try {
                 $this->expectException(RuntimeException::class);
-                $this->expectExceptionMessage(sprintf('Failed to create thumbnail directory "%s".', $thumbnailDir));
+                $this->expectExceptionMessageMatches('/' . preg_quote(sprintf('Failed to create thumbnail directory "%s".', $thumbnailDir), '/') . '/');
 
                 if (file_put_contents($thumbnailDir, '') === false) {
                     self::fail('Unable to create thumbnail directory placeholder file.');
@@ -416,7 +418,7 @@ namespace MagicSunday\Memories\Test\Unit\Service\Thumbnail {
             self::resetLastGdLoader();
 
             $this->expectException(RuntimeException::class);
-            $this->expectExceptionMessage('Imagick is required to create thumbnails for RAW/HEIC media');
+            $this->expectExceptionMessageMatches('/' . preg_quote('Imagick is required to create thumbnails for RAW/HEIC media', '/') . '/');
 
             try {
                 $service->generateAll($sourcePath, $media);
@@ -550,7 +552,7 @@ namespace MagicSunday\Memories\Test\Unit\Service\Thumbnail {
             $method = new ReflectionMethod(ThumbnailService::class, 'generateThumbnailsWithGd');
 
             $this->expectException(RuntimeException::class);
-            $this->expectExceptionMessage('Unable to resample image for thumbnail.');
+            $this->expectExceptionMessageMatches('/' . preg_quote('Unable to resample image for thumbnail.', '/') . '/');
 
             self::$forceGdResampleFailure = true;
 
@@ -987,7 +989,7 @@ namespace MagicSunday\Memories\Test\Unit\Service\Thumbnail {
             $method = new ReflectionMethod(ThumbnailService::class, 'generateThumbnailsWithGd');
 
             $this->expectException(RuntimeException::class);
-            $this->expectExceptionMessage(sprintf('Unable to read image data from "%s" for thumbnail generation.', $missingPath));
+            $this->expectExceptionMessageMatches('/' . preg_quote(sprintf('Unable to read image data from "%s" for thumbnail generation.', $missingPath), '/') . '/');
 
             try {
                 $method->invoke($service, $missingPath, null, [200], hash('sha256', 'missing'), null);
@@ -1022,7 +1024,7 @@ namespace MagicSunday\Memories\Test\Unit\Service\Thumbnail {
             $method = new ReflectionMethod(ThumbnailService::class, 'generateThumbnailsWithGd');
 
             $this->expectException(RuntimeException::class);
-            $this->expectExceptionMessage(sprintf('Unable to create GD image from "%s".', $sourcePath));
+            $this->expectExceptionMessageMatches('/' . preg_quote(sprintf('Unable to create GD image from "%s".', $sourcePath), '/') . '/');
 
             try {
                 $method->invoke($service, $sourcePath, null, [200], hash('sha256', 'invalid'), null);

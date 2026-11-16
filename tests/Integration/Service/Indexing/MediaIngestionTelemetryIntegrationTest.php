@@ -25,7 +25,6 @@ use Symfony\Component\Console\Output\NullOutput;
 
 use function array_filter;
 use function array_key_first;
-use function count;
 use function str_ends_with;
 use function str_repeat;
 use function sys_get_temp_dir;
@@ -64,12 +63,12 @@ final class MediaIngestionTelemetryIntegrationTest extends TestCase
             static fn (array $record): bool => ($record['message'] ?? '') === 'media_ingestion.finalize'
         );
 
-        self::assertSame(1, count($records));
+        self::assertCount(1, $records);
 
         $entry   = $records[array_key_first($records)];
         $context = $entry['context'] ?? [];
 
-        self::assertSame(false, $context['dryRun'] ?? null);
+        self::assertFalse($context['dryRun'] ?? null);
 
         $metrics = $context['metrics'] ?? [];
         self::assertSame(1, $metrics['images_total'] ?? null);

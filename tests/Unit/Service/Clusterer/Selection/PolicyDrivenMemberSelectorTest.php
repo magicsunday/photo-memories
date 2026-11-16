@@ -629,7 +629,7 @@ final class PolicyDrivenMemberSelectorTest extends TestCase
         self::assertSame([3, 1, 2], $summary['selected']);
 
         $iterations = $summary['iterations'];
-        self::assertSame(3, count($iterations));
+        self::assertCount(3, $iterations);
         self::assertSame([3, 1, 2], array_map(static fn (array $iteration): int => $iteration['selected'], $iterations));
     }
 
@@ -1168,7 +1168,7 @@ final class PolicyDrivenMemberSelectorTest extends TestCase
         /** @var list<array<string, mixed>> $result */
         $result = $method->invoke($selector, $candidates, $policy, $telemetry);
 
-        self::assertSame(2, count($result));
+        self::assertCount(2, $result);
         self::assertSame([150, 200], [
             $result[0]['timestamp'],
             $result[1]['timestamp'],

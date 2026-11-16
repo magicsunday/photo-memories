@@ -11,7 +11,6 @@ declare(strict_types=1);
 
 namespace MagicSunday\Memories\Test\Unit\Command;
 
-use DateTimeImmutable;
 use MagicSunday\Memories\Clusterer\Selection\SelectionProfileProvider;
 use MagicSunday\Memories\Clusterer\Selection\VacationSelectionOptions;
 use MagicSunday\Memories\Command\FeedExportHtmlCommand;
@@ -94,7 +93,6 @@ final class FeedExportHtmlCommandTest extends TestCase
         self::assertSame(320, $capturedRequest->getThumbnailWidth());
         self::assertTrue($capturedRequest->useSymlinks());
         self::assertSame($outputDir, $capturedRequest->getBaseOutputDirectory());
-        self::assertInstanceOf(DateTimeImmutable::class, $capturedRequest->getTimestamp());
         self::assertSame(FeedExportStage::Curated, $capturedRequest->getStage());
 
         $display = $tester->getDisplay();

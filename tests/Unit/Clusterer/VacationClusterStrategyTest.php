@@ -714,7 +714,6 @@ final class VacationClusterStrategyTest extends TestCase
         self::assertCount(1, $clusters);
         $cluster = $clusters[0];
 
-        self::assertInstanceOf(ClusterDraft::class, $cluster);
         self::assertSame('vacation', $cluster->getAlgorithm());
 
         $params = $cluster->getParams();

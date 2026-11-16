@@ -11,6 +11,7 @@ declare(strict_types=1);
 
 namespace MagicSunday\Memories\Test\Unit\Service\Clusterer;
 
+use ArrayObject;
 use Doctrine\ORM\EntityManagerInterface;
 use Doctrine\ORM\Query;
 use Doctrine\ORM\QueryBuilder;
@@ -121,14 +122,15 @@ final class DefaultClusterJobRunnerTest extends TestCase
             new ClusterDraft('algo-a', [], ['lat' => 0.0, 'lon' => 0.0], [1, 2]),
         ];
 
-        $deleteCalled = false;
+        /** @var ArrayObject<int, string> $events */
+        $events = new ArrayObject();
 
         $clusterer = $this->createMock(HybridClustererInterface::class);
         $clusterer->expects(self::once())->method('countStrategies')->willReturn(1);
         $clusterer->expects(self::once())
             ->method('build')
-            ->willReturnCallback(function (array $items, callable $onStart, callable $onDone, ?callable $progressFactory = null) use ($drafts, &$deleteCalled): array {
-                self::assertFalse($deleteCalled);
+            ->willReturnCallback(function (array $items, callable $onStart, callable $onDone, ?callable $progressFactory = null) use ($drafts, $events): array {
+                self::assertNotContains('deleteAll', $events->getArrayCopy());
                 self::assertCount(2, $items);
                 $onStart('Strategy', 1, 1);
                 self::assertNotNull($progressFactory);
@@ -155,15 +157,15 @@ final class DefaultClusterJobRunnerTest extends TestCase
         $persistence = $this->createMock(ClusterPersistenceInterface::class);
         $persistence->expects(self::once())
             ->method('deleteAll')
-            ->willReturnCallback(function () use (&$deleteCalled): int {
-                $deleteCalled = true;
+            ->willReturnCallback(function () use ($events): int {
+                $events->append('deleteAll');
 
                 return 5;
             });
         $persistence->expects(self::never())->method('persistBatched');
         $persistence->expects(self::once())
             ->method('persistStreaming')
-            ->willReturnCallback(function (iterable $persistedDrafts, ?callable $callback) use (&$deleteCalled): int {
+            ->willReturnCallback(function (iterable $persistedDrafts, ?callable $callback) use ($events): int {
                 self::assertThat(
                     $persistedDrafts,
                     self::logicalOr(
@@ -177,7 +179,7 @@ final class DefaultClusterJobRunnerTest extends TestCase
                     : iterator_to_array($persistedDrafts, preserve_keys: false);
 
                 self::assertCount(1, $persistedList);
-                self::assertTrue($deleteCalled);
+                self::assertContains('deleteAll', $events->getArrayCopy());
                 self::assertNotNull($callback);
                 $callback(1);
 
@@ -189,7 +191,7 @@ final class DefaultClusterJobRunnerTest extends TestCase
 
         $result = $runner->run($options, new NullProgressReporter());
 
-        self::assertTrue($deleteCalled);
+        self::assertContains('deleteAll', $events->getArrayCopy());
 
         self::assertSame(2, $result->getTotalMediaCount());
         self::assertSame(2, $result->getLoadedMediaCount());
