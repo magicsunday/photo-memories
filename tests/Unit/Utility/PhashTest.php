@@ -31,6 +31,9 @@ final class PhashTest extends TestCase
         self::assertSame($expectedDistance, Phash::hammingFromHex($a, $b));
     }
 
+    /**
+     * @return iterable<string, array{string, string}>
+     */
     public static function provideInvalidHexPairs(): iterable
     {
         yield 'odd length first argument' => ['abc', '00'];
@@ -39,6 +42,9 @@ final class PhashTest extends TestCase
         yield 'non-hex characters in second argument' => ['00', 'gg'];
     }
 
+    /**
+     * @return iterable<string, array{string, string, int}>
+     */
     public static function provideValidHexPairs(): iterable
     {
         yield 'empty strings' => ['', '', 0];
@@ -49,6 +55,9 @@ final class PhashTest extends TestCase
         yield from self::provideLongHexPairs();
     }
 
+    /**
+     * @return iterable<string, array{string, string, int}>
+     */
     public static function provideLongHexPairs(): iterable
     {
         yield 'long maximum distance' => [
