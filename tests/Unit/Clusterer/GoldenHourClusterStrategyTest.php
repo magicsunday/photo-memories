@@ -57,6 +57,7 @@ final class GoldenHourClusterStrategyTest extends TestCase
 
         $params = $clusters[0]->getParams();
         self::assertArrayHasKey('scene_tags', $params);
+        self::assertIsArray($params['scene_tags']);
         $labels = array_map(static fn (array $tag): string => $tag['label'], $params['scene_tags']);
         self::assertContains('Sunset Skyline', $labels);
         self::assertContains('Golden light', $labels);

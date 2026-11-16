@@ -131,9 +131,11 @@ final class OverlapResolverStageTest extends TestCase
         self::assertSame([10, 11, 12, 13], $merged->getMembers());
 
         $params = $merged->getParams();
+        self::assertIsArray($params['time_range']);
         self::assertSame(1_000, $params['time_range']['from']);
         self::assertSame(3_800, $params['time_range']['to']);
         self::assertArrayHasKey('member_selection', $params);
+        self::assertIsArray($params['member_selection']);
         self::assertCount(3, $params['member_selection']['hash_samples']);
 
         $merges = $params['meta']['merges'] ?? [];

@@ -63,10 +63,12 @@ final class SeasonOverYearsClusterStrategyTest extends TestCase
         $params = $cluster->getParams();
         self::assertSame('Sommer im Laufe der Jahre', $params['label']);
         self::assertSame([1, 2, 3, 4, 5, 6], $cluster->getMembers());
+        self::assertIsArray($params['years']);
         self::assertContains(2021, $params['years']);
         self::assertArrayHasKey('scene_tags', $params);
         self::assertArrayHasKey('keywords', $params);
         $sceneTags = $params['scene_tags'];
+        self::assertIsArray($sceneTags);
         self::assertCount(2, $sceneTags);
         self::assertSame('Sommer', $sceneTags[0]['label']);
         self::assertEqualsWithDelta(0.88, $sceneTags[0]['score'], 0.0001);

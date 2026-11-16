@@ -155,13 +155,16 @@ final class DefaultVacationSegmentAssemblerTest extends TestCase
         self::assertSame(['pt'], $params['countries']);
         self::assertArrayHasKey('member_selection', $params);
         self::assertArrayHasKey('day_segments', $params);
-        self::assertNotSame([], $params['day_segments']);
-        $segmentSample = reset($params['day_segments']);
+        $daySegments = $params['day_segments'];
+        self::assertIsArray($daySegments);
+        self::assertNotSame([], $daySegments);
+        $segmentSample = reset($daySegments);
         self::assertIsArray($segmentSample);
         self::assertArrayHasKey('category', $segmentSample);
         self::assertArrayHasKey('vacation_title', $params);
         self::assertArrayHasKey('vacation_subtitle', $params);
-        self::assertStringContainsString('Personenanteil:', (string) $params['vacation_subtitle']);
+        self::assertIsString($params['vacation_subtitle']);
+        self::assertStringContainsString('Personenanteil:', $params['vacation_subtitle']);
     }
 
     #[Test]
@@ -355,6 +358,7 @@ final class DefaultVacationSegmentAssemblerTest extends TestCase
         self::assertSame(8, $params['raw_member_count']);
 
         self::assertArrayHasKey('day_segments', $params);
+        self::assertIsArray($segments);
         self::assertSame(['2024-02-01', '2024-02-02', '2024-02-03'], array_keys($segments));
 
         $gapSegment = $segments[$gapDate];

@@ -83,7 +83,9 @@ final class TransitTravelDayClusterStrategyTest extends TestCase
         self::assertSame('Frankfurt', $cluster->getParams()['place_city']);
         self::assertSame('Germany', $cluster->getParams()['place_country']);
         self::assertSame('default', $cluster->getParams()['travel_profile']);
-        self::assertSame(3, $cluster->getParams()['travel_thresholds']['min_items_per_day']);
+        $thresholds = $cluster->getParams()['travel_thresholds'];
+        self::assertIsArray($thresholds);
+        self::assertSame(3, $thresholds['min_items_per_day']);
     }
 
     #[Test]
@@ -148,8 +150,10 @@ final class TransitTravelDayClusterStrategyTest extends TestCase
         self::assertCount(1, $clusters);
         $params = $clusters[0]->getParams();
         self::assertSame('adventurer', $params['travel_profile']);
-        self::assertSame(3, $params['travel_thresholds']['min_items_per_day']);
-        self::assertSame(1, $params['travel_thresholds']['min_fast_segments']);
+        $thresholds = $params['travel_thresholds'];
+        self::assertIsArray($thresholds);
+        self::assertSame(3, $thresholds['min_items_per_day']);
+        self::assertSame(1, $thresholds['min_fast_segments']);
         self::assertGreaterThanOrEqual(40.0, $params['distance_km']);
     }
 

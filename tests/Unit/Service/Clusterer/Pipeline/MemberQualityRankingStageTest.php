@@ -88,7 +88,7 @@ final class MemberQualityRankingStageTest extends TestCase
         $params = $draft->getParams();
         self::assertArrayHasKey('member_quality', $params);
 
-        /** @var array{ordered:list<int>,quality_ranked:array{ordered:list<int>,members:list<array{id:int,score:float,quality:float,aesthetics:float,penalty:float}>},members:array<string,array{score:float,quality:float,aesthetics:float,penalty:float}>} $meta */
+        /** @var array{ordered:list<int>,quality_ranked:array{ordered:list<int>,members:list<array{id:int,score:float,quality:float,aesthetics:float,penalty:float}>},members:array<int,array{score:float,quality:float,aesthetics:float,penalty:float}>} $meta */
         $meta = $params['member_quality'];
 
         self::assertSame([101, 102, 103], $meta['ordered']);
@@ -168,7 +168,8 @@ final class MemberQualityRankingStageTest extends TestCase
 
         $stage->process([$draft]);
 
-        $meta    = $draft->getParams()['member_quality'];
+        $meta = $draft->getParams()['member_quality'];
+        self::assertIsArray($meta);
         $members = $meta['members'];
 
         self::assertSame([201, 202, 203], $meta['ordered']);
@@ -240,7 +241,8 @@ final class MemberQualityRankingStageTest extends TestCase
 
         $stage->process([$draft]);
 
-        $meta    = $draft->getParams()['member_quality'];
+        $meta = $draft->getParams()['member_quality'];
+        self::assertIsArray($meta);
         $ordered = $meta['quality_ranked']['ordered'];
         $members = $meta['members'];
 
@@ -295,6 +297,7 @@ final class MemberQualityRankingStageTest extends TestCase
         $stage->process([$draft]);
 
         $meta = $draft->getParams()['member_quality'];
+        self::assertIsArray($meta);
 
         self::assertSame([401], $meta['ordered']);
         self::assertSame([401], $meta['quality_ranked']['ordered']);

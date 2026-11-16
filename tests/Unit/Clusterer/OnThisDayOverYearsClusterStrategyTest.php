@@ -79,10 +79,12 @@ final class OnThisDayOverYearsClusterStrategyTest extends TestCase
                 self::assertSame('on_this_day_over_years', $cluster->getAlgorithm());
                 self::assertSame([1, 2, 3, 4, 5, 6], $cluster->getMembers());
                 $params = $cluster->getParams();
+                self::assertIsArray($params['years']);
                 self::assertGreaterThanOrEqual(3, count($params['years']));
                 self::assertArrayHasKey('scene_tags', $params);
                 self::assertArrayHasKey('keywords', $params);
                 $sceneTags = $params['scene_tags'];
+                self::assertIsArray($sceneTags);
                 self::assertCount(2, $sceneTags);
                 self::assertSame('Feier', $sceneTags[0]['label']);
                 self::assertEqualsWithDelta(0.84, $sceneTags[0]['score'], 0.0001);

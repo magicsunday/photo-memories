@@ -71,6 +71,7 @@ final class YearInReviewClusterStrategyTest extends TestCase
         self::assertArrayHasKey('scene_tags', $params);
         self::assertArrayHasKey('keywords', $params);
         $sceneTags = $params['scene_tags'];
+        self::assertIsArray($sceneTags);
         self::assertCount(2, $sceneTags);
         self::assertSame('Reise', $sceneTags[0]['label']);
         self::assertEqualsWithDelta(0.85, $sceneTags[0]['score'], 0.0001);

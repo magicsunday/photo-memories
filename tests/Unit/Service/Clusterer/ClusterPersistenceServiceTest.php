@@ -284,9 +284,12 @@ final class ClusterPersistenceServiceTest extends TestCase
         );
 
         $this->addSelectionTelemetry($draft, [2, 1, 3]);
-        $params                              = $draft->getParams();
-        $params['member_quality']['ordered'] = [2, 1, 3];
-        $draft                               = $draft->withParams($params);
+        $params        = $draft->getParams();
+        $memberQuality = $params['member_quality'] ?? [];
+        self::assertIsArray($memberQuality);
+        $memberQuality['ordered']  = [2, 1, 3];
+        $params['member_quality']  = $memberQuality;
+        $draft                     = $draft->withParams($params);
 
         $persistedCount = $service->persistStreaming([$draft], null);
 
@@ -347,6 +350,7 @@ final class ClusterPersistenceServiceTest extends TestCase
         self::assertArrayHasKey('people', $roundtripParams);
         self::assertArrayHasKey('people_count', $roundtripParams);
         self::assertArrayHasKey('movement', $roundtripParams);
+        self::assertIsArray($roundtripParams['member_quality']);
         self::assertSame([2, 1, 3], $roundtripParams['member_quality']['ordered']);
         self::assertSame([
             'segment_count'                             => 4,

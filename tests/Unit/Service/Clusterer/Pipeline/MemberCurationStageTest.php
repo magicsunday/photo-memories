@@ -276,10 +276,12 @@ final class MemberCurationStageTest extends TestCase
 
         $params    = $processed->getParams();
         $selection = $params['member_selection'];
+        self::assertIsArray($selection);
         self::assertSame(['raw' => 3, 'curated' => 2, 'dropped' => 1], $selection['counts']);
         self::assertSame(1, $selection['rejection_counts'][SelectionTelemetry::REASON_PHASH]);
 
         $quality = $params['member_quality'];
+        self::assertIsArray($quality);
         self::assertSame([1, 3], $quality['ordered']);
         $summary = $quality['summary'];
         self::assertSame(['raw' => 3, 'curated' => 2, 'dropped' => 1], $summary['selection_counts']);

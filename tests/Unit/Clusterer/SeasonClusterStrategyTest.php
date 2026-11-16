@@ -73,6 +73,7 @@ final class SeasonClusterStrategyTest extends TestCase
         self::assertArrayHasKey('keywords', $params);
         self::assertArrayHasKey('quality_avg', $params);
         $sceneTags = $params['scene_tags'];
+        self::assertIsArray($sceneTags);
         self::assertCount(3, $sceneTags);
         self::assertSame('Schnee', $sceneTags[0]['label']);
         self::assertEqualsWithDelta(0.9, $sceneTags[0]['score'], 0.0001);

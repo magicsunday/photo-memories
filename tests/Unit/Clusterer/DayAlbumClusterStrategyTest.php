@@ -75,6 +75,7 @@ final class DayAlbumClusterStrategyTest extends TestCase
         self::assertArrayHasKey('scene_tags', $params);
         self::assertArrayHasKey('keywords', $params);
         $sceneTags = $params['scene_tags'];
+        self::assertIsArray($sceneTags);
         self::assertCount(3, $sceneTags);
         self::assertSame('Strand', $sceneTags[0]['label']);
         self::assertEqualsWithDelta(0.9, $sceneTags[0]['score'], 0.0001);

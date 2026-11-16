@@ -65,6 +65,7 @@ final class NightlifeEventClusterStrategyTest extends TestCase
         self::assertSame('night', $cluster->getParams()['feature_daypart']);
 
         $timeRange = $cluster->getParams()['time_range'];
+        self::assertIsArray($timeRange);
         self::assertSame($media[0]->getTakenAt()?->getTimestamp(), $timeRange['from']);
         self::assertSame($media[4]->getTakenAt()?->getTimestamp(), $timeRange['to']);
     }
@@ -103,6 +104,7 @@ final class NightlifeEventClusterStrategyTest extends TestCase
         self::assertCount(1, $clusters);
         $params = $clusters[0]->getParams();
         self::assertArrayHasKey('scene_tags', $params);
+        self::assertIsArray($params['scene_tags']);
         $labels = array_map(static fn (array $tag): string => $tag['label'], $params['scene_tags']);
         self::assertContains('Party crowd', $labels);
         self::assertContains('Nightclub interior', $labels);
