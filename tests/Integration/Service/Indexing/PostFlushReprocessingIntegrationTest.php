@@ -31,6 +31,7 @@ use MagicSunday\Memories\Test\TestCase;
 use Override;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\Test;
+use PHPUnit\Framework\MockObject\Stub;
 use Symfony\Component\Console\Output\NullOutput;
 
 use function array_unique;
@@ -154,7 +155,7 @@ final class PostFlushReprocessingIntegrationTest extends TestCase
         $pipeline->finalize(false);
     }
 
-    private function configureEntityManager(EntityManagerInterface $entityManager, InMemoryMediaRepository $repository): void
+    private function configureEntityManager(EntityManagerInterface&Stub $entityManager, InMemoryMediaRepository $repository): void
     {
         $pending  = [];
         $nextId   = 1;

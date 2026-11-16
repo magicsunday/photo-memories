@@ -50,6 +50,7 @@ use MagicSunday\Memories\Service\Thumbnail\ThumbnailServiceInterface;
 use MagicSunday\Memories\Test\TestCase;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\Test;
+use PHPUnit\Framework\MockObject\MockObject;
 use Psr\Log\AbstractLogger;
 use Symfony\Component\Console\Output\BufferedOutput;
 use Symfony\Component\Console\Output\OutputInterface;
@@ -339,7 +340,7 @@ final class DefaultMediaIngestionPipelineTest extends TestCase
     }
 
     /**
-     * @param array<string, array<string, SingleMetadataExtractorInterface>> $extractors
+     * @param array<string, array<string, SingleMetadataExtractorInterface&MockObject>> $extractors
      */
     private function expectNoExtractorInteractions(array $extractors): void
     {
@@ -352,7 +353,7 @@ final class DefaultMediaIngestionPipelineTest extends TestCase
     }
 
     /**
-     * @param array<string, array<string, SingleMetadataExtractorInterface>> $extractors
+     * @param array<string, array<string, SingleMetadataExtractorInterface&MockObject>> $extractors
      * @param list<string>                                                   $callLog
      */
     private function configureExtractorOrderExpectations(array $extractors, array &$callLog): void
@@ -416,7 +417,7 @@ final class DefaultMediaIngestionPipelineTest extends TestCase
     }
 
     /**
-     * @return array<string, array<string, SingleMetadataExtractorInterface>>
+     * @return array<string, array<string, SingleMetadataExtractorInterface&MockObject>>
      */
     private function createExtractorMap(): array
     {
