@@ -301,7 +301,7 @@ final class QualityClusterScoreHeuristicTest extends TestCase
 
             private function resolve(Media $media): ImageQualityScore
             {
-                return $this->scores[$media->getId()] ?? new ImageQualityScore(
+                return $this->scores[(int) $media->getId()] ?? new ImageQualityScore(
                     sharpness: 0.5,
                     exposure: 0.5,
                     contrast: 0.5,
