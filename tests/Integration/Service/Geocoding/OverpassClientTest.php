@@ -102,6 +102,9 @@ final class RecordingHttpClient implements HttpClientInterface
     {
     }
 
+    /**
+     * @param array<mixed> $options
+     */
     public function request(string $method, string $url, array $options = []): ResponseInterface
     {
         $data            = $options['body']['data'] ?? null;
@@ -115,6 +118,9 @@ final class RecordingHttpClient implements HttpClientInterface
         throw new BadMethodCallException('Not implemented.');
     }
 
+    /**
+     * @param array<mixed> $options
+     */
     public function withOptions(array $options): static
     {
         return $this;
@@ -123,6 +129,9 @@ final class RecordingHttpClient implements HttpClientInterface
 
 final readonly class StaticJsonResponse implements ResponseInterface
 {
+    /**
+     * @param array<string, mixed> $payload
+     */
     public function __construct(
         private int $statusCode,
         private array $payload,
@@ -144,6 +153,9 @@ final readonly class StaticJsonResponse implements ResponseInterface
         return '';
     }
 
+    /**
+     * @return array<mixed>
+     */
     public function toArray(bool $throw = true): array
     {
         return $this->payload;

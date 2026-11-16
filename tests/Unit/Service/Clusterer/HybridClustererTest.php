@@ -12,6 +12,7 @@ declare(strict_types=1);
 namespace MagicSunday\Memories\Test\Unit\Service\Clusterer;
 
 use Doctrine\ORM\EntityManagerInterface;
+use MagicSunday\Memories\Clusterer\ClusterDraft;
 use MagicSunday\Memories\Clusterer\Context;
 use MagicSunday\Memories\Clusterer\Contract\ProgressAwareClusterStrategyInterface;
 use MagicSunday\Memories\Clusterer\Support\ContextualClusterBridgeTrait;
@@ -41,6 +42,11 @@ final class HybridClustererTest extends TestCase
                 return 'progress-aware';
             }
 
+            /**
+             * @param list<Media> $items
+             *
+             * @return list<ClusterDraft>
+             */
             public function cluster(array $items): array
             {
                 return [];
@@ -164,6 +170,11 @@ final class HybridClustererTest extends TestCase
                 return 'dynamic-progress';
             }
 
+            /**
+             * @param list<Media> $items
+             *
+             * @return list<ClusterDraft>
+             */
             public function cluster(array $items): array
             {
                 return [];

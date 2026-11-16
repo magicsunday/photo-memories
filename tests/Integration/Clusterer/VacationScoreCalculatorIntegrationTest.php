@@ -210,6 +210,9 @@ final class VacationScoreCalculatorIntegrationTest extends TestCase
         self::assertSame($runMetrics['min_items_per_day'], $metricsEvent['context']['min_items_per_day']);
     }
 
+    /**
+     * @param array<string, mixed> $telemetryOverrides
+     */
     private function createCalculator(
         LocationHelper $locationHelper,
         ?VacationSelectionOptions $options = null,

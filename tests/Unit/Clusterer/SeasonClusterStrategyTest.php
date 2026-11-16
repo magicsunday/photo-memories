@@ -198,7 +198,7 @@ final class SeasonClusterStrategyTest extends TestCase
     /**
      * @param list<ClusterDraft> $clusters
      *
-     * @return list<array{algorithm: string, params: array, centroid: array, members: list<int>}>
+     * @return list<array{algorithm: string, params: array<string, int|float|string|bool|array<mixed>|null>, centroid: array{lat: float, lon: float}, members: list<int>}>
      */
     private function normaliseClusters(array $clusters): array
     {

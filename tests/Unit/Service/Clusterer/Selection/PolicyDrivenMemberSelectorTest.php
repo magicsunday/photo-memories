@@ -1381,6 +1381,7 @@ final class PolicyDrivenMemberSelectorTest extends TestCase
      * @param list<int>              $memberIds
      * @param array<int, Media>      $mediaMap
      * @param array<int, float|null> $qualityScores
+     * @param array<string, array<string, mixed>> $daySegments
      *
      * @return array{eligible: list<array<string, mixed>>, drops: array<string, int>, all: list<int>}
      */

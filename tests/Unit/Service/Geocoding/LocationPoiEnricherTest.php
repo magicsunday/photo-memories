@@ -333,6 +333,9 @@ final class LocationPoiEnricherTest extends TestCase
         );
     }
 
+    /**
+     * @param array<string, mixed> $payload
+     */
     private function createResponse(array $payload): FakeHttpResponse
     {
         return new FakeHttpResponse(200, $payload);
@@ -357,6 +360,9 @@ final class FakeHttpClient implements HttpClientInterface
         $this->responses = $responses;
     }
 
+    /**
+     * @param array<mixed> $options
+     */
     public function request(string $method, string $url, array $options = []): ResponseInterface
     {
         if ($this->responses === []) {
@@ -371,6 +377,9 @@ final class FakeHttpClient implements HttpClientInterface
         throw new BadMethodCallException('Not implemented.');
     }
 
+    /**
+     * @param array<mixed> $options
+     */
     public function withOptions(array $options): static
     {
         return $this;
@@ -382,6 +391,9 @@ final class FakeHttpClient implements HttpClientInterface
  */
 final readonly class FakeHttpResponse implements ResponseInterface
 {
+    /**
+     * @param array<string, mixed> $payload
+     */
     public function __construct(
         private int $statusCode,
         private array $payload,
@@ -403,6 +415,9 @@ final readonly class FakeHttpResponse implements ResponseInterface
         return json_encode($this->payload, JSON_THROW_ON_ERROR);
     }
 
+    /**
+     * @return array<mixed>
+     */
     public function toArray(bool $throw = true): array
     {
         return $this->payload;

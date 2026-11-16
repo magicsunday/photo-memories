@@ -156,6 +156,7 @@ final class DuplicateCollapseStageTest extends TestCase
 
     /**
      * @param list<int> $members
+     * @param array<string, int|float|string|bool|array<mixed>|null> $extraParams
      */
     private function createDraft(string $algorithm, float $score, array $members, array $extraParams = []): ClusterDraft
     {

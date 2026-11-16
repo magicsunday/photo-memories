@@ -289,6 +289,10 @@ final class OverlapResolverStageTest extends TestCase
         );
     }
 
+    /**
+     * @param list<string> $winnerCore
+     * @param list<string> $loserCore
+     */
     #[Test]
     #[DataProvider('coreSimilarityBoundaryProvider')]
     public function resolvesBasedOnCoreSimilarityBoundaries(
@@ -625,6 +629,9 @@ final class OverlapResolverStageTest extends TestCase
         $this->assertTelemetryForBoundary($emitter);
     }
 
+    /**
+     * @return array<string, mixed>
+     */
     private function extractLatestMergeEntry(ClusterDraft $draft): array
     {
         $params = $draft->getParams();
@@ -642,8 +649,10 @@ final class OverlapResolverStageTest extends TestCase
     }
 
     /**
-     * @param int[] $primaryMembers
-     * @param int[] $secondaryMembers
+     * @param list<int> $primaryMembers
+     * @param list<int> $secondaryMembers
+     *
+     * @return list<int>
      */
     private function expectedMergedMembers(array $primaryMembers, array $secondaryMembers): array
     {
@@ -731,6 +740,7 @@ final class OverlapResolverStageTest extends TestCase
 
     /**
      * @param list<int> $members
+     * @param array<string, int|float|string|bool|array<mixed>|null> $extraParams
      */
     private function createDraft(
         string $algorithm,

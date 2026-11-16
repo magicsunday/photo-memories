@@ -428,6 +428,9 @@ final class MemberCurationStageTest extends TestCase
         }
     }
 
+    /**
+     * @param array<string, array{score:float,category:string,duration:int|null,metrics:array<string,float>}> $daySegments
+     */
     private function invokeApplyDayContext(
         MemberCurationStage $stage,
         SelectionPolicy $policy,

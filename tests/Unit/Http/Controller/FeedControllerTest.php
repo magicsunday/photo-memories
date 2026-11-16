@@ -457,6 +457,7 @@ final class FeedControllerTest extends TestCase
 
         $mediaRepo->method('findByIds')
             ->willReturnCallback(
+                /** @param list<int> $ids */
                 static function (array $ids, bool $onlyVideos = false) use ($mediaMap): array {
                     $result = [];
 
@@ -558,6 +559,7 @@ final class FeedControllerTest extends TestCase
 
         $mediaRepo->method('findByIds')
             ->willReturnCallback(
+                /** @param list<int> $ids */
                 static function (array $ids, bool $onlyVideos = false) use ($mediaMap): array {
                     $result = [];
 
@@ -1360,7 +1362,7 @@ final class FeedControllerTest extends TestCase
         ];
 
         $mediaRepo->method('findByIds')
-            ->willReturnCallback(static function (array $ids) use ($mediaById): array {
+            ->willReturnCallback(/** @param list<int> $ids */ static function (array $ids) use ($mediaById): array {
                 $result = [];
 
                 foreach ($ids as $id) {
@@ -1783,6 +1785,9 @@ final class FeedControllerTest extends TestCase
     }
 
     /**
+     * @param array<string, mixed> $spaGestures
+     * @param array<string, mixed> $spaOffline
+     * @param array<string, mixed> $spaAnimations
      * @return array{0: FeedController, 1: string}
      */
     private function createControllerWithDependencies(

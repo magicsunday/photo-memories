@@ -2232,7 +2232,8 @@ final class VacationScoreCalculatorTest extends TestCase
     }
 
     /**
-     * @return list<Media>
+     * @param array<string, mixed> $telemetryOverrides
+     * @return VacationScoreCalculator
      */
     private function createCalculator(
         LocationHelper $locationHelper,

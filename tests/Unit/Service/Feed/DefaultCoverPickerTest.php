@@ -447,6 +447,9 @@ final class DefaultCoverPickerTest extends TestCase
         self::assertSame($peopleChampion, $result);
     }
 
+    /**
+     * @param array<string, mixed> $clusterOverrides
+     */
     #[Test]
     #[DataProvider('provideQualityTieScenarios')]
     public function itBreaksQualityTiesUsingDomainSpecificSignals(string $expected, array $clusterOverrides): void
@@ -726,6 +729,9 @@ final class DefaultCoverPickerTest extends TestCase
         self::assertSame($withPrimary, $result);
     }
 
+    /**
+     * @param list<string>|null $persons
+     */
     #[Test]
     #[DataProvider('providePrimarySubjectScenarios')]
     public function itAppliesPrimaryPersonBonusWhenAvailable(?array $persons, ?string $primary, bool $expectsBonus): void
@@ -766,7 +772,7 @@ final class DefaultCoverPickerTest extends TestCase
     }
 
     /**
-     * @return iterable<string, array{0: ?array, 1: ?string, 2: bool}>
+     * @return iterable<string, array{0: list<string>|null, 1: ?string, 2: bool}>
      */
     public static function providePrimarySubjectScenarios(): iterable
     {
