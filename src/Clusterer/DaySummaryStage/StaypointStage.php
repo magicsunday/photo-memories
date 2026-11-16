@@ -165,10 +165,6 @@ final readonly class StaypointStage implements DaySummaryStageInterface
 
         $ratio = $transitSeconds / $span;
 
-        if ($ratio < 0.0) {
-            return 0.0;
-        }
-
         if ($ratio > 1.0) {
             return 1.0;
         }
@@ -187,10 +183,6 @@ final readonly class StaypointStage implements DaySummaryStageInterface
         } elseif ($photoCount > 0) {
             $density = $poiSamples / $photoCount;
         } else {
-            return 0.0;
-        }
-
-        if ($density < 0.0) {
             return 0.0;
         }
 
