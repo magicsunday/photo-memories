@@ -2145,7 +2145,6 @@ BASH;
         $matches = [];
         preg_match_all('/xfade=transition=([^:]+):duration=([0-9.]+):offset=([0-9.]+)/', $filterComplex, $matches);
 
-        /** @var list<string> $transitions */
         $transitions = $matches[1] ?? [];
         /** @var list<float> $durations */
         $durations = array_map(static fn (string $value): float => (float) $value, $matches[2] ?? []);

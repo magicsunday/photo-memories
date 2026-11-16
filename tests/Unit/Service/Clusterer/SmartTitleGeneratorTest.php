@@ -428,7 +428,7 @@ YAML
     }
 
     /**
-     * @param array<string, scalar|array|null> $params
+     * @param array<string, int|float|string|bool|array<mixed>|null> $params
      */
     private function createCluster(string $algorithm, array $params): ClusterDraft
     {

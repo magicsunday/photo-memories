@@ -82,7 +82,7 @@ final class HybridClustererTest extends TestCase
             null,
             function (string $strategy, int $index, int $total) use (&$handles): ProgressHandleInterface {
                 $handle = new class implements ProgressHandleInterface {
-                    /** @var list<array{string, mixed}> */
+                    /** @var list<array{0: string, 1?: mixed}> */
                     public array $events = [];
 
                     public function advance(int $step = 1): void
@@ -211,7 +211,7 @@ final class HybridClustererTest extends TestCase
             null,
             static function () use (&$handles): ProgressHandleInterface {
                 $handle = new class implements ProgressHandleInterface {
-                    /** @var list<array{string, mixed}> */
+                    /** @var list<array{0: string, 1?: mixed}> */
                     public array $events = [];
 
                     public function advance(int $step = 1): void
