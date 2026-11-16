@@ -620,7 +620,7 @@ final class MemoryFeedBuilderTest extends TestCase
         $media->setPersons(['Alice']);
 
         $mediaRepository = $this->createMock(MediaRepository::class);
-        $mediaRepository->method('findByIds')->with([1], false)->willReturn([$media]);
+        $mediaRepository->expects(self::once())->method('findByIds')->with([1], false)->willReturn([$media]);
 
         $seriesHighlightService = new SeriesHighlightService();
 
@@ -687,7 +687,7 @@ final class MemoryFeedBuilderTest extends TestCase
         $media = $this->buildMedia(5, false, new DateTimeImmutable('2024-01-01T10:00:00Z'));
 
         $mediaRepository = $this->createMock(MediaRepository::class);
-        $mediaRepository->method('findByIds')->with([5], false)->willReturn([$media]);
+        $mediaRepository->expects(self::once())->method('findByIds')->with([5], false)->willReturn([$media]);
 
         $seriesHighlightService = new SeriesHighlightService();
 

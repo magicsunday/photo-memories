@@ -30,7 +30,7 @@ final class LocationResolverMetadataTest extends TestCase
         $repository->method('findBy')->willReturn([]);
 
         $entityManager = $this->createMock(EntityManagerInterface::class);
-        $entityManager->method('getRepository')->with(Location::class)->willReturn($repository);
+        $entityManager->expects(self::atLeastOnce())->method('getRepository')->with(Location::class)->willReturn($repository);
         $entityManager->method('contains')->willReturn(false);
         $entityManager->expects(self::once())->method('persist')->with(self::isInstanceOf(Location::class));
 

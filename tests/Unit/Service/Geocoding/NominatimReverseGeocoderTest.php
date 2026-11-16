@@ -45,7 +45,7 @@ final class NominatimReverseGeocoderTest extends TestCase
             ->willReturn($response);
 
         $response->method('getStatusCode')->willReturn(200);
-        $response->method('toArray')->with(false)->willReturn([
+        $response->expects(self::once())->method('toArray')->with(false)->willReturn([
             'place_id'     => 123456,
             'display_name' => 'Berlin, Deutschland',
             'lat'          => '52.520008',
