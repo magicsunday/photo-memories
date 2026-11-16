@@ -59,11 +59,13 @@ use MagicSunday\Memories\Test\TestCase;
 use MagicSunday\Memories\Test\Unit\Clusterer\Fixtures\VacationTestMemberSelector;
 use MagicSunday\Memories\Utility\LocationHelper;
 use MagicSunday\Memories\Utility\MediaMath;
+use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\Test;
 use ReflectionClass;
 use Stringable;
 use Symfony\Component\Yaml\Yaml;
 
+#[CoversClass(VacationClusterStrategy::class)]
 final class VacationClusterStrategyTest extends TestCase
 {
     #[Test]

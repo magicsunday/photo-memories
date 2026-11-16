@@ -23,8 +23,10 @@ use MagicSunday\Memories\Clusterer\Service\TimezoneResolver;
 use MagicSunday\Memories\Clusterer\Support\GeoDbscanHelper;
 use MagicSunday\Memories\Clusterer\Support\StaypointIndex;
 use MagicSunday\Memories\Test\TestCase;
+use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\Test;
 
+#[CoversClass(StaypointStage::class)]
 final class StaypointStageTest extends TestCase
 {
     #[Test]

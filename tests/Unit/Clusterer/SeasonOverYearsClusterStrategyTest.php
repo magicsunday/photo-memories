@@ -17,6 +17,7 @@ use MagicSunday\Memories\Clusterer\SeasonOverYearsClusterStrategy;
 use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Test\TestCase;
 use MagicSunday\Memories\Utility\LocationHelper;
+use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\Test;
 
 use function array_filter;
@@ -24,6 +25,7 @@ use function array_key_last;
 use function array_values;
 use function str_starts_with;
 
+#[CoversClass(SeasonOverYearsClusterStrategy::class)]
 final class SeasonOverYearsClusterStrategyTest extends TestCase
 {
     #[Test]

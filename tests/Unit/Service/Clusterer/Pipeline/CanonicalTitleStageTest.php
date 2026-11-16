@@ -15,10 +15,12 @@ use MagicSunday\Memories\Clusterer\ClusterDraft;
 use MagicSunday\Memories\Service\Clusterer\Pipeline\CanonicalTitleStage;
 use MagicSunday\Memories\Service\Clusterer\Title\RouteSummarizer;
 use MagicSunday\Memories\Test\TestCase;
+use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\Test;
 
 use function strtotime;
 
+#[CoversClass(CanonicalTitleStage::class)]
 final class CanonicalTitleStageTest extends TestCase
 {
     #[Test]

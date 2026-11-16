@@ -18,8 +18,10 @@ use MagicSunday\Memories\Clusterer\Context;
 use MagicSunday\Memories\Clusterer\CrossDimensionClusterStrategy;
 use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Test\TestCase;
+use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\Test;
 
+#[CoversClass(CrossDimensionClusterStrategy::class)]
 final class CrossDimensionClusterStrategyTest extends TestCase
 {
     #[Test]

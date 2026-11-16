@@ -21,6 +21,7 @@ use MagicSunday\Memories\Service\Metadata\Support\CaptureTimeResolver;
 use MagicSunday\Memories\Service\Metadata\Support\FilenameDateParser;
 use MagicSunday\Memories\Service\Metadata\TimeNormalizer;
 use MagicSunday\Memories\Test\TestCase;
+use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\Test;
 use RuntimeException;
 
@@ -38,6 +39,7 @@ use function unlink;
 
 use const JSON_THROW_ON_ERROR;
 
+#[CoversClass(TimeNormalizer::class)]
 final class TimeNormalizerTest extends TestCase
 {
     #[Test]

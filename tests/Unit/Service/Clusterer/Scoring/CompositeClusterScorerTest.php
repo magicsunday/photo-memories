@@ -34,10 +34,12 @@ use MagicSunday\Memories\Service\Clusterer\Scoring\QualityClusterScoreHeuristic;
 use MagicSunday\Memories\Service\Clusterer\Scoring\RecencyClusterScoreHeuristic;
 use MagicSunday\Memories\Service\Clusterer\Scoring\TemporalClusterScoreHeuristic;
 use MagicSunday\Memories\Test\TestCase;
+use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\Test;
 
 use function sprintf;
 
+#[CoversClass(CompositeClusterScorer::class)]
 final class CompositeClusterScorerTest extends TestCase
 {
     #[Test]

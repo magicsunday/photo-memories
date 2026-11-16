@@ -18,10 +18,12 @@ use MagicSunday\Memories\Service\Indexing\Stage\MetadataStage;
 use MagicSunday\Memories\Service\Metadata\MetadataFeatureVersion;
 use MagicSunday\Memories\Service\Metadata\SingleMetadataExtractorInterface;
 use MagicSunday\Memories\Test\TestCase;
+use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\Test;
 use RuntimeException;
 use Symfony\Component\Console\Output\BufferedOutput;
 
+#[CoversClass(MetadataStage::class)]
 final class MetadataStageTest extends TestCase
 {
     #[Test]

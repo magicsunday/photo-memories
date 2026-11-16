@@ -17,9 +17,11 @@ use MagicSunday\Memories\Service\Geocoding\OverpassPrimaryTagResolver;
 use MagicSunday\Memories\Service\Geocoding\OverpassTagConfiguration;
 use MagicSunday\Memories\Service\Geocoding\OverpassTagSelector;
 use MagicSunday\Memories\Service\Geocoding\PoiNameExtractor;
+use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 
+#[CoversClass(DefaultOverpassResponseParser::class)]
 final class DefaultOverpassResponseParserTest extends TestCase
 {
     #[Test]

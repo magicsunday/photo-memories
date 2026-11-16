@@ -14,8 +14,10 @@ namespace MagicSunday\Memories\Test\Unit\Support;
 use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Support\IndexLogHelper;
 use MagicSunday\Memories\Test\TestCase;
+use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\Test;
 
+#[CoversClass(IndexLogHelper::class)]
 final class IndexLogHelperTest extends TestCase
 {
     #[Test]

@@ -29,10 +29,12 @@ use MagicSunday\Memories\Service\Clusterer\Selection\SelectionPolicyProvider;
 use MagicSunday\Memories\Service\Feed\CoverPickerInterface;
 use MagicSunday\Memories\Support\ClusterEntityToDraftMapper;
 use MagicSunday\Memories\Test\TestCase;
+use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\Test;
 use ReflectionClass;
 use Symfony\Component\Yaml\Yaml;
 
+#[CoversClass(ClusterPersistenceService::class)]
 final class ClusterPersistenceServiceTest extends TestCase
 {
     #[Test]

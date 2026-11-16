@@ -28,11 +28,13 @@ use MagicSunday\Memories\Service\Clusterer\Selection\Stage\StaypointQuotaStage;
 use MagicSunday\Memories\Service\Clusterer\Selection\Stage\TimeGapStage;
 use MagicSunday\Memories\Test\Support\EntityIdAssignmentTrait;
 use MagicSunday\Memories\Test\TestCase;
+use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\Test;
 use ReflectionMethod;
 use ReflectionProperty;
 use Symfony\Component\Yaml\Yaml;
 
+#[CoversClass(PolicyDrivenMemberSelector::class)]
 final class PolicyDrivenMemberSelectorTest extends TestCase
 {
     use EntityIdAssignmentTrait;

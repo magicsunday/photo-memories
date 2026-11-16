@@ -14,8 +14,10 @@ namespace MagicSunday\Memories\Test\Unit\Service\Metadata\Exif\Processor;
 use MagicSunday\Memories\Service\Metadata\Exif\DefaultExifValueAccessor;
 use MagicSunday\Memories\Service\Metadata\Exif\Processor\CompositeImageExifMetadataProcessor;
 use MagicSunday\Memories\Test\TestCase;
+use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\Test;
 
+#[CoversClass(CompositeImageExifMetadataProcessor::class)]
 final class CompositeImageExifMetadataProcessorTest extends TestCase
 {
     #[Test]

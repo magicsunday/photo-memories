@@ -23,6 +23,7 @@ use MagicSunday\Memories\Service\Metadata\Exif\Processor\GpsExifMetadataProcesso
 use MagicSunday\Memories\Service\Metadata\Exif\Processor\OrientationExifMetadataProcessor;
 use MagicSunday\Memories\Service\Metadata\ExifMetadataExtractor;
 use MagicSunday\Memories\Test\TestCase;
+use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\Attributes\Test;
 use ReflectionClass;
@@ -30,6 +31,7 @@ use ReflectionMethod;
 use ReflectionProperty;
 use Symfony\Component\DependencyInjection\Attribute\AutoconfigureTag;
 
+#[CoversClass(ExifMetadataExtractor::class)]
 final class ExifMetadataExtractorTest extends TestCase
 {
     #[Test]

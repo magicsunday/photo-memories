@@ -15,6 +15,7 @@ use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Service\Clusterer\Quality\DeterministicImageQualityEstimator;
 use MagicSunday\Memories\Service\Clusterer\Quality\VideoFrameSampler;
 use MagicSunday\Memories\Service\Clusterer\Quality\VideoFrameSamplerInterface;
+use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\TestCase;
 
 use function array_key_last;
@@ -37,6 +38,7 @@ use function unlink;
 /**
  * @covers \MagicSunday\Memories\Service\Clusterer\Quality\DeterministicImageQualityEstimator
  */
+#[CoversClass(DeterministicImageQualityEstimator::class)]
 final class DeterministicImageQualityEstimatorTest extends TestCase
 {
     public function testScoreVideoUsesFfprobeSample(): void

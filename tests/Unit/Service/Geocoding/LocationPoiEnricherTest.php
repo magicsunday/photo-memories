@@ -24,6 +24,7 @@ use MagicSunday\Memories\Service\Geocoding\OverpassTagSelector;
 use MagicSunday\Memories\Service\Geocoding\PoiNameExtractor;
 use MagicSunday\Memories\Test\TestCase;
 use MagicSunday\Memories\Utility\MediaMath;
+use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\Test;
 use Symfony\Contracts\HttpClient\HttpClientInterface;
 use Symfony\Contracts\HttpClient\ResponseInterface;
@@ -32,6 +33,7 @@ use Symfony\Contracts\HttpClient\ResponseStreamInterface;
 use function array_map;
 use function round;
 
+#[CoversClass(LocationPoiEnricher::class)]
 final class LocationPoiEnricherTest extends TestCase
 {
     #[Test]

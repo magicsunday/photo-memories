@@ -15,8 +15,10 @@ use MagicSunday\Memories\Entity\Enum\ContentKind;
 use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Service\Metadata\ContentClassifierExtractor;
 use MagicSunday\Memories\Test\TestCase;
+use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\Test;
 
+#[CoversClass(ContentClassifierExtractor::class)]
 final class ContentClassifierExtractorTest extends TestCase
 {
     #[Test]

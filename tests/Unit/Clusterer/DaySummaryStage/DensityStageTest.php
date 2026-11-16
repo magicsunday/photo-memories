@@ -19,8 +19,10 @@ use MagicSunday\Memories\Clusterer\DaySummaryStage\InitializationStage;
 use MagicSunday\Memories\Clusterer\Service\PoiClassifier;
 use MagicSunday\Memories\Clusterer\Service\TimezoneResolver;
 use MagicSunday\Memories\Test\TestCase;
+use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\Test;
 
+#[CoversClass(DensityStage::class)]
 final class DensityStageTest extends TestCase
 {
     #[Test]

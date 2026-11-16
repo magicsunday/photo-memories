@@ -19,8 +19,10 @@ use MagicSunday\Memories\Clusterer\YearInReviewClusterStrategy;
 use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Test\TestCase;
 use MagicSunday\Memories\Utility\LocationHelper;
+use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\Test;
 
+#[CoversClass(YearInReviewClusterStrategy::class)]
 final class YearInReviewClusterStrategyTest extends TestCase
 {
     #[Test]

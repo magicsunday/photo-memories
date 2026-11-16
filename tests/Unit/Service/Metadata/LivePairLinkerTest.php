@@ -15,8 +15,10 @@ use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Repository\MediaRepository;
 use MagicSunday\Memories\Service\Metadata\LivePairLinker;
 use MagicSunday\Memories\Test\TestCase;
+use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\Test;
 
+#[CoversClass(LivePairLinker::class)]
 final class LivePairLinkerTest extends TestCase
 {
     #[Test]

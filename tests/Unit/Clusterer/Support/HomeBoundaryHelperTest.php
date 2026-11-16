@@ -13,8 +13,10 @@ namespace MagicSunday\Memories\Test\Unit\Clusterer\Support;
 
 use MagicSunday\Memories\Clusterer\Support\HomeBoundaryHelper;
 use MagicSunday\Memories\Test\TestCase;
+use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\Test;
 
+#[CoversClass(HomeBoundaryHelper::class)]
 final class HomeBoundaryHelperTest extends TestCase
 {
     #[Test]

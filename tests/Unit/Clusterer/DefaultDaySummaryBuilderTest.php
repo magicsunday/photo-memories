@@ -27,10 +27,12 @@ use MagicSunday\Memories\Clusterer\Support\GeoDbscanHelper;
 use MagicSunday\Memories\Entity\Location;
 use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Test\TestCase;
+use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\Test;
 
 use function array_slice;
 
+#[CoversClass(DefaultDaySummaryBuilder::class)]
 final class DefaultDaySummaryBuilderTest extends TestCase
 {
     #[Test]

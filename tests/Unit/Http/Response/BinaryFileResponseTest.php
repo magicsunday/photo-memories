@@ -13,10 +13,12 @@ namespace MagicSunday\Memories\Test\Unit\Http\Response;
 
 use MagicSunday\Memories\Http\Response\BinaryFileResponse;
 use MagicSunday\Memories\Test\TestCase;
+use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\Test;
 
 use function file_get_contents;
 
+#[CoversClass(BinaryFileResponse::class)]
 final class BinaryFileResponseTest extends TestCase
 {
     #[Test]

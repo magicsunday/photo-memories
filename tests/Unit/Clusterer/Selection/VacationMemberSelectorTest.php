@@ -18,6 +18,7 @@ use MagicSunday\Memories\Clusterer\Selection\VacationSelectionOptions;
 use MagicSunday\Memories\Clusterer\Support\StaypointIndex;
 use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Service\Metadata\Quality\MediaQualityAggregator;
+use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\TestCase;
 use Psr\Log\AbstractLogger;
 use Stringable;
@@ -33,6 +34,7 @@ use function substr;
 /**
  * @covers \MagicSunday\Memories\Clusterer\Selection\VacationMemberSelector
  */
+#[CoversClass(VacationMemberSelector::class)]
 final class VacationMemberSelectorTest extends TestCase
 {
     private VacationMemberSelector $selector;

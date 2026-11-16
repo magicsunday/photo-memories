@@ -18,8 +18,10 @@ use MagicSunday\Memories\Clusterer\ThisMonthOverYearsClusterStrategy;
 use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Test\TestCase;
 use MagicSunday\Memories\Utility\LocationHelper;
+use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\Test;
 
+#[CoversClass(ThisMonthOverYearsClusterStrategy::class)]
 final class ThisMonthOverYearsClusterStrategyTest extends TestCase
 {
     #[Test]

@@ -27,8 +27,10 @@ use MagicSunday\Memories\Test\TestCase;
 use MagicSunday\Memories\Test\Unit\Clusterer\Fixtures\RecordingMonitoringEmitter;
 use MagicSunday\Memories\Test\Unit\Clusterer\Fixtures\VacationTestMemberSelector;
 use MagicSunday\Memories\Utility\LocationHelper;
+use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\Test;
 
+#[CoversClass(VacationScoreCalculator::class)]
 final class VacationScoreCalculatorIntegrationTest extends TestCase
 {
     #[Test]

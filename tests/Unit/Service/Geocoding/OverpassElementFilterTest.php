@@ -12,9 +12,11 @@ declare(strict_types=1);
 namespace MagicSunday\Memories\Test\Unit\Service\Geocoding;
 
 use MagicSunday\Memories\Service\Geocoding\OverpassElementFilter;
+use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 
+#[CoversClass(OverpassElementFilter::class)]
 final class OverpassElementFilterTest extends TestCase
 {
     #[Test]

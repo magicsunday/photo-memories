@@ -16,8 +16,10 @@ use Doctrine\ORM\Query;
 use Doctrine\ORM\QueryBuilder;
 use MagicSunday\Memories\Repository\ClusterRepository;
 use MagicSunday\Memories\Test\TestCase;
+use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\Test;
 
+#[CoversClass(ClusterRepository::class)]
 final class ClusterRepositoryTest extends TestCase
 {
     #[Test]

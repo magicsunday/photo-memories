@@ -19,6 +19,7 @@ use MagicSunday\Memories\Repository\ClusterRepository;
 use MagicSunday\Memories\Service\Clusterer\Contract\ClusterCuratedOverlayRefresherInterface;
 use MagicSunday\Memories\Test\TestCase;
 use Override;
+use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\Test;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Tester\CommandTester;
@@ -27,6 +28,7 @@ use function array_filter;
 use function array_values;
 use function in_array;
 
+#[CoversClass(ClusterCurationMigrationCommand::class)]
 final class ClusterCurationMigrationCommandTest extends TestCase
 {
     #[Test]

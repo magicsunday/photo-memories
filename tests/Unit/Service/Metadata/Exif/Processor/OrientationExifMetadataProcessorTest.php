@@ -15,8 +15,10 @@ use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Service\Metadata\Exif\DefaultExifValueAccessor;
 use MagicSunday\Memories\Service\Metadata\Exif\Processor\OrientationExifMetadataProcessor;
 use MagicSunday\Memories\Test\TestCase;
+use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\Test;
 
+#[CoversClass(OrientationExifMetadataProcessor::class)]
 final class OrientationExifMetadataProcessorTest extends TestCase
 {
     #[Test]

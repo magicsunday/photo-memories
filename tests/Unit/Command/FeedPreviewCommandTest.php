@@ -27,12 +27,14 @@ use MagicSunday\Memories\Service\Feed\FeedPersonalizationProfileProvider;
 use MagicSunday\Memories\Service\Feed\FeedVisibilityFilter;
 use MagicSunday\Memories\Support\ClusterEntityToDraftMapper;
 use MagicSunday\Memories\Test\TestCase;
+use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\Test;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Tester\CommandTester;
 
 use function preg_replace;
 
+#[CoversClass(FeedPreviewCommand::class)]
 final class FeedPreviewCommandTest extends TestCase
 {
     #[Test]

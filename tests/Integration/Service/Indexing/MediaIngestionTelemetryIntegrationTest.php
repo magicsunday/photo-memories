@@ -18,6 +18,7 @@ use MagicSunday\Memories\Service\Indexing\Contract\MediaIngestionStageInterface;
 use MagicSunday\Memories\Service\Indexing\DefaultMediaIngestionPipeline;
 use MagicSunday\Memories\Service\Indexing\Support\MediaIngestionTelemetryCollector;
 use MagicSunday\Memories\Test\TestCase;
+use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\Test;
 use Psr\Log\AbstractLogger;
 use Symfony\Component\Console\Output\NullOutput;
@@ -31,6 +32,8 @@ use function sys_get_temp_dir;
 use function tempnam;
 use function unlink;
 
+#[CoversClass(DefaultMediaIngestionPipeline::class)]
+#[CoversClass(MediaIngestionTelemetryCollector::class)]
 final class MediaIngestionTelemetryIntegrationTest extends TestCase
 {
     #[Test]

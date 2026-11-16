@@ -17,9 +17,11 @@ use Doctrine\ORM\EntityRepository;
 use MagicSunday\Memories\Entity\Location;
 use MagicSunday\Memories\Service\Geocoding\GeocodeResult;
 use MagicSunday\Memories\Service\Geocoding\LocationResolver;
+use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 
+#[CoversClass(LocationResolver::class)]
 final class LocationResolverMetadataTest extends TestCase
 {
     #[Test]

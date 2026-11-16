@@ -28,12 +28,14 @@ use MagicSunday\Memories\Service\Indexing\MediaFileLocatorInterface;
 use MagicSunday\Memories\Service\Indexing\MediaIngestionPipelineInterface;
 use MagicSunday\Memories\Service\Metadata\MetadataQaReportCollector;
 use MagicSunday\Memories\Test\TestCase;
+use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\Test;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Console\Style\SymfonyStyle;
 use Symfony\Component\Console\Tester\CommandTester;
 
+#[CoversClass(MemoriesCurateCommand::class)]
 final class MemoriesCurateCommandTest extends TestCase
 {
     private const array CLUSTER_GROUP_MAP = [

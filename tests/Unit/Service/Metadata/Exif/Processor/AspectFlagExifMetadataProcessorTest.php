@@ -14,8 +14,10 @@ namespace MagicSunday\Memories\Test\Unit\Service\Metadata\Exif\Processor;
 use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Service\Metadata\Exif\Processor\AspectFlagExifMetadataProcessor;
 use MagicSunday\Memories\Test\TestCase;
+use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\Test;
 
+#[CoversClass(AspectFlagExifMetadataProcessor::class)]
 final class AspectFlagExifMetadataProcessorTest extends TestCase
 {
     #[Test]

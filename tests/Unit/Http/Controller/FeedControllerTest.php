@@ -38,6 +38,7 @@ use MagicSunday\Memories\Service\Slideshow\SlideshowVideoStatus;
 use MagicSunday\Memories\Service\Thumbnail\ThumbnailServiceInterface;
 use MagicSunday\Memories\Support\ClusterEntityToDraftMapper;
 use MagicSunday\Memories\Test\Support\EntityIdAssignmentTrait;
+use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\TestCase;
 use ReflectionClass;
 use ReflectionMethod;
@@ -57,6 +58,7 @@ use const JSON_THROW_ON_ERROR;
  *
  * @covers \MagicSunday\Memories\Http\Controller\FeedController
  */
+#[CoversClass(FeedController::class)]
 final class FeedControllerTest extends TestCase
 {
     use EntityIdAssignmentTrait;

@@ -26,9 +26,11 @@ use MagicSunday\Memories\Service\Clusterer\Pipeline\MemberMediaLookupInterface;
 use MagicSunday\Memories\Service\Clusterer\Selection\SelectionTelemetry;
 use MagicSunday\Memories\Test\TestCase;
 use MagicSunday\Memories\Test\Unit\Clusterer\Fixtures\RecordingMonitoringEmitter;
+use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\Test;
 use ReflectionProperty;
 
+#[CoversClass(ClusterMemberSelectionService::class)]
 final class ClusterMemberSelectionServiceTest extends TestCase
 {
     #[Test]

@@ -14,6 +14,7 @@ namespace MagicSunday\Memories\Test\Unit\Service\Metadata;
 use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Service\Metadata\AppleHeuristicsExtractor;
 use MagicSunday\Memories\Test\TestCase;
+use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\Test;
 
 use function file_put_contents;
@@ -29,6 +30,7 @@ use function sys_get_temp_dir;
 use function uniqid;
 use function unlink;
 
+#[CoversClass(AppleHeuristicsExtractor::class)]
 final class AppleHeuristicsExtractorTest extends TestCase
 {
     #[Test]

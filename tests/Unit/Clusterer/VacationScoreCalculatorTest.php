@@ -32,6 +32,7 @@ use MagicSunday\Memories\Test\Unit\Clusterer\Fixtures\VacationTestMemberSelector
 use MagicSunday\Memories\Utility\Contract\LocationLabelResolverInterface;
 use MagicSunday\Memories\Utility\Contract\PoiContextAnalyzerInterface;
 use MagicSunday\Memories\Utility\LocationHelper;
+use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\Test;
 use ReflectionClass;
 
@@ -40,6 +41,7 @@ use function ceil;
 /**
  * @covers \MagicSunday\Memories\Clusterer\Service\VacationScoreCalculator
  */
+#[CoversClass(VacationScoreCalculator::class)]
 final class VacationScoreCalculatorTest extends TestCase
 {
     #[Test]

@@ -16,6 +16,7 @@ use MagicSunday\Memories\Service\Metadata\ClipSceneTagExtractor;
 use MagicSunday\Memories\Service\Metadata\HeuristicClipSceneTagModel;
 use MagicSunday\Memories\Service\Metadata\VisionSceneTagModelInterface;
 use MagicSunday\Memories\Test\TestCase;
+use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\Test;
 
 use function explode;
@@ -23,6 +24,7 @@ use function json_decode;
 
 use const JSON_THROW_ON_ERROR;
 
+#[CoversClass(ClipSceneTagExtractor::class)]
 final class ClipSceneTagExtractorTest extends TestCase
 {
     #[Test]

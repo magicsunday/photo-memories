@@ -15,8 +15,10 @@ use MagicSunday\Memories\Clusterer\ClusterDraft;
 use MagicSunday\Memories\Service\Clusterer\Pipeline\DominanceSelectionStage;
 use MagicSunday\Memories\Test\TestCase;
 use MagicSunday\Memories\Test\Unit\Clusterer\Fixtures\RecordingMonitoringEmitter;
+use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\Test;
 
+#[CoversClass(DominanceSelectionStage::class)]
 final class DominanceSelectionStageTest extends TestCase
 {
     #[Test]

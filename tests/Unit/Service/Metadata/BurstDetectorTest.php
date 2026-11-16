@@ -15,8 +15,10 @@ use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Repository\MediaRepository;
 use MagicSunday\Memories\Service\Metadata\BurstDetector;
 use MagicSunday\Memories\Test\TestCase;
+use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\Test;
 
+#[CoversClass(BurstDetector::class)]
 final class BurstDetectorTest extends TestCase
 {
     #[Test]

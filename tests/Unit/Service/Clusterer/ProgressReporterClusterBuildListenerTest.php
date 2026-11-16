@@ -17,8 +17,10 @@ use MagicSunday\Memories\Service\Clusterer\Contract\ProgressReporterInterface;
 use MagicSunday\Memories\Service\Clusterer\DefaultClusterJobRunner;
 use MagicSunday\Memories\Service\Clusterer\ProgressReporterClusterBuildListener;
 use MagicSunday\Memories\Test\TestCase;
+use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\Test;
 
+#[CoversClass(ProgressReporterClusterBuildListener::class)]
 final class ProgressReporterClusterBuildListenerTest extends TestCase
 {
     #[Test]

@@ -23,11 +23,13 @@ use MagicSunday\Memories\Service\Clusterer\Selection\SelectionPolicyProvider;
 use MagicSunday\Memories\Service\Clusterer\Selection\SelectionTelemetry;
 use MagicSunday\Memories\Test\TestCase;
 use MagicSunday\Memories\Test\Unit\Clusterer\Fixtures\RecordingMonitoringEmitter;
+use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\Test;
 use ReflectionClass;
 
 use function array_sum;
 
+#[CoversClass(MemberCurationStage::class)]
 final class MemberCurationStageTest extends TestCase
 {
     #[Test]

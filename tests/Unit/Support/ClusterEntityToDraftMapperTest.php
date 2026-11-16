@@ -14,8 +14,10 @@ namespace MagicSunday\Memories\Test\Unit\Support;
 use MagicSunday\Memories\Entity\Cluster;
 use MagicSunday\Memories\Support\ClusterEntityToDraftMapper;
 use MagicSunday\Memories\Test\TestCase;
+use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\Test;
 
+#[CoversClass(ClusterEntityToDraftMapper::class)]
 final class ClusterEntityToDraftMapperTest extends TestCase
 {
     #[Test]

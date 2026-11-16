@@ -22,11 +22,13 @@ use MagicSunday\Memories\Service\Geocoding\OverpassClient;
 use MagicSunday\Memories\Service\Geocoding\OverpassQueryBuilderInterface;
 use MagicSunday\Memories\Service\Geocoding\OverpassResponseParserInterface;
 use MagicSunday\Memories\Service\Geocoding\ReverseGeocoderInterface;
+use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\Console\Output\NullOutput;
 use Symfony\Contracts\HttpClient\HttpClientInterface;
 
+#[CoversClass(DefaultLocationRefreshProcessor::class)]
 final class DefaultLocationRefreshProcessorTest extends TestCase
 {
     #[Test]

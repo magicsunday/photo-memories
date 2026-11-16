@@ -21,6 +21,7 @@ use MagicSunday\Memories\Service\Indexing\Stage\MetaExportStage;
 use MagicSunday\Memories\Service\Metadata\MetadataFeatureVersion;
 use MagicSunday\Memories\Service\Metadata\MetadataQaInspectionResult;
 use MagicSunday\Memories\Test\TestCase;
+use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\Test;
 use Symfony\Component\Console\Output\NullOutput;
 
@@ -38,6 +39,7 @@ use function unlink;
 
 use const JSON_THROW_ON_ERROR;
 
+#[CoversClass(MetaExportStage::class)]
 final class MetaExportStageTest extends TestCase
 {
     #[Test]

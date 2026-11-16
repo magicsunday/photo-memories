@@ -15,6 +15,7 @@ use MagicSunday\Memories\Service\Slideshow\SlideshowJob;
 use MagicSunday\Memories\Service\Slideshow\SlideshowTransitionCache;
 use MagicSunday\Memories\Service\Slideshow\SlideshowVideoGenerator;
 use MagicSunday\Memories\Test\Unit\Clusterer\Fixtures\RecordingMonitoringEmitter;
+use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\TestCase;
 use ReflectionClass;
 use RuntimeException;
@@ -40,6 +41,7 @@ use function unlink;
 /**
  * @covers \MagicSunday\Memories\Service\Slideshow\SlideshowVideoGenerator
  */
+#[CoversClass(SlideshowVideoGenerator::class)]
 final class SlideshowVideoGeneratorTest extends TestCase
 {
     public function testCommentMetadataUsesProvidedSubtitle(): void

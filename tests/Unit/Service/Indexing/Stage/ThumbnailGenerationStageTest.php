@@ -16,10 +16,12 @@ use MagicSunday\Memories\Service\Indexing\Contract\MediaIngestionContext;
 use MagicSunday\Memories\Service\Indexing\Stage\ThumbnailGenerationStage;
 use MagicSunday\Memories\Service\Thumbnail\ThumbnailServiceInterface;
 use MagicSunday\Memories\Test\TestCase;
+use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\Test;
 use RuntimeException;
 use Symfony\Component\Console\Output\BufferedOutput;
 
+#[CoversClass(ThumbnailGenerationStage::class)]
 final class ThumbnailGenerationStageTest extends TestCase
 {
     #[Test]

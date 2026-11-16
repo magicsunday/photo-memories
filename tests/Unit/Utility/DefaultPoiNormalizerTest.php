@@ -13,8 +13,10 @@ namespace MagicSunday\Memories\Test\Unit\Utility;
 
 use MagicSunday\Memories\Test\TestCase;
 use MagicSunday\Memories\Utility\DefaultPoiNormalizer;
+use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\Test;
 
+#[CoversClass(DefaultPoiNormalizer::class)]
 final class DefaultPoiNormalizerTest extends TestCase
 {
     #[Test]

@@ -18,11 +18,13 @@ use MagicSunday\Memories\Clusterer\Service\TransportDayExtender;
 use MagicSunday\Memories\Clusterer\Support\StaypointIndex;
 use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Test\TestCase;
+use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\Test;
 
 /**
  * @covers \MagicSunday\Memories\Clusterer\Service\RunDetector
  */
+#[CoversClass(RunDetector::class)]
 final class RunDetectorTest extends TestCase
 {
     #[Test]

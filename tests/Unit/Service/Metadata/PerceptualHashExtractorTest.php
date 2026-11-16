@@ -14,6 +14,7 @@ namespace MagicSunday\Memories\Test\Unit\Service\Metadata;
 use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Service\Metadata\PerceptualHashExtractor;
 use MagicSunday\Memories\Test\TestCase;
+use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\Test;
 use Symfony\Component\Process\Process;
 use Throwable;
@@ -39,6 +40,7 @@ use function sys_get_temp_dir;
 use function tempnam;
 use function unlink;
 
+#[CoversClass(PerceptualHashExtractor::class)]
 final class PerceptualHashExtractorTest extends TestCase
 {
     /**

@@ -20,6 +20,7 @@ use MagicSunday\Memories\Service\Indexing\Contract\MediaIngestionContext;
 use MagicSunday\Memories\Service\Indexing\Stage\DuplicateHandlingStage;
 use MagicSunday\Memories\Service\Metadata\MetadataFeatureVersion;
 use MagicSunday\Memories\Test\TestCase;
+use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\Test;
 use Symfony\Component\Console\Output\BufferedOutput;
 use Symfony\Component\Console\Output\OutputInterface;
@@ -31,6 +32,7 @@ use function sys_get_temp_dir;
 use function uniqid;
 use function unlink;
 
+#[CoversClass(DuplicateHandlingStage::class)]
 final class DuplicateHandlingStageTest extends TestCase
 {
     private ?string $tempFile = null;

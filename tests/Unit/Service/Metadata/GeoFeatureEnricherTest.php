@@ -16,12 +16,14 @@ use MagicSunday\Memories\Service\Metadata\GeoFeatureEnricher;
 use MagicSunday\Memories\Test\TestCase;
 use MagicSunday\Memories\Utility\MediaMath;
 use MagicSunday\Memories\Utility\S2CellId;
+use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\Test;
 
 use function floor;
 use function hash;
 use function sprintf;
 
+#[CoversClass(GeoFeatureEnricher::class)]
 final class GeoFeatureEnricherTest extends TestCase
 {
     private const float HOME_LAT = 48.137154;

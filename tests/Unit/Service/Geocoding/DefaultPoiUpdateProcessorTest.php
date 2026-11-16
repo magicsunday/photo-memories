@@ -17,11 +17,13 @@ use MagicSunday\Memories\Service\Geocoding\DefaultPoiUpdateProcessor;
 use MagicSunday\Memories\Service\Geocoding\PoiEnsurerInterface;
 use MagicSunday\Memories\Service\Monitoring\Contract\JobMonitoringEmitterInterface;
 use PHPUnit\Framework\Assert;
+use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 use Stringable;
 use Symfony\Component\Console\Output\NullOutput;
 
+#[CoversClass(DefaultPoiUpdateProcessor::class)]
 final class DefaultPoiUpdateProcessorTest extends TestCase
 {
     #[Test]

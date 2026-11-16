@@ -15,10 +15,12 @@ use MagicSunday\Memories\Clusterer\ClusterDraft;
 use MagicSunday\Memories\Service\Clusterer\Pipeline\OverlapResolverStage;
 use MagicSunday\Memories\Test\TestCase;
 use MagicSunday\Memories\Test\Unit\Clusterer\Fixtures\RecordingMonitoringEmitter;
+use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\Attributes\Test;
 use ReflectionMethod;
 
+#[CoversClass(OverlapResolverStage::class)]
 final class OverlapResolverStageTest extends TestCase
 {
     #[Test]

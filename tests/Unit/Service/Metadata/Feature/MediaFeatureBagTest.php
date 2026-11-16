@@ -14,9 +14,11 @@ namespace MagicSunday\Memories\Test\Unit\Service\Metadata\Feature;
 use InvalidArgumentException;
 use MagicSunday\Memories\Entity\Enum\ContentKind;
 use MagicSunday\Memories\Service\Metadata\Feature\MediaFeatureBag;
+use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\TestCase;
 use stdClass;
 
+#[CoversClass(MediaFeatureBag::class)]
 final class MediaFeatureBagTest extends TestCase
 {
     public function testCreatesBagFromNamespacedArray(): void

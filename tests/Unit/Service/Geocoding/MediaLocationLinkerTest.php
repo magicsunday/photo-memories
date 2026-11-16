@@ -12,10 +12,12 @@ declare(strict_types=1);
 namespace MagicSunday\Memories\Test\Unit\Service\Geocoding;
 
 use MagicSunday\Memories\Service\Geocoding\MediaLocationLinker;
+use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\TestCase;
 use ReflectionClass;
 use ReflectionMethod;
 
+#[CoversClass(MediaLocationLinker::class)]
 final class MediaLocationLinkerTest extends TestCase
 {
     public function testNormalizeAcceptLanguage(): void

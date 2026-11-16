@@ -14,8 +14,10 @@ namespace MagicSunday\Memories\Test\Unit\Service\Metadata;
 use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Service\Metadata\BurstIndexExtractor;
 use MagicSunday\Memories\Test\TestCase;
+use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\Test;
 
+#[CoversClass(BurstIndexExtractor::class)]
 final class BurstIndexExtractorTest extends TestCase
 {
     #[Test]

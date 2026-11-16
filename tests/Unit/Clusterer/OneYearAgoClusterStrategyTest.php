@@ -19,8 +19,10 @@ use MagicSunday\Memories\Clusterer\OneYearAgoClusterStrategy;
 use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Test\TestCase;
 use MagicSunday\Memories\Utility\LocationHelper;
+use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\Test;
 
+#[CoversClass(OneYearAgoClusterStrategy::class)]
 final class OneYearAgoClusterStrategyTest extends TestCase
 {
     #[Test]

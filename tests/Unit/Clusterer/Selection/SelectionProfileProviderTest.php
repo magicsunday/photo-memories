@@ -14,11 +14,13 @@ namespace MagicSunday\Memories\Test\Unit\Clusterer\Selection;
 use MagicSunday\Memories\Clusterer\Selection\SelectionProfileProvider;
 use MagicSunday\Memories\Clusterer\Selection\VacationSelectionOptions;
 use MagicSunday\Memories\Service\Metadata\Support\FaceDetectionAvailability;
+use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\TestCase;
 
 /**
  * @covers \MagicSunday\Memories\Clusterer\Selection\SelectionProfileProvider
  */
+#[CoversClass(SelectionProfileProvider::class)]
 final class SelectionProfileProviderTest extends TestCase
 {
     public function testItDowngradesTransitProfileWhenFaceDetectionUnavailable(): void

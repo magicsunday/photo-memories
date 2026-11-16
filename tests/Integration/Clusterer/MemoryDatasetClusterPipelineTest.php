@@ -14,6 +14,7 @@ namespace MagicSunday\Memories\Test\Integration\Clusterer;
 use MagicSunday\Memories\Test\Support\Memories\MemoryDatasetLoader;
 use MagicSunday\Memories\Test\Support\Memories\MemoryDatasetPipeline;
 use MagicSunday\Memories\Test\TestCase;
+use PHPUnit\Framework\Attributes\CoversNothing;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\Attributes\Test;
 
@@ -26,6 +27,7 @@ use const JSON_THROW_ON_ERROR;
 use const JSON_UNESCAPED_SLASHES;
 use const JSON_UNESCAPED_UNICODE;
 
+#[CoversNothing]
 final class MemoryDatasetClusterPipelineTest extends TestCase
 {
     private const int JSON_ENCODE_FLAGS = JSON_THROW_ON_ERROR

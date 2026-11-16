@@ -20,8 +20,10 @@ use MagicSunday\Memories\Service\Metadata\MetadataQaInspector;
 use MagicSunday\Memories\Service\Metadata\SolarEnricher;
 use MagicSunday\Memories\Service\Metadata\Support\CaptureTimeResolver;
 use MagicSunday\Memories\Test\TestCase;
+use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\Test;
 
+#[CoversClass(MetadataQaInspector::class)]
 final class MetadataQaInspectorTest extends TestCase
 {
     #[Test]

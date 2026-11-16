@@ -19,8 +19,10 @@ use MagicSunday\Memories\Clusterer\Support\LocalTimeHelper;
 use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Test\TestCase;
 use MagicSunday\Memories\Utility\LocationHelper;
+use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\Test;
 
+#[CoversClass(AtHomeWeekendClusterStrategy::class)]
 final class AtHomeWeekendClusterStrategyTest extends TestCase
 {
     private const string HOME_VERSION_HASH = 'test-home-version';

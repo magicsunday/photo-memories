@@ -29,6 +29,7 @@ use MagicSunday\Memories\Service\Metadata\BurstDetector;
 use MagicSunday\Memories\Service\Metadata\LivePairLinker;
 use MagicSunday\Memories\Test\TestCase;
 use Override;
+use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\Test;
 use Symfony\Component\Console\Output\NullOutput;
 
@@ -36,6 +37,7 @@ use function array_unique;
 use function array_values;
 use function iterator_to_array;
 
+#[CoversClass(PostFlushReprocessingStage::class)]
 final class PostFlushReprocessingIntegrationTest extends TestCase
 {
     #[Test]

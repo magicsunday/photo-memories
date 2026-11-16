@@ -25,11 +25,13 @@ use MagicSunday\Memories\Service\Clusterer\DefaultClusterJobRunner;
 use MagicSunday\Memories\Service\Clusterer\NullProgressReporter;
 use MagicSunday\Memories\Service\Metadata\MetadataFeatureVersion;
 use MagicSunday\Memories\Test\TestCase;
+use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\Test;
 use Traversable;
 
 use function iterator_to_array;
 
+#[CoversClass(DefaultClusterJobRunner::class)]
 final class DefaultClusterJobRunnerTest extends TestCase
 {
     #[Test]

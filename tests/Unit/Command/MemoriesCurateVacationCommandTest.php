@@ -23,6 +23,7 @@ use MagicSunday\Memories\Service\Indexing\MediaFileLocatorInterface;
 use MagicSunday\Memories\Service\Indexing\MediaIngestionPipelineInterface;
 use MagicSunday\Memories\Service\Metadata\MetadataQaReportCollector;
 use MagicSunday\Memories\Test\TestCase;
+use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\Test;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputInterface;
@@ -32,6 +33,7 @@ use Symfony\Component\Console\Tester\CommandTester;
 use function sys_get_temp_dir;
 use function uniqid;
 
+#[CoversClass(MemoriesCurateVacationCommand::class)]
 final class MemoriesCurateVacationCommandTest extends TestCase
 {
     private const array CLUSTER_GROUP_MAP = [

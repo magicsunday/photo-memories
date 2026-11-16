@@ -18,9 +18,11 @@ use MagicSunday\Memories\Repository\MediaRepository;
 use MagicSunday\Memories\Service\Indexing\Contract\MediaIngestionContext;
 use MagicSunday\Memories\Service\Indexing\Stage\NearDuplicateStage;
 use MagicSunday\Memories\Test\TestCase;
+use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\Test;
 use Symfony\Component\Console\Output\BufferedOutput;
 
+#[CoversClass(NearDuplicateStage::class)]
 final class NearDuplicateStageTest extends TestCase
 {
     #[Test]

@@ -13,10 +13,12 @@ namespace MagicSunday\Memories\Test\Unit\Service\Slideshow;
 
 use MagicSunday\Memories\Service\Slideshow\TransitionSequenceGenerator;
 use MagicSunday\Memories\Test\TestCase;
+use PHPUnit\Framework\Attributes\CoversClass;
 
 /**
  * @covers \MagicSunday\Memories\Service\Slideshow\TransitionSequenceGenerator
  */
+#[CoversClass(TransitionSequenceGenerator::class)]
 final class TransitionSequenceGeneratorTest extends TestCase
 {
     public function testGenerateAvoidsConsecutiveDuplicatesWhenMultipleTransitionsExist(): void

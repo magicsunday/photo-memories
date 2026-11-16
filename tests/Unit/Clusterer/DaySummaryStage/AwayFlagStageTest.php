@@ -28,8 +28,10 @@ use MagicSunday\Memories\Clusterer\Support\GeoDbscanHelper;
 use MagicSunday\Memories\Entity\Location;
 use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Test\TestCase;
+use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\Test;
 
+#[CoversClass(AwayFlagStage::class)]
 final class AwayFlagStageTest extends TestCase
 {
     #[Test]

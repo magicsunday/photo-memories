@@ -15,8 +15,10 @@ use MagicSunday\Memories\Clusterer\ClusterDraft;
 use MagicSunday\Memories\Service\Clusterer\Pipeline\AnnotationPruningStage;
 use MagicSunday\Memories\Test\TestCase;
 use MagicSunday\Memories\Test\Unit\Clusterer\Fixtures\RecordingMonitoringEmitter;
+use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\Test;
 
+#[CoversClass(AnnotationPruningStage::class)]
 final class AnnotationPruningStageTest extends TestCase
 {
     #[Test]

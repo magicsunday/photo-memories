@@ -16,8 +16,10 @@ use MagicSunday\Memories\Clusterer\ClusterDraft;
 use MagicSunday\Memories\Service\Clusterer\Scoring\HolidayClusterScoreHeuristic;
 use MagicSunday\Memories\Service\Clusterer\Scoring\HolidayResolverInterface;
 use MagicSunday\Memories\Test\TestCase;
+use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\Test;
 
+#[CoversClass(HolidayClusterScoreHeuristic::class)]
 final class HolidayClusterScoreHeuristicTest extends TestCase
 {
     #[Test]

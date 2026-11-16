@@ -16,8 +16,10 @@ use Doctrine\ORM\EntityRepository;
 use MagicSunday\Memories\Entity\MediaDuplicate;
 use MagicSunday\Memories\Repository\MediaDuplicateRepository;
 use MagicSunday\Memories\Test\TestCase;
+use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\Test;
 
+#[CoversClass(MediaDuplicateRepository::class)]
 final class MediaDuplicateRepositoryTest extends TestCase
 {
     #[Test]

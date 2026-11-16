@@ -24,8 +24,10 @@ use MagicSunday\Memories\Service\Clusterer\Quality\ImageQualityEstimatorInterfac
 use MagicSunday\Memories\Service\Clusterer\Quality\ImageQualityScore;
 use MagicSunday\Memories\Test\TestCase;
 use MagicSunday\Memories\Utility\LocationHelper;
+use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\Test;
 
+#[CoversClass(DeviceSimilarityStrategy::class)]
 final class DeviceSimilarityStrategyTest extends TestCase
 {
     #[Test]

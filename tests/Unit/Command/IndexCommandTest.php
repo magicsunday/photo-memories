@@ -17,6 +17,7 @@ use MagicSunday\Memories\Service\Indexing\MediaFileLocatorInterface;
 use MagicSunday\Memories\Service\Indexing\MediaIngestionPipelineInterface;
 use MagicSunday\Memories\Service\Metadata\MetadataQaReportCollector;
 use MagicSunday\Memories\Test\TestCase;
+use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\Test;
 use RecursiveDirectoryIterator;
 use RecursiveIteratorIterator;
@@ -34,6 +35,7 @@ use function sys_get_temp_dir;
 use function uniqid;
 use function unlink;
 
+#[CoversClass(IndexCommand::class)]
 final class IndexCommandTest extends TestCase
 {
     /**

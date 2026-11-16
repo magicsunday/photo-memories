@@ -15,8 +15,10 @@ use MagicSunday\Memories\Clusterer\ClusterDraft;
 use MagicSunday\Memories\Service\Clusterer\Scoring\LocationClusterScoreHeuristic;
 use MagicSunday\Memories\Service\Feed\FeedUserPreferences;
 use MagicSunday\Memories\Test\TestCase;
+use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\Test;
 
+#[CoversClass(LocationClusterScoreHeuristic::class)]
 final class LocationClusterScoreHeuristicTest extends TestCase
 {
     #[Test]

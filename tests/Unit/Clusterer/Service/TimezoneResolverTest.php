@@ -15,8 +15,10 @@ use DateTimeImmutable;
 use DateTimeZone;
 use MagicSunday\Memories\Clusterer\Service\TimezoneResolver;
 use MagicSunday\Memories\Test\TestCase;
+use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\Test;
 
+#[CoversClass(TimezoneResolver::class)]
 final class TimezoneResolverTest extends TestCase
 {
     #[Test]

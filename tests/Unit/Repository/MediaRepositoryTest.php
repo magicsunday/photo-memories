@@ -22,10 +22,12 @@ use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Repository\MediaRepository;
 use MagicSunday\Memories\Service\Metadata\MetadataFeatureVersion;
 use MagicSunday\Memories\Test\TestCase;
+use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\Test;
 
 use function str_contains;
 
+#[CoversClass(MediaRepository::class)]
 final class MediaRepositoryTest extends TestCase
 {
     #[Test]

@@ -13,8 +13,10 @@ namespace MagicSunday\Memories\Test\Unit\Service\Metadata\Exif;
 
 use MagicSunday\Memories\Service\Metadata\Exif\DefaultExifValueAccessor;
 use MagicSunday\Memories\Service\Metadata\Exif\Value\GpsMetadata;
+use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\TestCase;
 
+#[CoversClass(DefaultExifValueAccessor::class)]
 final class DefaultExifValueAccessorTest extends TestCase
 {
     public function testParseOffsetMinutesAcceptsColonSeparatedValue(): void

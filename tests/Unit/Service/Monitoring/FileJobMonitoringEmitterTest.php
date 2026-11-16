@@ -14,6 +14,7 @@ namespace MagicSunday\Memories\Test\Unit\Service\Monitoring;
 use DateTimeImmutable;
 use JsonException;
 use MagicSunday\Memories\Service\Monitoring\FileJobMonitoringEmitter;
+use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 
@@ -29,6 +30,7 @@ use function unlink;
 
 use const JSON_THROW_ON_ERROR;
 
+#[CoversClass(FileJobMonitoringEmitter::class)]
 final class FileJobMonitoringEmitterTest extends TestCase
 {
     #[Test]

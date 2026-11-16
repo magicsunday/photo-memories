@@ -16,8 +16,10 @@ use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Service\Clusterer\Pipeline\MemberMediaLookupInterface;
 use MagicSunday\Memories\Service\Clusterer\Pipeline\MemberQualityRankingStage;
 use MagicSunday\Memories\Test\TestCase;
+use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\Test;
 
+#[CoversClass(MemberQualityRankingStage::class)]
 final class MemberQualityRankingStageTest extends TestCase
 {
     #[Test]

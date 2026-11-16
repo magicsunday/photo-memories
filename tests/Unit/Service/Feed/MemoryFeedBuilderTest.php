@@ -23,9 +23,11 @@ use MagicSunday\Memories\Service\Feed\FeedVisibilityFilter;
 use MagicSunday\Memories\Service\Feed\MemoryFeedBuilder;
 use MagicSunday\Memories\Service\Feed\SeriesHighlightService;
 use MagicSunday\Memories\Test\TestCase;
+use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\Attributes\Test;
 
+#[CoversClass(MemoryFeedBuilder::class)]
 final class MemoryFeedBuilderTest extends TestCase
 {
     #[Test]

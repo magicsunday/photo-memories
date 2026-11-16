@@ -13,9 +13,11 @@ namespace MagicSunday\Memories\Test\Unit\Entity;
 
 use DateTimeImmutable;
 use MagicSunday\Memories\Entity\Location;
+use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 
+#[CoversClass(Location::class)]
 final class LocationMetadataTest extends TestCase
 {
     #[Test]

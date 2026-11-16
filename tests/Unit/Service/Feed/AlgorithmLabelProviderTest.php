@@ -12,6 +12,7 @@ declare(strict_types=1);
 namespace MagicSunday\Memories\Test\Unit\Service\Feed;
 
 use MagicSunday\Memories\Service\Feed\AlgorithmLabelProvider;
+use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\TestCase;
 
 /**
@@ -19,6 +20,7 @@ use PHPUnit\Framework\TestCase;
  *
  * @covers \MagicSunday\Memories\Service\Feed\AlgorithmLabelProvider
  */
+#[CoversClass(AlgorithmLabelProvider::class)]
 final class AlgorithmLabelProviderTest extends TestCase
 {
     public function testReturnsConfiguredLabelWhenAvailable(): void

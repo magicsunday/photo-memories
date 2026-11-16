@@ -19,8 +19,10 @@ use MagicSunday\Memories\Service\Clusterer\Quality\ImageQualityRawMetrics;
 use MagicSunday\Memories\Service\Clusterer\Quality\ImageQualityScore;
 use MagicSunday\Memories\Service\Clusterer\Scoring\QualityClusterScoreHeuristic;
 use MagicSunday\Memories\Test\TestCase;
+use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\Test;
 
+#[CoversClass(QualityClusterScoreHeuristic::class)]
 final class QualityClusterScoreHeuristicTest extends TestCase
 {
     #[Test]

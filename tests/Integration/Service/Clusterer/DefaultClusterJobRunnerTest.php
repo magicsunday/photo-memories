@@ -43,10 +43,12 @@ use MagicSunday\Memories\Service\Feed\CoverPickerInterface;
 use MagicSunday\Memories\Service\Metadata\MetadataFeatureVersion;
 use MagicSunday\Memories\Test\TestCase;
 use Override;
+use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\Test;
 use RuntimeException;
 use Symfony\Component\Yaml\Yaml;
 
+#[CoversClass(DefaultClusterJobRunner::class)]
 final class DefaultClusterJobRunnerTest extends TestCase
 {
     #[Test]

@@ -13,8 +13,10 @@ namespace MagicSunday\Memories\Test\Unit\Utility;
 
 use MagicSunday\Memories\Test\TestCase;
 use MagicSunday\Memories\Utility\DefaultPoiScorer;
+use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\Test;
 
+#[CoversClass(DefaultPoiScorer::class)]
 final class DefaultPoiScorerTest extends TestCase
 {
     #[Test]

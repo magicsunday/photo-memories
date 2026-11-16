@@ -13,8 +13,10 @@ namespace MagicSunday\Memories\Test\Unit\Service\Slideshow;
 
 use MagicSunday\Memories\Service\Slideshow\SlideshowVideoStatus;
 use MagicSunday\Memories\Test\TestCase;
+use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\Test;
 
+#[CoversClass(SlideshowVideoStatus::class)]
 final class SlideshowVideoStatusTest extends TestCase
 {
     #[Test]

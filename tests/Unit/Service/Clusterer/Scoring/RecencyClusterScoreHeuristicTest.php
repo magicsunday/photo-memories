@@ -15,8 +15,10 @@ use DateTimeImmutable;
 use MagicSunday\Memories\Clusterer\ClusterDraft;
 use MagicSunday\Memories\Service\Clusterer\Scoring\RecencyClusterScoreHeuristic;
 use MagicSunday\Memories\Test\TestCase;
+use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\Test;
 
+#[CoversClass(RecencyClusterScoreHeuristic::class)]
 final class RecencyClusterScoreHeuristicTest extends TestCase
 {
     #[Test]

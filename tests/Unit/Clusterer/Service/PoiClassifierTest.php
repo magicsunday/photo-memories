@@ -13,8 +13,10 @@ namespace MagicSunday\Memories\Test\Unit\Clusterer\Service;
 
 use MagicSunday\Memories\Clusterer\Service\PoiClassifier;
 use MagicSunday\Memories\Test\TestCase;
+use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\Test;
 
+#[CoversClass(PoiClassifier::class)]
 final class PoiClassifierTest extends TestCase
 {
     #[Test]

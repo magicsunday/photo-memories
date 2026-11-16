@@ -17,11 +17,13 @@ use MagicSunday\Memories\Service\Indexing\Contract\MediaIngestionContext;
 use MagicSunday\Memories\Service\Indexing\Stage\PersistenceBatchStage;
 use MagicSunday\Memories\Service\Indexing\Support\PersistedMediaTracker;
 use MagicSunday\Memories\Test\TestCase;
+use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\Test;
 use Symfony\Component\Console\Output\BufferedOutput;
 use Symfony\Component\Console\Output\NullOutput;
 use Symfony\Component\Console\Output\OutputInterface;
 
+#[CoversClass(PersistenceBatchStage::class)]
 final class PersistenceBatchStageTest extends TestCase
 {
     #[Test]
