@@ -14,9 +14,9 @@ namespace MagicSunday\Memories\Test\Unit\Support;
 use MagicSunday\Memories\Support\FeatureFlagProvider;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\TestCase;
+use Symfony\Component\DependencyInjection\Exception\ParameterNotFoundException;
 use Symfony\Component\DependencyInjection\ParameterBag\ParameterBag;
 use Symfony\Component\DependencyInjection\ParameterBag\ParameterBagInterface;
-use Symfony\Component\DependencyInjection\ParameterBag\ParameterNotFoundException;
 use UnitEnum;
 
 use function array_key_exists;
@@ -81,7 +81,7 @@ final class CountingParameterBag implements ParameterBagInterface
     }
 
     /**
-     * @param array<string, mixed> $parameters
+     * @param array<mixed> $parameters
      */
     public function add(array $parameters): void
     {
