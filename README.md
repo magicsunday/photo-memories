@@ -4,7 +4,7 @@
 
 # Photo Memories
 
-Photo Memories ist eine modulare PHP-8.4-Anwendung, die große Foto- und Videoarchive analysiert, anreichert und als kuratierte "Für dich"-Erinnerungen bereitstellt. Herzstück ist eine Symfony-Console-Anwendung mit Doctrine ORM, die Metadaten extrahiert, Orte geokodiert, Cluster bildet und daraus einen Feed für eine schlanke Single-Page-App generiert.
+Photo Memories ist eine modulare PHP-8.5-Anwendung, die große Foto- und Videoarchive analysiert, anreichert und als kuratierte "Für dich"-Erinnerungen bereitstellt. Herzstück ist eine Symfony-Console-Anwendung mit Doctrine ORM, die Metadaten extrahiert, Orte geokodiert, Cluster bildet und daraus einen Feed für eine schlanke Single-Page-App generiert.
 
 ## Highlights
 
@@ -52,7 +52,7 @@ Photo Memories ist eine modulare PHP-8.4-Anwendung, die große Foto- und Videoar
 ## Installation & Vorbereitung
 
 1. **Voraussetzungen**
-   - PHP ≥ 8.4 mit Extensions `dom`, `exif`, `fileinfo`, `pdo`, `pdo_mysql`.
+   - PHP ≥ 8.5 mit Extensions `dom`, `exif`, `fileinfo`, `pdo`, `pdo_mysql`.
    - Composer für PHP-Abhängigkeiten, Node.js ≥ 18 für das Frontend, sowie eine unterstützte Datenbank (MySQL/MariaDB) für Doctrine.
 2. **Backend-Abhängigkeiten installieren**
    ```bash

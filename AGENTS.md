@@ -1,6 +1,6 @@
 <!-- Managed by agent: keep sections & order; edit content, not structure. Last updated: 2025-10-13 -->
 ## Overview
-- Photo Memories is a PHP 8.4 console and lightweight web application for organising media libraries. Symfony Console commands are bootstrapped via `src/Memories.php`, with services wired through `config/services.yaml` and Doctrine ORM. Front-end assets live under `public/app` and are built with Vite.
+- Photo Memories is a PHP 8.5 console and lightweight web application for organising media libraries. Symfony Console commands are bootstrapped via `src/Memories.php`, with services wired through `config/services.yaml` and Doctrine ORM. Front-end assets live under `public/app` and are built with Vite.
 - Instruction precedence: the nearest `AGENTS.md` governs a file. Start here, then follow scoped files (see index below) for folder-specific rules.
 - Scoped guides:
   - `config/AGENTS.md` – Symfony and parameter YAML conventions.
@@ -13,7 +13,7 @@
 - Sources merged: prior root `AGENTS.md`, `README.md`, `composer.json`, `Make/*.mk`, and `package.json`.
 
 ## Setup & env
-- Use PHP ≥8.4 with required extensions (`dom`, `exif`, `fileinfo`, `pdo`, `pdo_mysql`). Run `composer install` to pull dependencies into `vendor/`.
+- Use PHP ≥8.5 with required extensions (`dom`, `exif`, `fileinfo`, `pdo`, `pdo_mysql`). Run `composer install` to pull dependencies into `vendor/`.
 - Node 20+ is recommended for Vite/Playwright tooling; install npm packages before running web targets.
 - Load project environment via direnv: `direnv allow` (see `.envrc`). Runtime configuration lives in `.env[.local]` and `config/parameters.yaml`.
 - Clear Symfony caches (e.g., delete `var/cache/DependencyContainer.php`) if service wiring changes.
