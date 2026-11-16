@@ -46,7 +46,7 @@ final class PostFlushReprocessingIntegrationTest extends TestCase
     {
         $repository          = new InMemoryMediaRepository(self::createStub(EntityManagerInterface::class));
         $tracker             = new PersistedMediaTracker();
-        $duplicateRepository = new RecordingMediaDuplicateRepository();
+        $duplicateRepository = new RecordingMediaDuplicateRepository(self::createStub(EntityManagerInterface::class));
 
         $entityManager = self::createStub(EntityManagerInterface::class);
         $this->configureEntityManager($entityManager, $repository);
@@ -100,7 +100,7 @@ final class PostFlushReprocessingIntegrationTest extends TestCase
     {
         $repository          = new InMemoryMediaRepository(self::createStub(EntityManagerInterface::class));
         $tracker             = new PersistedMediaTracker();
-        $duplicateRepository = new RecordingMediaDuplicateRepository();
+        $duplicateRepository = new RecordingMediaDuplicateRepository(self::createStub(EntityManagerInterface::class));
 
         $entityManager = self::createStub(EntityManagerInterface::class);
         $this->configureEntityManager($entityManager, $repository);
@@ -253,7 +253,10 @@ final readonly class InMemoryMediaRepository extends MediaRepository
     public function __construct(EntityManagerInterface $entityManager)
     {
         parent::__construct($entityManager);
-        $this->storage = new ArrayObject();
+
+        /** @var ArrayObject<int, Media> $storage */
+        $storage       = new ArrayObject();
+        $this->storage = $storage;
     }
 
     public function store(Media $media): void
@@ -494,9 +497,13 @@ final readonly class RecordingMediaDuplicateRepository extends MediaDuplicateRep
      */
     public ArrayObject $records;
 
-    public function __construct()
+    public function __construct(EntityManagerInterface $entityManager)
     {
-        $this->records = new ArrayObject();
+        parent::__construct($entityManager);
+
+        /** @var ArrayObject<int, array{Media, Media, int}> $records */
+        $records       = new ArrayObject();
+        $this->records = $records;
     }
 
     #[Override]
