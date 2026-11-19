@@ -45,7 +45,7 @@
         "doctrine/dbal": "^4.2"
     },
     "require-dev": {
-        "magicsunday/coding-standard": "^3.0",
+        "magicsunday/coding-standard": "^3.12.0",
         "phpdocumentor/reflection-docblock": "^6.0"
     },
     "autoload": {
