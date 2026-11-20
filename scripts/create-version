@@ -22,7 +22,16 @@ fi
 echo "$VERSION" > version
 
 git add version
-git commit -m "[Release] $VERSION"
-git tag "$VERSION"
-git push
-git push --tags
+git commit -s -m "Release $VERSION" || exit 1
+git tag -a -s "$VERSION" -m "$VERSION" || exit 1
+
+# Push the branch first and the tag only after the branch was accepted. A tag that reached the remote cannot be
+# removed again where tags are immutable, so a refused branch must leave the tag local. The tag is named explicitly,
+# because the option that sends all tags would publish other local tags as well.
+if ! git push --no-follow-tags; then
+    echo "The push of the branch was refused, so the tag $VERSION stays local."
+    echo "Land exactly this release commit on the branch, which a fast-forward does and a squash merge does not, and push the tag again."
+    exit 1
+fi
+
+git push --no-follow-tags origin "refs/tags/$VERSION"
