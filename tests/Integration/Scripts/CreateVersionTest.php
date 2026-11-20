@@ -36,8 +36,16 @@ use function uniqid;
 #[CoversNothing]
 final class CreateVersionTest extends TestCase
 {
+    /**
+     * Scratch directory that holds the bare remote, the repository and the signer stub.
+     *
+     * @var string
+     */
     private string $workDir = '';
 
+    /**
+     * Builds a scratch repository with a bare remote, a stub that stands in for the signer and a leftover tag.
+     */
     protected function setUp(): void
     {
         parent::setUp();
@@ -82,6 +90,9 @@ final class CreateVersionTest extends TestCase
         $this->git(['tag', '-a', '0.9.0', '-m', 'Leftover tag'], $repository);
     }
 
+    /**
+     * Removes the scratch directory.
+     */
     protected function tearDown(): void
     {
         (new Process(['rm', '-rf', $this->workDir]))->mustRun();
@@ -90,8 +101,8 @@ final class CreateVersionTest extends TestCase
     }
 
     /**
-     * A refused push of the branch stops the script before the tag is sent. The tag stays local, because a tag that
-     * reached the remote cannot be removed again where tags are immutable.
+     * A refused push of the branch stops the script before the tag is sent. The tag stays local, because a tag
+     * that reached the remote cannot be removed again where tags are immutable.
      */
     #[Test]
     public function keepsTheTagLocalWhenThePushOfTheBranchIsRefused(): void
@@ -106,9 +117,9 @@ final class CreateVersionTest extends TestCase
     }
 
     /**
-     * The release commit carries a sign-off and the title of a release, the tag is an annotated tag, and the remote
-     * receives the branch and only the tag of the release. A leftover local tag stays local although the setting that
-     * follows tags is on.
+     * The release commit carries a sign-off and the title of a release, the tag is a signed annotated tag, and
+     * the remote receives the branch and only the tag of the release. A leftover local tag stays local although
+     * the setting that follows tags is on.
      */
     #[Test]
     public function publishesTheReleaseCommitAndOnlyTheReleaseTag(): void
@@ -123,6 +134,7 @@ final class CreateVersionTest extends TestCase
         self::assertSame('0.9.0', $this->git(['tag', '--list', '0.9.0'], $this->workDir . '/repository'));
         self::assertSame(['refs/tags/1.0.1'], $this->refs($remote, 'refs/tags/1.0.1'));
         self::assertSame('tag', $this->git(['cat-file', '-t', '1.0.1'], $remote));
+        self::assertStringContainsString('-----BEGIN PGP SIGNATURE-----', $this->git(['cat-file', '-p', '1.0.1'], $remote));
 
         $message = $this->git(['log', '-1', '--format=%B', 'main'], $remote);
 
@@ -131,8 +143,30 @@ final class CreateVersionTest extends TestCase
     }
 
     /**
-     * Makes the bare remote refuse every update of main, the way a ruleset that waits for scan results does. The
-     * check runs per reference, so the update of a tag in the same push would pass.
+     * A push remote that is configured for the branch must not split the branch and the tag. Both go to the
+     * remote that the script names, and the other remote receives nothing.
+     */
+    #[Test]
+    public function sendsTheBranchAndTheTagToTheSameRemote(): void
+    {
+        $repository = $this->workDir . '/repository';
+        $other      = $this->workDir . '/other.git';
+
+        $this->git(['init', '--quiet', '--bare', $other], $this->workDir);
+        $this->git(['remote', 'add', 'other', $other], $repository);
+        $this->git(['config', 'branch.main.pushRemote', 'other'], $repository);
+
+        $status = $this->runScript("1.0.1\n");
+
+        self::assertSame(0, $status);
+        self::assertSame(['refs/tags/1.0.1'], $this->refs($this->workDir . '/remote.git', 'refs/tags/1.0.1'));
+        self::assertSame([], $this->refs($other, 'refs/heads'));
+        self::assertSame([], $this->refs($other, 'refs/tags'));
+    }
+
+    /**
+     * Makes the bare remote refuse every update of main, the way a ruleset that waits for scan results does.
+     * The check runs per reference, so the update of a tag in the same push would pass.
      */
     private function installRemoteThatRefusesTheBranch(): void
     {
